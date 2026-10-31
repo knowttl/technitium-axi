@@ -1,0 +1,60 @@
+# Offline package journeys
+
+The B1.01 and B1.02 checks run the installed npm tarball, never a TypeScript loader.
+They require Linux with user, PID, mount and network namespaces, iproute2 and OpenSSL.
+The namespace enables only loopback and contains the CLI, server, adapter and subprocesses.
+Follow the [README setup](../README.md) to fetch the pinned npm dependencies once, then keep all journeys offline.
+The runner removes inherited credentials and packs and installs the executable in an empty temporary prefix.
+Discovery commands make zero vendor requests.
+Only B1.02 starts and probes the two disposable HTTPS boundaries with synthetic identities; these probes do not implement vendor operations.
+
+```sh
+npm test
+node --test tests/journey.test.mjs
+npm run typecheck
+npm run check:generated
+```
+
+The hosted checks require a maintainer-supplied, reviewed but unmerged Artium admission fixture matching [the reviewed host contract](../tests/fixtures/host-contract.json).
+Stock Artium is unsupported until admission lands upstream.
+Obtain the prepared Artium checkout, its revision and its exact reviewed JSON manifest from a maintainer.
+The manifest supplies the revision as `fixtureCommit` and lists each tool tarball in `tools`, with a `tool` name, `tarball` path and hexadecimal `sha256` digest.
+It must include `technitium-axi`; its tarball paths must resolve from the journey runner's working directory, so use absolute paths when preparing the fixture.
+The manifest bytes must match the reviewed digest; rewriting paths requires a newly reviewed manifest and contract pin.
+Prepare its dependencies and build before entering the offline namespace.
+The original fixture worktree is read-only.
+Use a disposable exported copy for these checks.
+Its frozen pnpm lockfile contains relative artifact locations, so preserve their resolution when arranging the export and tarballs.
+
+```sh
+export ARTIUM_FIXTURE_ROOT=/absolute/path/to/prepared/artium-fixture
+export ARTIUM_FIXTURE_MANIFEST=/absolute/path/to/fixture/manifest.json
+npm run check:journey -- --task B1.01 --paths native,artium --offline
+npm run check:journey -- --task B1.02 --paths native,artium --offline
+```
+
+Pass the prepared checkout path through `ARTIUM_FIXTURE_ROOT` and the manifest path through `ARTIUM_FIXTURE_MANIFEST`; the revision is supplied through the manifest, not a separate flag.
+The harness verifies the manifest SHA-256, its `fixtureCommit` against the reviewed revision, the pinned source-file SHA-256 digests, and the `technitium-axi` tarball SHA-256 against both the manifest and the freshly packed package before starting the server.
+It refuses to continue on a mismatch; other tool tarballs are installed through the fixture's frozen pnpm lockfile with integrity checks.
+Record the fixture revision used for this PR in the PR body only, rather than copying the contract pin into this guide.
+The host registry must contain that exact installed package, with pnpm integrity checks intact.
+Missing fixture inputs for a selected Artium path, an omitted path selection and unknown paths fail explicitly.
+Native-only runs do not require the Artium fixture; every selected path must execute successfully.
+Each report separates expected, executed, failed, pending and skipped cases.
+
+Hosted setup uses public login, password replacement, recent authentication, credential, tool, user and role endpoints.
+The synthetic alpha caller has the tool grant; beta is authenticated without that grant.
+The fixture stages a shared tool credential and does not consume it during discovery.
+Per-caller vendor identity conformance remains part of later credential slices.
+
+The source-reviewed run, input-file and existing transfer contracts live in `tests/fixtures/host-contract.json`.
+The current host has no Technitium transfer route or transfer selection.
+The harness checks that limit without inventing a route or claiming a completed transfer.
+Later transfer slices require a host extension.
+
+Node diagnostics report actual child PID, argv and executable hash without replacing the runner.
+The harness verifies exact executable paths before normalizing their prefixes in emitted evidence.
+Public request traces retain method, path, safe header metadata, input hash and synthetic caller identity.
+They omit authorization values and request bodies.
+Save reports outside the repository when retaining local evidence.
+Owned server processes, disposable keys, database, sessions and temporary installations are removed after the run.

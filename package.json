@@ -1,0 +1,22 @@
+{
+  "name": "@knowttl/technitium-axi",
+  "version": "0.1.0",
+  "description": "AXI-standard agent-facing CLI for Technitium DNS Server",
+  "type": "module",
+  "license": "UNLICENSED",
+  "repository": { "type": "git", "url": "https://github.com/knowttl/technitium-axi.git" },
+  "bin": { "technitium-axi": "bin/technitium-axi.js" },
+  "files": ["bin/", "dist/", "axi-credential.schema.json", "command-inventory.json"],
+  "engines": { "node": ">=24.14.0 <25", "npm": ">=11.9.0 <12" },
+  "packageManager": "npm@11.9.0",
+  "scripts": {
+    "build": "tsc && node scripts/inventory.mjs",
+    "typecheck": "tsc --noEmit",
+    "check:generated": "node scripts/inventory.mjs --check",
+    "check:journey": "node scripts/journey.mjs",
+    "test": "npm run check:journey -- --task B1.01 --paths native --offline && npm run check:journey -- --task B1.02 --paths native --offline",
+    "prepack": "npm run build && npm run check:generated"
+  },
+  "dependencies": { "@toon-format/toon": "4.4.0" },
+  "devDependencies": { "@types/node": "24.10.0", "typescript": "5.9.3", "ajv": "8.17.1" }
+}

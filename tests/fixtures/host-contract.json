@@ -1,0 +1,60 @@
+{
+  "status": "synthetic-source-reviewed",
+  "source": {
+    "repository": "https://github.com/knowttl/artium-axi",
+    "baseline": "63719968d6dfae0d1d8c5b59a284fab388626a3a",
+    "fixtureRevision": "3cfc65afc2d7c1a0f50d2f6e02dc2ee13d6fd7e8",
+    "manifestSha256": "7ffa36cf084a169cfa4582390964345e606cb610a5c47a3c91bff4a9b05d6875",
+    "files": {
+      "src/shared/api.ts": "32901be14a0cf27f294c389ddd1b36bce9e05bd78d6d24c61f0bf08959828a1d",
+      "src/server/app.ts": "fa6b1f44c81f1db5dd59d73ea7e6fadace2d0d59cc1f78997a09a966733c17c1",
+      "src/server/adapters/technitium.ts": "08f3c4321e34054b6852f9ff229f5a863bbcb09f54090ad2d9e191ac53c22072",
+      "tools/pnpm-lock.yaml": "2058e30782578f499de5d4525eacf3f208d2144a60de000215c95ca514271cb5"
+    }
+  },
+  "seed": {
+    "callers": ["alpha", "beta"],
+    "granted": ["alpha"],
+    "vendorIdentities": ["alpha", "beta"],
+    "credentialPolicy": "The admission fixture stages one shared tool credential. Discovery consumes no vendor credential. Per-caller vendor credential conformance belongs to later credential tasks."
+  },
+  "request": {
+    "run": {
+      "method": "POST",
+      "path": "/v1/tools/technitium-axi/run",
+      "headers": { "authorization": "Bearer <caller access token>", "content-type": "application/json" },
+      "fields": { "args": "required string[]", "stdin": "optional string", "files": "optional inputFile[]" },
+      "unknownFields": "rejected",
+      "limits": { "requestBytes": 16777216, "arguments": 64, "argumentBytes": 65536, "stdinBytes": 524288, "files": 8, "fileBytes": 1048576, "totalFileBytes": 4194304 }
+    },
+    "inputFile": {
+      "fields": { "name": "required safe leaf name, at most 255 UTF-8 bytes", "size": "optional nonnegative integer equal to decoded bytes", "contentBase64": "required canonical base64" },
+      "unsafeNames": [".", "..", "../input.json", "folder/input.json", "C:\\input.json"],
+      "duplicateNames": "rejected",
+      "unknownFields": "rejected",
+      "example": { "name": "input.json", "size": 2, "contentBase64": "e30=" }
+    },
+    "transfer": {
+      "method": "POST",
+      "prefixes": ["/v1/transfers/hybrid", "/v1/transfers/checkpoint", "/v1/transfers/mg", "/v1/transfers/beyondtrust"],
+      "prepare": { "selection": { "operation": "hash-download-bin", "selector": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "type": "bin" }, "targetDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" },
+      "executeAdditionalFields": { "transferId": "UUID", "execute": true, "confirm": "nonempty string, at most 65536 characters" },
+      "retrieveAdditionalFields": { "transferId": "UUID" },
+      "receiptAdditionalFields": { "transferId": "UUID", "archive": { "archiveBytes": 0, "archiveSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" }, "saveOutcome": "verified-save or save-failed" },
+      "routes": ["prepare", "execute", "retrieve", "receipt", "cancel", "status"],
+      "cancelAndStatusFields": "same as retrieve",
+      "limits": { "artifactBytes": 262144000, "lifetimeMs": 600000, "reservationsPerUser": 1, "reservations": 4, "reservedBytes": 1073741824 },
+      "technitium": "No transfer route or selection is admitted yet. Do not invent a Technitium route; later transfer tasks require a host extension."
+    }
+  },
+  "response": {
+    "runFields": ["source", "stdout", "stderr", "exitCode", "durationMs", "outputBytes", "truncated"],
+    "outputBytesFields": ["stdout", "stderr"],
+    "truncatedFields": ["stdout", "stderr"],
+    "errorFields": ["code", "source", "message", "next", "requestId"],
+    "optionalErrorFields": ["diagnostic"]
+  },
+  "expected": { "version": "0.1.0", "unknownFlag": "INVALID_INPUT", "ungrantedCaller": "TOOL_NOT_GRANTED", "fileOnDiscovery": "UNSUPPORTED_INPUT", "invalidFile": "INVALID_INPUT", "technitiumTransferRoute": "NOT_FOUND" },
+  "preserve": { "vendorRequests": 0, "unselectedCallerGrants": [], "writeAccess": false },
+  "faults": ["unknown flag", "ungranted caller", "unsafe file name", "noncanonical base64", "duplicate file name", "file size mismatch", "stdin on discovery", "unsupported transfer", "server startup failure", "cancellation"]
+}
