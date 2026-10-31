@@ -13,8 +13,7 @@ export class Redactor {
   }
   text(value: string): string {
     for (const secret of [...this.values].sort((a, b) => b.length - a.length)) value = value.replaceAll(secret, '[REDACTED]');
-    return value.replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '[REDACTED]')
-      .replace(/AccountKey=[^;\s"\\]+/gi, 'AccountKey=[REDACTED]');
+    return value;
   }
 }
 
