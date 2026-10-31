@@ -8,7 +8,8 @@ import { monitorJourney } from './monitor-journey.ts';
 import monitor from '../tests/fixtures/monitor-reads.json' with { type: 'json' };
 
 export const monitorTasks = Object.keys(monitor.operations).map(id => `B2.${id}`);
-export const readTasks = ['B2.01', 'B2.02', 'B2.03', 'B2.04', 'B2.05', ...monitorTasks];
+const adminCases = JSON.parse(await readFile(new URL('../tests/fixtures/admin-read-cases.json', import.meta.url), 'utf8'));
+export const readTasks = ['B2.01', 'B2.02', 'B2.03', 'B2.04', 'B2.05', 'B2.admin-reads', ...monitorTasks, ...Object.keys(adminCases.operations).map(id => `B2.${id}`)];
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 // Stored ZIP records keep independently reviewed entry names and payload bytes visible.
@@ -39,6 +40,9 @@ function archive(names) {
 
 export async function readJourney({ task, temporary, env, run, executable, vendors, invokeHosted, selectedToken, configureHosted }) {
   const matrix = JSON.parse(await readFile(new URL('../tests/fixtures/read-matrix.json', import.meta.url), 'utf8'));
+  const selected = task.startsWith('B2.OP-') ? task.slice(3) : undefined;
+  const adminTask = task === 'B2.admin-reads' || (selected !== undefined && Object.hasOwn(adminCases.operations, selected));
+  if (adminTask) matrix.operations = matrix.operations.filter(row => selected ? row.operation === selected : Object.hasOwn(adminCases.operations, row.operation));
   const worlds = JSON.parse(await readFile(new URL('../tests/fixtures/archive-worlds.json', import.meta.url), 'utf8'));
   const directory = join(temporary, invokeHosted ? 'hosted-reads' : 'reads');
   await mkdir(directory, { mode: 0o700 });
@@ -76,23 +80,25 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
       directory, vendors, success, fail, archive, components: worlds.backupComponents }));
     return checks;
   }
-  if (task.startsWith('B2.OP-')) return await monitorJourney({ row: matrix.operations.find(row => row.operation === task.slice(3)),
+  if (monitorTasks.includes(task)) return await monitorJourney({ row: matrix.operations.find(row => row.operation === selected),
     directory, vendors, success, fail, archive, components: worlds.backupComponents });
-  if (task === 'B2.01') {
-    const codec = JSON.parse(await readFile(new URL('../package.json', import.meta.resolve('@toon-format/toon')), 'utf8'));
-    assert.equal(codec.version, '2.3.1', 'The journey decoder must match the Artium TOON contract');
-    const profileRow = matrix.operations.find(row => row.operation === 'OP-012');
-    respond(profileRow);
-    const profileOutput = await success([...argumentsFor(profileRow), '--full'], false);
-    assert.deepEqual(profileOutput.response, profileRow.ordinaryResponse);
-    assert.deepEqual(profileOutput.output.collections, {
-      memberOfGroups: { returned: 1, available: 1, complete: true },
-      sessions: { returned: 1, available: 1, complete: true },
-    });
-    checks.push('packaged-toon-2.3.1-collections-compatibility');
-    const inventory = await success(['inventory']);
-    assert.deepEqual(inventory.commands.filter(command => command.operation).map(command => command.operation).sort(),
-      ['OP-001', 'OP-006', ...matrix.operations.map(row => row.operation)].sort());
+  if (task === 'B2.01' || adminTask) {
+    if (task === 'B2.01') {
+      const codec = JSON.parse(await readFile(new URL('../package.json', import.meta.resolve('@toon-format/toon')), 'utf8'));
+      assert.equal(codec.version, '2.3.1', 'The journey decoder must match the Artium TOON contract');
+      const profileRow = matrix.operations.find(row => row.operation === 'OP-012');
+      respond(profileRow);
+      const profileOutput = await success([...argumentsFor(profileRow), '--full'], false);
+      assert.deepEqual(profileOutput.response, profileRow.ordinaryResponse);
+      assert.deepEqual(profileOutput.output.collections, {
+        memberOfGroups: { returned: 1, available: 1, complete: true },
+        sessions: { returned: 2, available: 2, complete: true },
+      });
+      checks.push('packaged-toon-2.3.1-collections-compatibility');
+      const inventory = await success(['inventory']);
+      assert.deepEqual(inventory.commands.filter(command => command.operation).map(command => command.operation).sort(),
+        ['OP-001', 'OP-006', ...matrix.operations.map(row => row.operation)].sort());
+    }
     for (const row of matrix.operations.filter(row => row.kind === 'json')) {
       respond(row);
       const args = [...argumentsFor(row), '--full'];
@@ -123,19 +129,42 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
         vendors.responders.set(row.path, () => ({ body: { status: 'ok' } }));
         await fail(args, 'UPSTREAM_INVALID');
       }
+      for (const scenario of row.scenarios ?? []) {
+        const response = scenario.response ?? { ...row.response.response, ...scenario.patch };
+        for (const key of scenario.omit ?? []) delete response[key];
+        vendors.responders.set(row.path, () => scenario.httpStatus
+          ? { status: scenario.httpStatus, bytes: Buffer.alloc(0) }
+          : { body: { status: 'ok', response } });
+        const scenarioArgs = [...row.command.split(' '), ...row.parameters.filter(parameter => !(scenario.omitInputs ?? []).includes(parameter.name))
+          .flatMap(parameter => [parameter.flag, scenario.inputs?.[parameter.name] ?? parameter.requested]), '--full'];
+        if (scenario.error) await fail(scenarioArgs, scenario.error);
+        else {
+          assert.deepEqual((await success(scenarioArgs)).response, scenario.expected ?? response, `${row.operation}: ${scenario.name}`);
+          if (scenario.expected) {
+            const destination = join(directory, `${row.operation}-scenario.result`);
+            const preserved = await success([...scenarioArgs, '--result-file', destination]);
+            const bytes = Buffer.from(JSON.stringify({ status: 'ok', response }));
+            assert.deepEqual(await readFile(destination), bytes);
+            assert.equal(preserved.result.sha256, hash(bytes));
+            assert.deepEqual(preserved.response, scenario.expected);
+          }
+        }
+      }
     }
-    const options = matrix.operations.find(row => row.operation === 'OP-031');
-    vendors.responders.set(options.path, () => ({ body: { status: 'ok', response: { ...options.response.response, catalog: 'catalog1' } } }));
-    assert.equal((await success(argumentsFor(options))).response.catalog, 'catalog1');
-    vendors.responders.set(options.path, () => ({ body: { status: 'ok', response: { ...options.response.response, catalog: 7 } } }));
-    await fail(argumentsFor(options), 'UPSTREAM_INVALID');
-    checks.push('read-contracts-and-wire-matrix');
+    if (task === 'B2.01') {
+      const options = matrix.operations.find(row => row.operation === 'OP-031');
+      vendors.responders.set(options.path, () => ({ body: { status: 'ok', response: { ...options.response.response, catalog: 'catalog1' } } }));
+      assert.equal((await success(argumentsFor(options))).response.catalog, 'catalog1');
+      vendors.responders.set(options.path, () => ({ body: { status: 'ok', response: { ...options.response.response, catalog: 7 } } }));
+      await fail(argumentsFor(options), 'UPSTREAM_INVALID');
+    }
+    if (!adminTask) checks.push('read-contracts-and-wire-matrix');
   }
-  if (task === 'B2.02') {
+  if (task === 'B2.02' || adminTask) {
     for (const row of matrix.operations.filter(row => row.kind !== 'json' || ['OP-075', 'OP-079', 'OP-050'].includes(row.operation))) {
       const bytes = row.kind === 'json' ? Buffer.from(JSON.stringify(row.response)) : row.kind === 'zip'
         ? Buffer.from('504b0506000000000000000000000000000000000000', 'hex')
-        : Buffer.from(row.kind === 'csv' ? 'name,value\nsynthetic,7\n' : 'SYNTHETIC-download-bytes\n');
+        : Buffer.from(row.text ?? (row.kind === 'csv' ? 'name,value\nsynthetic,7\n' : 'SYNTHETIC-download-bytes\n'));
       const contentType = row.kind === 'json' ? 'application/json' : row.kind === 'zip' ? 'application/zip' : row.kind === 'csv' ? 'text/csv' : 'text/plain';
       vendors.responders.set(row.path, () => ({ bytes, contentType, ...(row.operation === 'OP-125' ? { headers: { 'last-modified': worlds.baseline } } : {}) }));
       const destination = join(directory, `${row.operation}.result`);
@@ -149,7 +178,7 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
       await fail([...argumentsFor(row), '--result-file', destination], 'UPSTREAM_ERROR');
       assert.deepEqual(await readFile(destination), bytes, 'Failed read replaced the last valid result');
     }
-    for (const world of worlds.transferWorlds) {
+    for (const world of matrix.operations.some(row => row.operation === 'OP-125') ? worlds.transferWorlds : []) {
       const bytes = archive(world.entries);
       const row = matrix.operations.find(row => row.operation === 'OP-125');
       vendors.responders.set(row.path, () => ({ bytes, contentType: 'application/zip', headers: { 'last-modified': worlds.baseline } }));
@@ -161,9 +190,9 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
       assert.equal(vendors.traces.at(-1).headers['if-modified-since'], worlds.baseline);
       assert.equal(vendors.traces.at(-1).inputHash, hash(new URLSearchParams({ includeZones: world.includeZones }).toString()));
     }
-    checks.push('exact-protected-formats-and-json-error-refusal');
+    if (!adminTask) checks.push('exact-protected-formats-and-json-error-refusal');
   }
-  if (task === 'B2.03') {
+  if (task === 'B2.03' || (adminTask && (!selected || selected === 'OP-020'))) {
     const row = matrix.operations.find(row => row.operation === 'OP-020');
     const zones = Array.from({ length: 203 }, (_, index) => ({ name: `z${index}.example.test`, type: 'Primary', disabled: false }));
     vendors.responders.set(row.path, (_request, body) => {
@@ -233,7 +262,7 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
     }
     respond(row);
     await fail([...argumentsFor(row), '--max-bytes', '10'], 'RESPONSE_LIMIT');
-    checks.push('paging-caps-retries-and-structured-errors');
+    if (!adminTask) checks.push('paging-caps-retries-and-structured-errors');
   }
   if (task === 'B2.04') {
     const before = vendors.traces.length;
@@ -250,5 +279,6 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
     assert.equal(vendors.traces.length, before, 'Archive review must not execute a transfer');
     checks.push('source-reviewed-backup-and-transfer-entry-map');
   }
+  if (adminTask) checks.push(`${task}:read-contracts-and-protected-results`);
   return checks;
 }

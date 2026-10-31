@@ -39,6 +39,9 @@ function project(value: unknown, shape: Shape, nullable = false): unknown {
     if (shape === 'unknown') return null;
     if (shape === 'nullable') {
       if (value !== null && typeof value !== 'string') invalid();
+    } else if (shape === 'string-or-number') {
+      // DNSKEY encodes the protocol as a number; FWD encodes its transport as a string.
+      if (typeof value !== 'string' && typeof value !== 'number') invalid();
     } else if (typeof value !== shape) invalid();
     return value;
   }
@@ -56,6 +59,7 @@ function project(value: unknown, shape: Shape, nullable = false): unknown {
   }
   if (value === null && nullable) return null;
   if (!record(value)) return invalid();
+  if (Object.hasOwn(shape, 'canView') && ['canView', 'canModify', 'canDelete'].some(key => !Object.hasOwn(value, key))) invalid();
   return Object.fromEntries(Object.entries(shape).filter(([key]) => !sensitive.test(key) && Object.hasOwn(value, key))
     .map(([key, field]) => [key, project(value[key], field, key === 'proxy')]));
 }

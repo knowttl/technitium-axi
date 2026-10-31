@@ -48,6 +48,13 @@ A nonzero Retry-After prevents an immediate retry and produces retry guidance.
 Single-use identities never retry.
 Transport, malformed JSON, missing required fields, invalid credentials, second-factor requirements, permission denial, unavailable operations and vendor failures have structured errors.
 Vendor error messages and stack traces are not echoed.
+Permission rows require all three boolean grants (`canView`, `canModify`, `canDelete`); a missing grant is an invalid response.
+Record projections preserve TXT text and FWD routing metadata, including the string transport protocol used by FWD and the numeric protocol used by DNSKEY.
+Proxy passwords remain available only in the protected result file.
+
+The admin, user, LDAP, zone and record acceptance slice runs with `npm run check:journey -- --task B2.admin-reads --paths native,artium --offline`.
+Each operation is also selectable, for example `--task B2.OP-141 --operation OP-141`.
+The generated read matrix combines the pinned documentation seeds with synthetic operation fixtures, including optional candidate lists, permission failures, unsigned zones, unsupported LDAP and exact text exports.
 
 Use `--result-file <absolute-path>` to preserve exact response bytes in an atomic protected native file.
 The result reference reports the file path, byte count and SHA-256; it never puts confidential bytes in stdout.
