@@ -46,18 +46,18 @@ Each report separates expected, executed, failed, pending and skipped cases.
 
 Hosted setup uses public login, password replacement, recent authentication, credential, tool, user and role endpoints.
 The synthetic alpha caller has the tool grant; beta is authenticated without that grant.
-The fixture stages a shared tool credential; status sends no bearer and session get consumes only the isolated injected SecretRef.
-Session get returns a caller-bound, credential-revision-bound, one-time protected-result reference alongside its redacted projection.
-The protected result is retained in bounded host memory for at most five minutes and is never written into ordinary output or audit.
+The fixture stages a shared tool credential; status sends no bearer and authenticated reads consume only the isolated injected SecretRef.
+Authenticated reads return a protected-result reference alongside their approved projection.
+The protected result is retained in bounded host memory and is never written into ordinary output or audit.
 
-The source-reviewed run, input-file and existing transfer contracts live in `tests/fixtures/host-contract.json`.
+The source-reviewed run, input-file, protected-result and existing transfer contracts live in [the reviewed host contract](../tests/fixtures/host-contract.json), including result binding, retrieval and retention limits.
 The current host has no Technitium transfer route or transfer selection.
 The harness checks that limit without inventing a route or claiming a completed transfer.
 Later transfer slices require a host extension.
 
 B2.01 through B2.04 cover the generated read matrix, protected formats, bounded paging/errors and archive-entry review.
 They use the same task selector and paths as B1.
-The B2 hosted path requires a newly reviewed fixture admitting the complete read inventory and generalizing protected result custody beyond sessions.
+The B2 hosted path uses the same pinned fixture, which admits the complete read inventory and protected results beyond sessions.
 It uses the authenticated result path returned by the host rather than inventing a Technitium transfer endpoint.
 The response matrix is generated from typed contracts and retained public documentation example seeds; all POST fixtures are synthetic.
 The archive review task performs no successful backup or transfer request.

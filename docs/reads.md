@@ -24,6 +24,7 @@ Known passwords, TSIG shared secrets and token values are excluded from generic 
 Session output preserves the existing typed identity and permission projection.
 Opaque app configuration produces only metadata, even when its keys do not look like secrets.
 `--full` expands the approved projection, not the set of confidential fields allowed into stdout.
+The collection, field-selection, paging and retry controls below apply to the additional read commands; `status` and `user session get` retain the interfaces described in the [README](../README.md).
 
 Collections default to at most 100 rows with four summary fields per object row.
 `--fields` selects documented fields on the primary object collection, or response fields for a detail read.
