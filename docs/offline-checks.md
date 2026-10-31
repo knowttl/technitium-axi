@@ -15,9 +15,12 @@ npm run typecheck
 npm run check:generated
 ```
 
-The hosted checks require the separately prepared, unmerged Artium admission fixture pinned by `source.fixtureRevision` in [the reviewed host contract](../tests/fixtures/host-contract.json).
-This is local test support, not a claim of stock Artium admission.
-Obtain the fixture export and its manifest from the fixture owner and follow its startup preparation instructions.
+The hosted checks require a maintainer-supplied, reviewed but unmerged Artium admission fixture matching [the reviewed host contract](../tests/fixtures/host-contract.json).
+Stock Artium is unsupported until admission lands upstream.
+Obtain the prepared Artium checkout, its revision and its exact reviewed JSON manifest from a maintainer.
+The manifest supplies the revision as `fixtureCommit` and lists each tool tarball in `tools`, with a `tool` name, `tarball` path and hexadecimal `sha256` digest.
+It must include `technitium-axi`; its tarball paths must resolve from the journey runner's working directory, so use absolute paths when preparing the fixture.
+The manifest bytes must match the reviewed digest; rewriting paths requires a newly reviewed manifest and contract pin.
 Prepare its dependencies and build before entering the offline namespace.
 The original fixture worktree is read-only.
 Use a disposable exported copy for these checks.
@@ -30,7 +33,10 @@ npm run check:journey -- --task B1.01 --paths native,artium --offline
 npm run check:journey -- --task B1.02 --paths native,artium --offline
 ```
 
-The harness checks the manifest digest, source-contract digests and current package tarball against the reviewed pin before starting the server.
+Pass the prepared checkout path through `ARTIUM_FIXTURE_ROOT` and the manifest path through `ARTIUM_FIXTURE_MANIFEST`; the revision is supplied through the manifest, not a separate flag.
+The harness verifies the manifest SHA-256, its `fixtureCommit` against the reviewed revision, the pinned source-file SHA-256 digests, and the `technitium-axi` tarball SHA-256 against both the manifest and the freshly packed package before starting the server.
+It refuses to continue on a mismatch; other tool tarballs are installed through the fixture's frozen pnpm lockfile with integrity checks.
+Record the fixture revision used for this PR in the PR body only, rather than copying the contract pin into this guide.
 The host registry must contain that exact installed package, with pnpm integrity checks intact.
 Missing fixture inputs for a selected Artium path, an omitted path selection and unknown paths fail explicitly.
 Native-only runs do not require the Artium fixture; every selected path must execute successfully.
