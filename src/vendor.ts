@@ -1,5 +1,4 @@
 import { request } from 'node:https';
-import { readFile } from 'node:fs/promises';
 import { checkServerIdentity } from 'node:tls';
 import type { Profile } from './credentials.js';
 import { ToolError } from './errors.js';
@@ -27,7 +26,7 @@ function object(value: unknown): value is Record<string, unknown> {
 export async function vendorRead(profile: Profile, operation: 'status' | 'user session get', token?: string) {
   const origin = new URL(profile.origin);
   if (origin.origin !== profile.origin || origin.protocol !== 'https:') responseInvalid();
-  const ca = profile.caFile ? await readFile(profile.caFile) : undefined;
+  const ca = profile.caFile ? await new PrivateFiles().read(profile.caFile, false) : undefined;
   const body = operation === 'status' ? '' : 'includeInfo=true';
   const bytes = await new Promise<Buffer>((resolve, reject) => {
     const call = request(origin, {

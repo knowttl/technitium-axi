@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { isAbsolute, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { Ajv } from 'ajv';
 import { PrivateFiles } from './private-file.js';
 import { invalid, ToolError } from './errors.js';
@@ -62,7 +62,10 @@ export async function loadConfig(path: string, explicit = false): Promise<Config
   let config: unknown;
   try { config = JSON.parse(raw); } catch { invalid('Config must contain valid JSON'); }
   if (!(await validator()).config(config)) invalid('Invalid config, profile fields or SecretRef');
-  for (const profile of Object.values(config.profiles)) validateOrigin(profile);
+  for (const profile of Object.values(config.profiles)) {
+    validateOrigin(profile);
+    if (profile.caFile) profile.caFile = resolve(dirname(path), profile.caFile);
+  }
   if (config.defaultProfile && !Object.hasOwn(config.profiles, config.defaultProfile)) invalid('Default profile does not exist');
   return config;
 }
@@ -87,6 +90,7 @@ export async function selectProfile(options: { config?: string; profile?: string
     const value = Object.fromEntries(envFields.map(([field, suffix]) => [field, field === 'token'
       ? { env: 'TECHNITIUM_AXI_TOKEN' } : process.env[`TECHNITIUM_AXI_${suffix}`]]));
     if (!(await validator()).profile(value)) invalid('Incomplete or invalid environment profile');
+    if (value.caFile && !isAbsolute(value.caFile)) invalid('Environment caFile must be an absolute path');
     name = 'env'; source = 'environment'; profile = value;
   } else {
     const names = Object.keys(config.profiles);

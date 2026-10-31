@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { chmod, readFile } from 'node:fs/promises';
 import { createServer, request } from 'node:https';
 import { connect } from 'node:net';
 import { join } from 'node:path';
@@ -11,6 +11,7 @@ export async function fakeVendors(temporary, run, env) {
   const generated = await run('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1',
     '-keyout', key, '-out', cert, '-subj', '/CN=localhost', '-addext', 'subjectAltName=IP:127.0.0.1,DNS:localhost'], { env });
   assert.equal(generated.code, 0, generated.stderr);
+  await chmod(cert, 0o600);
   const tls = { key: await readFile(key), cert: await readFile(cert) };
   const traces = [];
   const tokens = new Map();

@@ -5,10 +5,10 @@ import { join } from 'node:path';
 
 export const credentialTasks = {
   'B1.03': ['selection', 'invalid', 'refs', 'isolation', 'noninteractive'],
-  'B1.04': ['insecure', 'atomic', 'tls', 'result'],
+  'B1.04': ['insecure', 'atomic', 'tls', 'insecure-ca', 'relative-ca', 'result'],
   'B1.CR-001': ['selection'], 'B1.CR-002': ['invalid'], 'B1.CR-003': ['refs'],
   'B1.CR-004': ['insecure'], 'B1.CR-005': ['atomic'], 'B1.CR-008': ['isolation'],
-  'B1.CR-011': ['tls'], 'B1.CR-012': ['noninteractive'],
+  'B1.CR-011': ['tls', 'insecure-ca', 'relative-ca'], 'B1.CR-012': ['noninteractive'],
   'B1.OP-001': ['status'], 'B1.OP-006': ['session', 'login-session', 'single-use-session'],
 };
 const hash = value => createHash('sha256').update(value).digest('hex');
@@ -165,6 +165,28 @@ export async function credentialJourney({ task, temporary, env, run, executable,
         assert.equal(vendors.traces.length, count, 'TLS failure sent a credential-bearing HTTP request');
       }
       await writeConfig(seeded);
+      await reject(session, 'CONFIG_INVALID', { ...environment, TECHNITIUM_AXI_CA_FILE: 'ca.pem' });
+    },
+    async 'insecure-ca'() {
+      const caFile = join(directory, 'untrusted-ca.pem');
+      await writeFile(caFile, await readFile(vendors.caFile), { mode: 0o600 });
+      await chmod(caFile, 0o666);
+      await writeConfig({ ...seeded, profiles: { alpha: { ...profile(), caFile } } });
+      for (const args of [session, ['doctor'], ['status'], []]) await reject(args, 'CONFIG_INSECURE');
+      await reject(session, 'CONFIG_INSECURE', { ...environment, TECHNITIUM_AXI_CA_FILE: caFile });
+      await writeConfig(seeded);
+    },
+    async 'relative-ca'() {
+      const trusted = join(directory, 'trusted');
+      await mkdir(trusted, { mode: 0o700 });
+      await writeFile(join(trusted, 'ca.pem'), await readFile(vendors.caFile), { mode: 0o600 });
+      const declared = join(trusted, 'config.json');
+      await writeFile(declared, JSON.stringify({ ...seeded, profiles: { alpha: { ...profile(), caFile: 'ca.pem' } } }), { mode: 0o600 });
+      for (const args of [session, ['doctor']]) assert.equal((await ok(args, {}, declared)).username, 'planner');
+      assert.equal((await ok(['status'], {}, declared)).server, 'dns-alpha.example.test');
+      const imported = join(directory, 'imported.json');
+      await ok(['config', 'import', '--input-file', declared], {}, imported);
+      assert.equal((await ok(session, {}, imported)).username, 'planner');
     },
     async result() {
       const destination = join(directory, 'results', 'session.json');
