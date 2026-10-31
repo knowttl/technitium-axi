@@ -3,20 +3,20 @@
   "source": {
     "repository": "https://github.com/knowttl/artium-axi",
     "baseline": "63719968d6dfae0d1d8c5b59a284fab388626a3a",
-    "fixtureRevision": "3cfc65afc2d7c1a0f50d2f6e02dc2ee13d6fd7e8",
-    "manifestSha256": "7ffa36cf084a169cfa4582390964345e606cb610a5c47a3c91bff4a9b05d6875",
+    "fixtureRevision": "bfe22bd26ae49e71134349fa75cba8406587274c",
+    "manifestSha256": "0aa59168ff2265b894745ec6d6447eaa522f3f431486d61969adc949b98a7bf7",
     "files": {
       "src/shared/api.ts": "32901be14a0cf27f294c389ddd1b36bce9e05bd78d6d24c61f0bf08959828a1d",
-      "src/server/app.ts": "fa6b1f44c81f1db5dd59d73ea7e6fadace2d0d59cc1f78997a09a966733c17c1",
-      "src/server/adapters/technitium.ts": "08f3c4321e34054b6852f9ff229f5a863bbcb09f54090ad2d9e191ac53c22072",
-      "tools/pnpm-lock.yaml": "2058e30782578f499de5d4525eacf3f208d2144a60de000215c95ca514271cb5"
+      "src/server/app.ts": "f9c4f05be5802f009e3a5a1545bc2cd647499a71ca0f18fd7045eed8f191d9b7",
+      "src/server/adapters/technitium.ts": "7c1d5e5f75f74c5dc28e7a298f1f4b7c9496333ff40667690bc40de2ec3b99a7",
+      "tools/pnpm-lock.yaml": "cd0e1a7b946d51b10c0720d3ae08adb18f3c3ab9b15f6a1aed9ad9e3cd231031"
     }
   },
   "seed": {
     "callers": ["alpha", "beta"],
     "granted": ["alpha"],
     "vendorIdentities": ["alpha", "beta"],
-    "credentialPolicy": "The admission fixture stages one shared tool credential. Discovery consumes no vendor credential. Per-caller vendor credential conformance belongs to later credential tasks."
+    "credentialPolicy": "The admission fixture injects one shared tool credential into an isolated artium profile using v2 SecretRefs. Status is unauthenticated. Session results are bound to caller, operation and credential revision and retrieved once through an authenticated route."
   },
   "request": {
     "run": {

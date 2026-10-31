@@ -17,6 +17,6 @@
     "test": "npm run check:journey -- --task B1.01 --paths native --offline && npm run check:journey -- --task B1.02 --paths native --offline",
     "prepack": "npm run build && npm run check:generated"
   },
-  "dependencies": { "@toon-format/toon": "4.4.0" },
-  "devDependencies": { "@types/node": "24.10.0", "typescript": "5.9.3", "ajv": "8.17.1" }
+  "dependencies": { "@toon-format/toon": "4.4.0", "ajv": "8.17.1" },
+  "devDependencies": { "@types/node": "24.10.0", "typescript": "5.9.3" }
 }

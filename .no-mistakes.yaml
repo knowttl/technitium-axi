@@ -7,7 +7,7 @@ agent_args_override:
     - model_reasoning_effort="medium"
 no_ci: true
 commands:
-  test: npm test && node --test tests/journey.test.mjs && npm run check:journey -- --task B1.01 --paths native --offline && npm run check:journey -- --task B1.02 --paths native --offline
+  test: npm test && node --test tests/journey.test.mjs tests/vendor.test.mjs tests/private-file.test.mjs && npm run check:journey -- --task B1.01 --paths native --offline && npm run check:journey -- --task B1.02 --paths native --offline
   lint: npm run typecheck && npm run check:generated
 review:
   path_instructions:

@@ -1,6 +1,13 @@
 export const commands = [
   { command: 'schema', description: 'Show the credential profile JSON Schema', effect: 'local', arguments: [], flags: ['--json', '--help'] },
   { command: 'inventory', description: 'Show the packaged command inventory', effect: 'local', arguments: [], flags: ['--json', '--help'] },
+  { command: 'status', description: 'Read the selected server status without sending a credential', effect: 'read', operation: 'OP-001', arguments: [], flags: ['--json', '--help', '--config', '--profile'] },
+  { command: 'user session get', description: 'Read the selected session with a redacted projection and optional protected result file', effect: 'read', operation: 'OP-006', arguments: [], flags: ['--json', '--help', '--config', '--profile', '--result-file'] },
+  { command: 'auth status', description: 'Verify the selected credential and report its source without values', effect: 'local', arguments: [], flags: ['--json', '--help', '--config', '--profile'] },
+  { command: 'profile list', description: 'List profile names from the selected config', effect: 'local', arguments: [], flags: ['--json', '--help', '--config'] },
+  { command: 'config path', description: 'Show the selected config path', effect: 'local', arguments: [], flags: ['--json', '--help', '--config'] },
+  { command: 'config import', description: 'Validate and atomically install a config containing SecretRefs', effect: 'local', arguments: [], flags: ['--json', '--help', '--config', '--input-file'] },
+  { command: 'doctor', description: 'Verify credential protection and perform one bounded session read', effect: 'read', arguments: [], flags: ['--json', '--help', '--config', '--profile'] },
 ] as const;
 
 export const inventory = { version: 1, tool: 'technitium-axi', commands };
