@@ -82,8 +82,8 @@ if (!inside) {
       TMPDIR: temporary, NODE_DISABLE_COMPILE_CACHE: '1',
       npm_config_cache: join(temporary, 'cache'), npm_config_offline: 'true',
       npm_config_audit: 'false', npm_config_fund: 'false' };
-    // Tarballs have a single pinned dependency; use the prepared npm cache only
-    // during offline installation, never expose the caller's home to the tool.
+    // Use the prepared npm cache only during offline installation;
+    // never expose the caller's home to the tool.
     const cache = process.env.npm_config_cache ?? join(homedir(), '.npm');
     const installEnvironment = { ...env, npm_config_cache: cache };
     const packed = await run('npm', ['pack', '--offline', '--json', '--pack-destination', temporary], { env: installEnvironment });
