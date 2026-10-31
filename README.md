@@ -4,6 +4,13 @@ AXI-standard agent-facing CLI for Technitium DNS Server.
 The package provides status and session reads, strict credential profiles, offline discovery and protected session-result files.
 Vendor mutations are unavailable.
 
+Install the public npm package globally, then run the `technitium-axi` executable:
+
+```sh
+npm install -g @knowttl/technitium-axi
+technitium-axi --help
+```
+
 Use the Node version pinned in [.node-version](.node-version) and the npm version in the `packageManager` field of [package.json](package.json).
 
 ```sh
@@ -25,6 +32,8 @@ npm run check:journey -- --task B1.02 --paths native --offline
 ```
 
 See [Offline package journeys](docs/offline-checks.md) for isolation, synthetic harness boundaries, cleanup and the full native and Artium checks with their required fixture setup.
+
+Release automation runs `npm run test:release` and installs the packed package for CLI smoke checks with registry access, without a prepared offline cache.
 
 Configure a version 1 config with a named profile containing an HTTPS `origin`, `auth: "token"`, `tokenKind: "api"` and `token: {"env": "MY_TECHNITIUM_TOKEN"}`.
 `schema --json` describes the accepted profile fields.
