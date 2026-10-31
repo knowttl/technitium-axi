@@ -114,6 +114,11 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
         await fail(args, 'UPSTREAM_INVALID');
       }
     }
+    const options = matrix.operations.find(row => row.operation === 'OP-031');
+    vendors.responders.set(options.path, () => ({ body: { status: 'ok', response: { ...options.response.response, catalog: 'catalog1' } } }));
+    assert.equal((await success(argumentsFor(options))).response.catalog, 'catalog1');
+    vendors.responders.set(options.path, () => ({ body: { status: 'ok', response: { ...options.response.response, catalog: 7 } } }));
+    await fail(argumentsFor(options), 'UPSTREAM_INVALID');
     checks.push('read-contracts-and-wire-matrix');
   }
   if (task === 'B2.02') {
@@ -167,6 +172,32 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
     assert.equal(bounded.output.complete, false);
     assert.equal(bounded.output.nextPage, 3);
     assert.deepEqual((await success(['zone', 'list', '--fields', 'name'])).response.zones[0], { name: 'z0.example.test' });
+    const empty = { pageNumber: 0, totalPages: 0, totalZones: 0, zones: [] };
+    for (const args of [['zone', 'list'], ['zone', 'list', '--full'], ['zone', 'list', '--page-number', '2']]) {
+      vendors.responders.set(row.path, () => ({ body: { status: 'ok', response: empty } }));
+      const result = await success(args);
+      assert.deepEqual(result.response, empty);
+      assert.equal(result.output.complete, true);
+      assert.equal(result.output.requests, 1);
+      assert.equal(result.output.nextPage, undefined);
+    }
+    for (const ending of [empty, { ...empty, totalPages: 1 }, { ...empty, totalZones: 1 }, { ...empty, zones: [zones[0]] },
+      { ...empty, pageNumber: 3 }]) {
+      for (const subsequent of [false, true]) {
+        vendors.responders.set(row.path, (_request, body) => {
+          const page = Number(new URLSearchParams(body.toString()).get('pageNumber'));
+          return { body: { status: 'ok', response: subsequent && page === 1
+            ? { zones: [zones[0]], pageNumber: 1, totalPages: 2, totalZones: 2 } : ending } };
+        });
+        if (ending === empty) {
+          const result = await success(['zone', 'list', '--full']);
+          assert.deepEqual(result.response.zones, subsequent ? [zones[0]] : []);
+          assert.equal(result.output.pages, subsequent ? 2 : 1);
+          assert.equal(result.output.complete, !subsequent);
+          if (subsequent) assert.equal(result.output.stoppedBy, 'PROVIDER_TOTAL_MISMATCH');
+        } else await fail(['zone', 'list', '--full'], 'UPSTREAM_INVALID');
+      }
+    }
     let attempts = 0;
     vendors.responders.set(row.path, () => ++attempts === 1 ? { status: 503, body: {} } : { body: row.response });
     assert.equal((await success(argumentsFor(row))).response.zones.length, row.response.response.zones.length);

@@ -159,7 +159,10 @@ export async function readOperation(profile: Profile, command: string, token: st
   let continuation: number | undefined;
   let stoppedBy: string | undefined;
   if (paged && listKey) {
-    if (!Array.isArray(payload[listKey]) || payload.pageNumber !== Number(form.get('pageNumber'))) invalid();
+    const validPage = (value: Record<string, unknown>, page: number) => Array.isArray(value[listKey]) &&
+      (value.pageNumber === page || (contract.id === 'OP-020' && value.pageNumber === 0 &&
+        value.totalPages === 0 && value.totalZones === 0 && (value[listKey] as unknown[]).length === 0));
+    if (!validPage(payload, Number(form.get('pageNumber')))) invalid();
     const identity = (row: unknown): string => {
       if (!record(row) || (contract.id === 'OP-020' ? typeof row.name !== 'string' : !Number.isSafeInteger(row.rowNumber))) return invalid();
       return JSON.stringify(contract.id === 'OP-020' ? row.name : row.rowNumber);
@@ -191,7 +194,7 @@ export async function readOperation(profile: Profile, command: string, token: st
       }
       if (next.contentType !== 'application/json') invalid();
       last = decode(next.bytes);
-      if (last.pageNumber !== page || !Array.isArray(last[listKey])) invalid();
+      if (!validPage(last, page)) invalid();
       for (const row of last[listKey] as unknown[]) {
         const key = identity(row);
         if (!seen.has(key)) { seen.add(key); rows.push(row); }

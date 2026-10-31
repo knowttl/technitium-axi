@@ -2762,7 +2762,7 @@
             "192.168.10.5"
           ],
           "disabled": false,
-          "catalog": "catalog1",
+          "catalog": null,
           "overrideCatalogQueryAccess": false,
           "overrideCatalogZoneTransfer": false,
           "overrideCatalogNotify": false,
@@ -2815,7 +2815,7 @@
           "192.168.10.5"
         ],
         "disabled": false,
-        "catalog": "catalog1",
+        "catalog": null,
         "overrideCatalogQueryAccess": false,
         "overrideCatalogZoneTransfer": false,
         "overrideCatalogNotify": false,
@@ -6041,7 +6041,14 @@
           "permissions": [
             {
               "section": "Dashboard",
-              "userPermissions": [],
+              "userPermissions": [
+                {
+                  "username": "shreyas",
+                  "canView": true,
+                  "canModify": false,
+                  "canDelete": false
+                }
+              ],
               "groupPermissions": [
                 {
                   "name": "Administrators",
@@ -6304,7 +6311,14 @@
         "permissions": [
           {
             "section": "Dashboard",
-            "userPermissions": [],
+            "userPermissions": [
+              {
+                "username": "shreyas",
+                "canView": true,
+                "canModify": false,
+                "canDelete": false
+              }
+            ],
             "groupPermissions": [
               {
                 "name": "Administrators",
