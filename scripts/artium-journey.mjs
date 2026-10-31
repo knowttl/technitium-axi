@@ -181,8 +181,11 @@ export async function artiumJourney({ temporary, sha256, env, run, packageRoot, 
     assert.ok(startups.some(startup => startup.argv.slice(2).join(' ') === 'schema --json'));
     assert.ok(startups.some(startup => startup.argv.slice(2).join(' ') === 'inventory --json'));
     assert.deepEqual(await readdir(join(scratch, 'calls')), []);
+    const publicStartups = startups.map(startup => ({ ...startup,
+      argv: ['node', '<host-installed-package>/bin/technitium-axi.js', ...startup.argv.slice(2)],
+    }));
     console.log(JSON.stringify({ host: { fixtureRevision: manifest.fixtureCommit, manifestSha256: hash(manifestBytes),
-      packageSha256: sha256, processStarts: startups, requests: traces } }));
+      packageSha256: sha256, argvPaths: 'normalized after exact installed-path checks', processStarts: publicStartups, requests: traces } }));
     return ['artium:public-discovery', 'artium:authenticated-run-and-denial', 'artium:file-and-transfer-contract', 'artium:installed-process-provenance'];
   } finally {
     server.kill('SIGTERM');

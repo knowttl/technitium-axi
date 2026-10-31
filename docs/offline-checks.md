@@ -47,6 +47,7 @@ The harness checks that limit without inventing a route or claiming a completed 
 Later transfer slices require a host extension.
 
 Node diagnostics report actual child PID, argv and executable hash without replacing the runner.
+The harness verifies exact executable paths before normalizing their prefixes in emitted evidence.
 Public request traces retain method, path, safe header metadata, input hash and synthetic caller identity.
 They omit authorization values and request bodies.
 Save reports outside the repository when retaining local evidence.
