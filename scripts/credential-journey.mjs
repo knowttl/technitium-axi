@@ -9,7 +9,7 @@ export const credentialTasks = {
   'B1.CR-001': ['selection'], 'B1.CR-002': ['invalid'], 'B1.CR-003': ['refs'],
   'B1.CR-004': ['insecure'], 'B1.CR-005': ['atomic'], 'B1.CR-008': ['isolation'],
   'B1.CR-011': ['tls'], 'B1.CR-012': ['noninteractive'],
-  'B1.OP-001': ['status'], 'B1.OP-006': ['session'],
+  'B1.OP-001': ['status'], 'B1.OP-006': ['session', 'login-session', 'single-use-session'],
 };
 const hash = value => createHash('sha256').update(value).digest('hex');
 
@@ -105,6 +105,16 @@ export async function credentialJourney({ task, temporary, env, run, executable,
       await writeConfig({ ...seeded, profiles: { alpha: { ...profile(), token: { file: linked } } } });
       await reject(session, 'CONFIG_INSECURE');
       await writeConfig(seeded);
+      await chmod(config, 0o666);
+      await reject(['status'], 'CONFIG_INSECURE');
+      await chmod(config, 0o600);
+      const storedDirectory = join(env.XDG_STATE_HOME, 'technitium-axi');
+      await mkdir(storedDirectory, { recursive: true, mode: 0o700 });
+      const storedFile = join(storedDirectory, 'credentials.json');
+      await writeFile(storedFile, '{}', { mode: 0o644 });
+      await writeConfig({ ...seeded, profiles: { alpha: { ...profile(), token: { stored: true } } } });
+      await reject(session, 'CONFIG_INSECURE');
+      await writeConfig(seeded);
     },
     async atomic() {
       const input = join(directory, 'import.json');
@@ -179,8 +189,25 @@ export async function credentialJourney({ task, temporary, env, run, executable,
       vendors.faults.set('alpha', 'true');
       assert.equal((await invoke(session)).value.error.code, 'UPSTREAM_INVALID');
       vendors.faults.delete('alpha');
+      vendors.tokenKinds.set('alpha', 'session');
+      assert.equal((await invoke(session)).value.error.code, 'UPSTREAM_INVALID');
+      vendors.tokenKinds.delete('alpha');
     },
   };
+  for (const [name, tokenKind] of [['login-session', 'session'], ['single-use-session', 'single-use']]) {
+    tests[name] = async () => {
+      vendors.tokenKinds.set('alpha', tokenKind);
+      await writeConfig({ ...seeded, profiles: { alpha: { ...profile(), tokenKind } } });
+      const destination = join(directory, 'results', `${tokenKind}.json`);
+      const value = await ok([...session, '--result-file', destination]);
+      assert.equal(value.username, 'planner');
+      assert.equal(Object.hasOwn(value, 'tokenName'), false);
+      assert.equal(JSON.parse(await readFile(destination, 'utf8')).token, token);
+      assert.equal((await ok(['doctor'])).username, 'planner');
+      vendors.tokenKinds.delete('alpha');
+      await writeConfig(seeded);
+    };
+  }
   const checks = [];
   for (const test of credentialTasks[task]) { await tests[test](); checks.push(`native:${test}`); }
   return checks;

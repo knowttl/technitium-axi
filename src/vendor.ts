@@ -69,14 +69,16 @@ export async function vendorRead(profile: Profile, operation: 'status' | 'user s
     if (typeof value.server !== 'string' || typeof value.hasDefaultCredentials !== 'boolean' || typeof value.ssoEnabled !== 'boolean') responseInvalid();
     return { bytes, projection: { status: 'ok', server: value.server, hasDefaultCredentials: value.hasDefaultCredentials, ssoEnabled: value.ssoEnabled } };
   }
-  if (typeof value.username !== 'string' || typeof value.tokenName !== 'string' || typeof value.token !== 'string' || !object(value.info) || typeof value.info.version !== 'string') responseInvalid();
+  if (typeof value.username !== 'string' || typeof value.token !== 'string' || !object(value.info) || typeof value.info.version !== 'string') responseInvalid();
+  if ((profile.tokenKind === 'api' || value.tokenName !== undefined) && typeof value.tokenName !== 'string') responseInvalid();
   const permissions = value.info.permissions;
   if (!object(permissions)) responseInvalid();
   if (value.hasDnssecPrivateKeys !== undefined && typeof value.hasDnssecPrivateKeys !== 'boolean') responseInvalid();
   for (const permission of Object.values(permissions)) {
     if (!object(permission) || Object.values(permission).some(flag => typeof flag !== 'boolean')) responseInvalid();
   }
-  return { bytes, projection: { status: 'ok', username: value.username, tokenName: value.tokenName,
+  return { bytes, projection: { status: 'ok', username: value.username,
+    ...(value.tokenName !== undefined ? { tokenName: value.tokenName } : {}),
     ...(value.hasDnssecPrivateKeys !== undefined ? { hasDnssecPrivateKeys: value.hasDnssecPrivateKeys } : {}),
     info: { version: value.info.version, permissions } }, secret: value.token };
 }

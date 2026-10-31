@@ -68,7 +68,7 @@ export async function main(args: string[]): Promise<void> {
       return;
     }
     if (options.resultFile && !isAbsolute(options.resultFile)) throw new ToolError('USAGE', 'Result file must be absolute', 'Use --result-file <absolute-path>');
-    const credential = await selectProfile(options, command === 'auth status' || command === 'doctor');
+    const credential = await selectProfile(options);
     let token: string | undefined;
     if (command && command !== 'status') { token = await credential.token(); redactor.add(token); }
     if (command === 'auth status') {

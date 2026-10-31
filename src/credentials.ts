@@ -67,7 +67,7 @@ export async function loadConfig(path: string, explicit = false): Promise<Config
   return config;
 }
 
-export async function selectProfile(options: { config?: string; profile?: string }, verifyAcl = false) {
+export async function selectProfile(options: { config?: string; profile?: string }) {
   readOnly();
   const path = configPath(options.config);
   const config = await loadConfig(path, options.config !== undefined || process.env.TECHNITIUM_AXI_CONFIG !== undefined);
@@ -95,16 +95,15 @@ export async function selectProfile(options: { config?: string; profile?: string
     name = selected; source = config.defaultProfile ? 'default' : 'sole'; profile = config.profiles[name]!;
   }
   validateOrigin(profile);
-  if (verifyAcl && source !== 'environment') await files.read(path, false, true);
   const tokenRef = profile.token ?? { env: 'TECHNITIUM_AXI_TOKEN' };
   const tokenSource = 'env' in tokenRef ? { env: tokenRef.env } : 'file' in tokenRef ? { file: tokenRef.file } : { stored: statePath() };
   return { name, source, path, profile, tokenSource, async token(): Promise<string> {
     let token: string | undefined;
     if ('env' in tokenRef) token = process.env[tokenRef.env];
-    else if ('file' in tokenRef) token = (await files.read(tokenRef.file, true, verifyAcl)).replace(/^\uFEFF/, '').trimEnd();
+    else if ('file' in tokenRef) token = (await files.read(tokenRef.file)).replace(/^\uFEFF/, '').trimEnd();
     else {
       let stored: Record<string, { binding: unknown; token: string }>;
-      try { stored = JSON.parse(await files.read(statePath(), true, verifyAcl)); }
+      try { stored = JSON.parse(await files.read(statePath())); }
       catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
         stored = {};

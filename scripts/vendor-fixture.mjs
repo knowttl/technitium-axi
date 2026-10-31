@@ -14,6 +14,7 @@ export async function fakeVendors(temporary, run, env) {
   const tls = { key: await readFile(key), cert: await readFile(cert) };
   const traces = [];
   const tokens = new Map();
+  const tokenKinds = new Map();
   const faults = new Map();
   const servers = [];
   try {
@@ -34,7 +35,8 @@ export async function fakeVendors(temporary, run, env) {
           const token = tokens.get(identity);
           outgoing.end(JSON.stringify(bearer !== token || incoming.method !== 'POST' || body.toString() !== 'includeInfo=true'
             ? { status: 'invalid-token' }
-            : { status: 'ok', username: 'planner', tokenName: 'automation-1', token,
+            : { status: 'ok', username: 'planner',
+              ...((tokenKinds.get(identity) ?? 'api') === 'api' ? { tokenName: 'automation-1' } : {}), token,
               unknownConfidential: token, escaped: encodeURIComponent(token), hasDnssecPrivateKeys: false,
               info: { version: '15.4', permissions: { Administration: { canModify: faults.get(identity) ?? false } } } }));
         } else outgoing.end(JSON.stringify({ status: 'ok', fixtureIdentity: identity }));
@@ -44,7 +46,7 @@ export async function fakeVendors(temporary, run, env) {
     }
     return {
       traces,
-      tokens, faults, caFile: cert,
+      tokens, tokenKinds, faults, caFile: cert,
       origins: servers.map(server => `https://127.0.0.1:${server.address().port}`),
       async check() {
         for (const [index, server] of servers.entries()) {

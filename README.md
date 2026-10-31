@@ -51,4 +51,6 @@ The environment profile uses `TECHNITIUM_AXI_ORIGIN`, `TECHNITIUM_AXI_AUTH`, `TE
 `user session get` returns a redacted projection; `--result-file` additionally saves the exact confidential JSON in an atomic protected file and reports its path, byte count and SHA-256.
 `caFile` and `tlsServerName` select trust and certificate identity while certificate verification stays enabled.
 `doctor` verifies credential protection and performs one bounded session read.
-Linux file protection is verified natively; native Windows ACL and interruption verification remain pending.
+Linux file protection is verified natively; native Windows file protection and interruption verification remain PENDING.
+Windows file reads and writes are refused until ownership and ACL verification is available.
+Environment-only profiles and env SecretRefs remain supported when no config file is present.
