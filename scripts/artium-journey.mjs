@@ -180,7 +180,7 @@ export async function artiumJourney({ temporary, sha256, env, run, packageRoot, 
       // Grant beta the tool too: result ownership must apply independently of tool policy.
       const users = await success('/v1/admin/users', undefined, admin);
       const beta = users.users.find(user => user.username === 'beta');
-      await success(`/v1/admin/users/${beta.id}`, { roleIds: [role.id], expectedRevision: beta.revision }, admin, 'PATCH');
+      await success(`/v1/admin/users/${beta.id}/roles`, { roleIds: [role.id], expectedRevision: beta.revision }, admin, 'PUT');
       const rejected = await request(session.result.path, undefined, actors.beta, 'GET', 'beta');
       assert.equal(rejected.value.error.code, 'NOT_FOUND');
       const delivered = await fetch(`${origin}${session.result.path}`, { headers: actors.alpha, signal });
@@ -199,6 +199,32 @@ export async function artiumJourney({ temporary, sha256, env, run, packageRoot, 
         assert.equal(vendors.traces.length, count);
       }
       assert.ok(vendors.traces.slice(before).every(trace => trace.identity === 'alpha'));
+      const hostProfile = { origin: origins[0], auth: 'token', tokenKind: 'api', token: vendorToken,
+        caFile: await readFile(vendors.caFile, 'utf8'), tlsServerName: 'localhost' };
+      const replace = async (value, accepted = true) => {
+        const credential = await success('/v1/admin/tools/technitium-axi/credential', undefined, admin);
+        const tool = await success('/v1/admin/tools/technitium-axi', undefined, admin);
+        const count = vendors.traces.length;
+        const response = await request('/v1/admin/tools/technitium-axi/credential', {
+          expectedRevision: credential.revision, expectedToolRevision: tool.revision, value,
+        }, admin, 'PUT');
+        if (accepted) assert.ok(response.status < 300, JSON.stringify(response.value));
+        else {
+          assert.equal(response.value.error.code, 'INVALID_INPUT');
+          assert.equal(vendors.traces.length, count);
+        }
+      };
+      await replace({ ...hostProfile, token: { env: 'DEVELOPER_TOKEN' } }, false);
+      await replace({ ...hostProfile, unexpected: true }, false);
+      const pending = await invoke(['user', 'session', 'get']);
+      await replace({ ...hostProfile, tlsServerName: 'wrong.example.test' });
+      const count = vendors.traces.length;
+      const badTrust = await run(process.execPath, [cli, 'technitium-axi', 'user', 'session', 'get', '--json'], { env: clientEnv('alpha') });
+      assert.notEqual(badTrust.code, 0);
+      assert.equal(JSON.parse(badTrust.stdout).error.code, 'TRANSPORT_FAILED');
+      assert.equal(vendors.traces.length, count);
+      assert.equal((await request(pending.result.path, undefined, actors.alpha)).value.error.code, 'NOT_FOUND');
+      await replace(hostProfile);
     }
     const cases = [
       [{ args: ['--bogus'] }, fixture.expected.unknownFlag],
