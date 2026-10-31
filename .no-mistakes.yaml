@@ -6,6 +6,9 @@ agent_args_override:
     - -c
     - model_reasoning_effort="medium"
 no_ci: true
+commands:
+  test: npm test && node --test tests/journey.test.mjs && npm run check:journey -- --task B1.01 --paths native,artium --offline && npm run check:journey -- --task B1.02 --paths native,artium --offline
+  lint: npm run typecheck && npm run check:generated
 review:
   path_instructions:
     - path: "**"
