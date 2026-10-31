@@ -3,7 +3,7 @@
   "source": { "contract": "AXI Credential Standard v2", "repository": "https://github.com/knowttl/artium-axi", "revision": "63719968d6dfae0d1d8c5b59a284fab388626a3a" },
   "seed": { "node": "24.14.0", "npm": "11.9.0", "profile": { "origin": "https://127.0.0.1:9443", "auth": "token", "tokenKind": "api", "token": { "env": "SYNTHETIC_TOKEN" }, "writes": { "allowWrites": false, "operations": [] } } },
   "request": { "commands": ["--help", "--version", "schema --json", "inventory --json"], "network": "none" },
-  "response": { "version": "0.1.0", "commands": ["schema", "inventory"] },
+  "response": { "version": "0.1.0", "commands": ["schema", "inventory", "status", "user session get", "auth status", "profile list", "config path", "config import", "doctor"] },
   "expected": { "unknownFlagExit": 2, "secretAnnotation": true },
   "preserve": { "userConfiguration": "unavailable", "vendorRequests": 0 },
   "faults": ["unknown flag", "unknown command", "extra argument", "inline secret"]

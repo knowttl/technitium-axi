@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import Ajv from 'ajv';
 import { decode } from '@toon-format/toon';
 import { fakeVendors } from './vendor-fixture.mjs';
+import { credentialJourney, credentialTasks } from './credential-journey.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2);
@@ -16,14 +17,17 @@ if (inside) args.pop();
 let task;
 let paths;
 let offline = false;
+let operation;
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
   if (arg === '--task' && !task) task = args[++i];
   else if (arg === '--paths' && !paths) paths = args[++i]?.split(',');
   else if (arg === '--offline' && !offline) offline = true;
+  else if (arg === '--operation' && !operation) operation = args[++i];
   else throw new Error(`Unknown or repeated journey argument: ${arg}`);
 }
-assert.ok(['B1.01', 'B1.02'].includes(task), 'Select --task B1.01 or B1.02');
+assert.ok(['B1.01', 'B1.02', ...Object.keys(credentialTasks)].includes(task), 'Select a supported --task');
+assert.equal(operation, task?.startsWith('B1.OP-') ? task.slice(3) : undefined, 'Operation selection must match the operation task');
 assert.ok(paths?.length && new Set(paths).size === paths.length && paths.every(path => ['native', 'artium'].includes(path)), 'Select --paths native,artium');
 assert.ok(offline, '--offline is required');
 
@@ -67,7 +71,8 @@ if (!inside) {
   const temporary = await mkdtemp(join(tmpdir(), 'technitium-journey-'));
   let vendors;
   const checks = [];
-  const expected = (paths.includes('native') ? (task === 'B1.02' ? 7 : 5) : 0) + (paths.includes('artium') ? 4 : 0);
+  const identityTask = Object.hasOwn(credentialTasks, task);
+  const expected = (paths.includes('native') ? (identityTask ? credentialTasks[task].length : task === 'B1.02' ? 7 : 5) : 0) + (paths.includes('artium') ? (identityTask ? 5 : 4) : 0);
   try {
     const home = join(temporary, 'home');
     await mkdir(home, { mode: 0o700 });
@@ -95,11 +100,14 @@ if (!inside) {
     assert.equal(await realpath(executable), join(packageRoot, 'bin', 'technitium-axi.js'));
     const setup = JSON.parse(await readFile(new URL('../tests/fixtures/setup.json', import.meta.url), 'utf8'));
     const invoke = argv => run(executable, argv, { cwd: home, env });
-    if (task === 'B1.02') {
+    if (task === 'B1.02' || identityTask) {
       vendors = await fakeVendors(temporary, run, env);
       await vendors.check();
     }
-    if (paths.includes('native')) {
+    if (paths.includes('native') && identityTask) {
+      checks.push(...await credentialJourney({ task, temporary, env, run, executable, vendors }));
+    }
+    if (paths.includes('native') && !identityTask) {
       for (const flag of ['--version', '-v', '-V']) {
         const result = await invoke([flag]);
         assert.deepEqual(result, { code: 0, stdout: `${setup.response.version}\n`, stderr: '' });
@@ -156,13 +164,13 @@ if (!inside) {
     if (paths.includes('artium')) {
       const { artiumJourney } = await import('./artium-journey.mjs');
       checks.push(...await artiumJourney({ temporary, sha256, env, run, packageRoot,
-        origins: vendors?.origins, signal: cancellation.signal }));
+        origins: vendors?.origins, vendors, task, identityTask, signal: cancellation.signal }));
     }
-    if (vendors) assert.equal(vendors.traces.length, 2, 'Discovery must not contact either fake vendor');
+    if (vendors && !identityTask) assert.equal(vendors.traces.length, 2, 'Discovery must not contact either fake vendor');
     assert.ok(checks.length > 0, 'Zero assertions executed');
     assert.equal(checks.length, expected, 'Selected journey did not execute every expected case');
     console.log(JSON.stringify({ task, paths, expected, actual: checks.length, failed: 0,
-      pending: 0, skipped: 0, package: { version: pack.version, sha256, integrity: pack.integrity }, checks }));
+      pending: 0, skipped: 0, platformEvidence: { linux: 'native', windows: identityTask ? 'PENDING - native Windows verification deferred' : 'not selected' }, package: { version: pack.version, sha256, integrity: pack.integrity }, checks }));
   } catch (error) {
     console.log(JSON.stringify({ task, paths, expected, actual: checks.length, failed: 1,
       pending: Math.max(0, expected - checks.length - 1), skipped: 0, error: error.message }));

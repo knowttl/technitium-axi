@@ -13,23 +13,38 @@ export async function fakeVendors(temporary, run, env) {
   assert.equal(generated.code, 0, generated.stderr);
   const tls = { key: await readFile(key), cert: await readFile(cert) };
   const traces = [];
+  const tokens = new Map();
+  const faults = new Map();
   const servers = [];
   try {
     for (const identity of ['alpha', 'beta']) {
       const server = createServer(tls, async (incoming, outgoing) => {
         const chunks = [];
         for await (const chunk of incoming) chunks.push(chunk);
+        const body = Buffer.concat(chunks);
+        const bearer = incoming.headers.authorization?.replace(/^Bearer /, '');
         traces.push({ method: incoming.method, path: incoming.url.split('?')[0],
           headers: { 'content-type': incoming.headers['content-type'] ?? null },
-          inputHash: createHash('sha256').update(Buffer.concat(chunks)).digest('hex'), identity });
+          inputHash: createHash('sha256').update(body).digest('hex'),
+          bearerHash: bearer ? createHash('sha256').update(bearer).digest('hex') : null, identity });
         outgoing.writeHead(200, { 'content-type': 'application/json' });
-        outgoing.end(JSON.stringify({ status: 'ok', fixtureIdentity: identity }));
+        if (incoming.url === '/api/status') {
+          outgoing.end(JSON.stringify({ status: 'ok', server: `dns-${identity}.example.test`, hasDefaultCredentials: false, ssoEnabled: false }));
+        } else if (incoming.url === '/api/user/session/get') {
+          const token = tokens.get(identity);
+          outgoing.end(JSON.stringify(bearer !== token || incoming.method !== 'POST' || body.toString() !== 'includeInfo=true'
+            ? { status: 'invalid-token' }
+            : { status: 'ok', username: 'planner', tokenName: 'automation-1', token,
+              unknownConfidential: token, escaped: encodeURIComponent(token), hasDnssecPrivateKeys: false,
+              info: { version: '15.4', permissions: { Administration: { canModify: faults.get(identity) ?? false } } } }));
+        } else outgoing.end(JSON.stringify({ status: 'ok', fixtureIdentity: identity }));
       });
       servers.push(server);
       await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
     }
     return {
       traces,
+      tokens, faults, caFile: cert,
       origins: servers.map(server => `https://127.0.0.1:${server.address().port}`),
       async check() {
         for (const [index, server] of servers.entries()) {
