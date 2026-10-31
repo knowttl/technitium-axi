@@ -11,13 +11,13 @@ Status and session fixtures follow the vendor top-level JSON response shapes.
 
 ```sh
 npm test
-node --test tests/journey.test.mjs
+node --test tests/journey.test.mjs tests/vendor.test.mjs tests/private-file.test.mjs
 npm run typecheck
 npm run check:generated
 ```
 
 The hosted checks require a maintainer-supplied, reviewed but unmerged Artium admission fixture matching [the reviewed host contract](../tests/fixtures/host-contract.json).
-Artium-path journeys require this fixture and are run separately with `--paths artium`.
+The default pipeline checks run native only; hosted journeys run separately at the final head using the reviewed frozen fixture with `--paths native,artium` (or `--paths artium` for hosted checks alone).
 Stock Artium is unsupported until admission lands upstream.
 Obtain the prepared Artium checkout, its revision and its exact reviewed JSON manifest from a maintainer.
 The manifest supplies the revision as `fixtureCommit` and lists each tool tarball in `tools`, with a `tool` name, `tarball` path and hexadecimal `sha256` digest.

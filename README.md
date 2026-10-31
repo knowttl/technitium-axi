@@ -27,7 +27,7 @@ npm run check:journey -- --task B1.02 --paths native --offline
 See [Offline package journeys](docs/offline-checks.md) for isolation, synthetic harness boundaries, cleanup and the full native and Artium checks with their required fixture setup.
 
 Configure a version 1 config with a named profile containing an HTTPS `origin`, `auth: "token"`, `tokenKind: "api"` and `token: {"env": "MY_TECHNITIUM_TOKEN"}`.
-`schema --json` describes all accepted fields.
+`schema --json` describes the accepted profile fields.
 SecretRefs also support protected absolute files and explicitly stored credentials.
 Inline secrets and secret flags are refused.
 Ordinary reads never acquire, refresh or store credentials.
@@ -50,6 +50,9 @@ The environment profile uses `TECHNITIUM_AXI_ORIGIN`, `TECHNITIUM_AXI_AUTH`, `TE
 `status` and the no-argument view perform one unauthenticated HTTPS status read.
 `user session get` returns a redacted projection; `--result-file` additionally saves the exact confidential JSON in an atomic protected file and reports its path, byte count and SHA-256.
 `caFile` and `tlsServerName` select trust and certificate identity while certificate verification stays enabled.
+Relative `caFile` paths resolve beside the config file that declares them; environment profiles require an absolute CA path.
+Config and CA files must be owned by the current user and not writable by group or others; file SecretRefs and stored credentials must additionally deny all group and other access.
+These reads reject symlinks and redirected paths before consuming the file.
 `doctor` verifies credential protection and performs one bounded session read.
 Linux file protection is verified natively; native Windows file protection and interruption verification remain PENDING.
 Windows file reads and writes are refused until ownership and ACL verification is available.
