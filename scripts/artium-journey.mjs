@@ -5,7 +5,8 @@ import { once } from 'node:events';
 import { mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { decode } from '@toon-format/toon';
 import { readJourney } from './read-journey.mjs';
 
@@ -29,6 +30,9 @@ export async function artiumJourney({ temporary, sha256, env, run, packageRoot, 
   assert.equal(sha256, pin.sha256, 'Current tarball differs from the reviewed host package pin');
   const hostPackage = join(root, 'tools/node_modules/@knowttl/technitium-axi');
   assert.ok((await realpath(hostPackage)).startsWith(`${root}/tools/node_modules/`), 'Host package must be installed, not linked to a source checkout');
+  const hostRequire = createRequire(await realpath(join(hostPackage, 'package.json')));
+  const hostCodec = JSON.parse(await readFile(new URL('../package.json', pathToFileURL(hostRequire.resolve('@toon-format/toon'))), 'utf8'));
+  assert.equal(hostCodec.version, '2.3.1', 'Host-installed tool must resolve the pinned TOON 2.3.1 dependency from its real package path');
   const hostExecutable = join(hostPackage, 'bin/technitium-axi.js');
   for (const file of ['package.json', 'bin/technitium-axi.js', 'dist/cli.js', 'dist/catalogue.js', 'dist/credentials.js', 'dist/private-file.js', 'dist/vendor.js', 'dist/errors.js', 'dist/reads.js', 'dist/read-contracts.js', 'dist/archive-contract.js', 'axi-credential.schema.json', 'command-inventory.json']) {
     assert.deepEqual(await readFile(join(hostPackage, file)), await readFile(join(packageRoot, file)), `Installed package differs: ${file}`);
