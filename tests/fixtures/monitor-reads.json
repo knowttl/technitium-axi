@@ -1,0 +1,62 @@
+{
+  "provenance": "Synthetic acceptance fixtures based on the reviewed Technitium API contract, not live observations.",
+  "operations": {
+    "OP-015": { "response": { "uptimestamp": "2024-01-01T00:00:00Z", "uptimeSeconds": 9, "lifetimeCounters": { "totalQueries": 17, "totalBlocked": 3 } } },
+    "OP-016": { "text": "# TYPE total_queries counter\ntotal_queries 17\ntotal_blocked 3\n" },
+    "OP-017": {
+      "parameters": { "node": "node-a", "type": "Custom", "utc": "true", "dontTrimQueryTypeData": "true", "start": "2024-01-01T00:00:00Z", "end": "2024-01-01T00:01:00Z" },
+      "response": { "stats": { "totalQueries": 7 }, "mainChartData": { "labelFormat": "HH:mm", "labels": ["00:00", "00:01"], "datasets": [{ "label": "Queries", "data": [2, 5] }] }, "queryTypeChartData": { "labels": ["A", "AAAA"], "datasets": [{ "data": [7, 0] }] } }
+    },
+    "OP-018": {
+      "parameters": { "node": "node-a", "type": "LastHour", "statsType": "TopClients", "limit": "1", "noReverseLookup": "true", "onlyRateLimitedClients": "true" },
+      "response": { "topClients": [{ "name": "192.0.2.10", "domain": null, "hits": 7, "rateLimited": true }] },
+      "unfiltered": [{ "name": "192.0.2.10", "domain": null, "hits": 7, "rateLimited": true }, { "name": "192.0.2.11", "domain": null, "hits": 3, "rateLimited": false }]
+    },
+    "OP-053": {
+      "parameters": { "domain": "example.test", "direction": "down" },
+      "response": { "domain": "example.test", "zones": ["child.example.test"], "records": [{ "name": "www.example.test", "type": "A", "ttl": "283 (4 mins 43 sec)", "rData": { "value": "192.0.2.10" } }] },
+      "up": { "domain": "test", "zones": ["example.test"], "records": [] }
+    },
+    "OP-068": {
+      "response": { "apps": [{ "name": "TestApp", "version": "1.0", "dnsApps": [{ "classPath": "Test.App", "isQueryLogger": false }] }] }
+    },
+    "OP-069": {
+      "response": { "storeApps": [{ "name": "TestApp", "version": "2.0", "url": "https://store.example.test/TestApp.zip", "installed": true, "installedVersion": "1.0", "updateAvailable": true }, { "name": "NewApp", "version": "1.0", "url": "https://store.example.test/NewApp.zip", "installed": false }] }
+    },
+    "OP-075": {
+      "parameters": { "name": "TestApp" },
+      "response": { "config": "{\n  \"oddKey\": \"SYNTHETIC-opaque-canary\", \"nested\": {\"password\": \"SYNTHETIC-config-password\"}\n}\n" }
+    },
+    "OP-078": { "parameters": { "node": "node-a", "domain": "www.example.test", "type": "A" } },
+    "OP-079": {
+      "response": { "version": "15.4", "defaultRecordTtl": 3600, "enableBlocking": true, "hasDnssecPrivateKeys": false, "proxy": { "type": "Http", "address": "proxy.example.test", "port": 8080, "username": "synthetic", "password": "SYNTHETIC-proxy-canary" }, "tsigKeys": [{ "keyName": "key-1", "algorithmName": "hmac-sha256", "sharedSecret": "SYNTHETIC-tsig-canary" }] }
+    },
+    "OP-081": { "response": { "tsigKeyNames": ["key-1", "key-2"] } },
+    "OP-084": {},
+    "OP-086": {
+      "response": { "leases": [{ "scope": "lab", "type": "Reserved", "hardwareAddress": "00-11-22-33-44-55", "clientIdentifier": "1-001122334455", "address": "192.0.2.20", "hostName": "client.example.test", "leaseObtained": "01/01/2024 00:00:00", "leaseExpires": "01/08/2024 00:00:00" }, { "scope": "keep", "type": "Dynamic", "hardwareAddress": "00-11-22-33-44-66", "clientIdentifier": "1-001122334466", "address": "192.0.2.21", "hostName": null, "leaseObtained": "01/01/2024 00:00:00", "leaseExpires": "01/08/2024 00:00:00" }] }
+    },
+    "OP-090": {
+      "response": { "scopes": [{ "name": "lab", "enabled": false, "startingAddress": "192.0.2.10", "endingAddress": "192.0.2.100", "subnetMask": "255.255.255.0", "networkAddress": "192.0.2.0" }, { "name": "keep", "enabled": true, "startingAddress": "198.51.100.10", "endingAddress": "198.51.100.100", "subnetMask": "255.255.255.0", "networkAddress": "198.51.100.0" }] }
+    },
+    "OP-091": {
+      "parameters": { "name": "lab" },
+      "response": { "name": "lab", "domainSearchList": ["example.test"], "dnsTtl": 900, "genericOptions": [{ "code": 150, "value": "C0:00:02:01" }], "reservedLeases": [{ "hostName": null, "hardwareAddress": "00-11-22-33-44-55", "address": "192.0.2.20", "comments": "fixture reservation" }] }
+    },
+    "OP-134": {
+      "parameters": { "node": "node-a" },
+      "response": { "logFiles": [{ "fileName": "2024-01-01", "size": "8.14 KB" }, { "fileName": "2024-01-02", "size": "5.6 KB" }] }
+    },
+    "OP-135": {
+      "parameters": { "node": "node-a", "fileName": "2024-01-01", "limit": "1" },
+      "text": "2024-01-01 α synthetic log\nSYNTHETIC-log-canary\n"
+    },
+    "OP-138": {
+      "parameters": { "node": "node-a", "name": "QueryLogs", "classPath": "QueryLogs.App", "pageNumber": "1", "entriesPerPage": "10", "descendingOrder": "true", "start": "2024-01-01T00:00:00Z", "end": "2024-01-01T00:01:00Z", "clientIpAddress": "192.0.2.10", "protocol": "Udp", "responseType": "Recursive", "rcode": "NoError", "qname": "www.example.test", "qtype": "A", "qclass": "IN" }
+    },
+    "OP-139": {
+      "parameters": { "node": "node-a", "name": "QueryLogs", "classPath": "QueryLogs.App", "start": "2024-01-01T00:00:00Z", "end": "2024-01-01T00:01:00Z", "clientIpAddress": "192.0.2.10", "protocol": "Udp", "responseType": "Recursive", "rcode": "NoError", "qname": "www.example.test", "qtype": "TXT", "qclass": "IN" },
+      "text": "qname,qtype,answer\r\nwww.example.test,TXT,\"quoted, answer\nsecond line\"\r\n"
+    }
+  }
+}

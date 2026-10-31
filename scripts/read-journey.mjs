@@ -4,8 +4,11 @@ import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { decode } from '@toon-format/toon';
 import { crc32 } from 'node:zlib';
+import { monitorJourney } from './monitor-journey.ts';
+import monitor from '../tests/fixtures/monitor-reads.json' with { type: 'json' };
 
-export const readTasks = ['B2.01', 'B2.02', 'B2.03', 'B2.04'];
+export const monitorTasks = Object.keys(monitor.operations).map(id => `B2.${id}`);
+export const readTasks = ['B2.01', 'B2.02', 'B2.03', 'B2.04', 'B2.05', ...monitorTasks];
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 // Stored ZIP records keep independently reviewed entry names and payload bytes visible.
@@ -68,6 +71,13 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
   const argumentsFor = row => [...row.command.split(' '), ...row.parameters.flatMap(parameter => [parameter.flag, parameter.requested])];
   const respond = row => vendors.responders.set(row.path, () => ({ body: row.response }));
   const checks = [];
+  if (task === 'B2.05') {
+    for (const selected of monitorTasks) checks.push(...await monitorJourney({ row: matrix.operations.find(row => row.operation === selected.slice(3)),
+      directory, vendors, success, fail, archive, components: worlds.backupComponents }));
+    return checks;
+  }
+  if (task.startsWith('B2.OP-')) return await monitorJourney({ row: matrix.operations.find(row => row.operation === task.slice(3)),
+    directory, vendors, success, fail, archive, components: worlds.backupComponents });
   if (task === 'B2.01') {
     const codec = JSON.parse(await readFile(new URL('../package.json', import.meta.resolve('@toon-format/toon')), 'utf8'));
     assert.equal(codec.version, '2.3.1', 'The journey decoder must match the Artium TOON contract');

@@ -59,6 +59,13 @@ Zone exports, ZIP archives, CSV, logs and allowed/blocked exports produce metada
 Prometheus output also permits a bounded text preview.
 Hosted result paths are supplied by the host; callers cannot choose server filesystem destinations.
 
+The monitor read journeys cover dashboard metrics and charts, cache navigation, DNS health checks, app and settings reads, DHCP leases and scopes, and logs.
+Run `npm run check:journey -- --task B2.05 --paths native --offline` for this group, or select an individual operation with `--task B2.OP-015 --operation OP-015`.
+Use `--paths artium` with the reviewed frozen fixture environment to exercise authenticated host result custody.
+Log download `--limit` is the vendor's megabyte limit; `--max-bytes` is the separate local response cap.
+Log filenames cannot contain paths.
+Opaque app configurations accept string or null values and remain available only in protected results.
+
 # Archive entry review
 
 Backup and transfer contracts in `inventory --json` include the source-reviewed entry map.
