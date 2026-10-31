@@ -16,6 +16,7 @@ npm run check:generated
 ```
 
 The hosted checks require a maintainer-supplied, reviewed but unmerged Artium admission fixture matching [the reviewed host contract](../tests/fixtures/host-contract.json).
+Artium-path journeys require this fixture and are run separately with `--paths artium`.
 Stock Artium is unsupported until admission lands upstream.
 Obtain the prepared Artium checkout, its revision and its exact reviewed JSON manifest from a maintainer.
 The manifest supplies the revision as `fixtureCommit` and lists each tool tarball in `tools`, with a `tool` name, `tarball` path and hexadecimal `sha256` digest.
