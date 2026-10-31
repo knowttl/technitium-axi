@@ -1,7 +1,7 @@
 # technitium-axi
 
 AXI-standard agent-facing CLI for Technitium DNS Server.
-The package provides status and session reads, strict credential profiles, offline discovery and protected session-result files.
+The package provides 46 read operations, strict credential profiles, offline discovery and protected result files.
 Vendor mutations are unavailable.
 
 Install the public npm package globally, then run the `technitium-axi` executable:
@@ -48,6 +48,10 @@ technitium-axi profile list
 technitium-axi auth status --profile automation
 technitium-axi status --profile automation
 technitium-axi user session get --profile automation --result-file /absolute/path/session.json
+technitium-axi zone list --profile automation --fields name,type
+technitium-axi zone list --profile automation --full
+technitium-axi settings get --profile automation --result-file /absolute/path/settings.json
+technitium-axi settings backup --profile automation --zones true --result-file /absolute/path/zones.zip
 ```
 
 Config selection uses `--config`, then `TECHNITIUM_AXI_CONFIG`, then the platform config directory.
@@ -63,6 +67,8 @@ Relative `caFile` paths resolve beside the config file that declares them; envir
 Config and CA files must be owned by the current user and not writable by group or others; file SecretRefs and stored credentials must additionally deny all group and other access.
 These reads reject symlinks and redirected paths before consuming the file.
 `doctor` verifies credential protection and performs one bounded session read.
+The generated inventory and each command's `--help` describe the supported read parameters.
+Read [Read contracts and protected results](docs/reads.md) for output bounds, paging, transfer formats and the reviewed archive-entry map.
 Linux file protection is verified natively; native Windows file protection and interruption verification remain PENDING.
 Windows file reads and writes are refused until ownership and ACL verification is available.
 Environment-only profiles and env SecretRefs remain supported when no config file is present.

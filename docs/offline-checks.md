@@ -1,6 +1,6 @@
 # Offline package journeys
 
-The B1 package, credential and operation checks run the installed npm tarball, never a TypeScript loader.
+The B1 and B2 package, credential and read checks run the installed npm tarball, never a TypeScript loader.
 They require Linux with user, PID, mount and network namespaces, iproute2, OpenSSL and a C compiler for process-interruption checks.
 The namespace enables only loopback and contains the CLI, server, adapter and subprocesses.
 Follow the [README setup](../README.md) to fetch the pinned npm dependencies once, then keep all journeys offline.
@@ -46,14 +46,30 @@ Each report separates expected, executed, failed, pending and skipped cases.
 
 Hosted setup uses public login, password replacement, recent authentication, credential, tool, user and role endpoints.
 The synthetic alpha caller has the tool grant; beta is authenticated without that grant.
-The fixture stages a shared tool credential; status sends no bearer and session get consumes only the isolated injected SecretRef.
-Session get returns a caller-bound, credential-revision-bound, one-time protected-result reference alongside its redacted projection.
-The protected result is retained in bounded host memory for at most five minutes and is never written into ordinary output or audit.
+The fixture stages a shared tool credential; status sends no bearer and authenticated reads consume only the isolated injected SecretRef.
+Authenticated reads return a protected-result reference alongside their approved projection.
+The protected result is retained in bounded host memory and is never written into ordinary output or audit.
 
-The source-reviewed run, input-file and existing transfer contracts live in `tests/fixtures/host-contract.json`.
+The source-reviewed run, input-file, protected-result and existing transfer contracts live in [the reviewed host contract](../tests/fixtures/host-contract.json), including result binding, retrieval and retention limits.
 The current host has no Technitium transfer route or transfer selection.
 The harness checks that limit without inventing a route or claiming a completed transfer.
 Later transfer slices require a host extension.
+
+B2.01 through B2.04 cover the generated read matrix, protected formats, bounded paging/errors and archive-entry review.
+They use the same task selector and paths as B1.
+The B2 hosted path uses the same pinned fixture, which admits the complete read inventory and protected results beyond sessions.
+It uses the authenticated result path returned by the host rather than inventing a Technitium transfer endpoint.
+The response matrix is generated from typed contracts and retained public documentation example seeds; all POST fixtures are synthetic.
+The archive review task performs no successful backup or transfer request.
+The format task exercises independently defined ZIP entry worlds and exact protected bytes.
+Hosted expiry checks advance the server process clock boundary without sleeping.
+
+```sh
+npm run check:journey -- --task B2.01 --paths native,artium --offline
+npm run check:journey -- --task B2.02 --paths native,artium --offline
+npm run check:journey -- --task B2.03 --paths native,artium --offline
+npm run check:journey -- --task B2.04 --paths native,artium --offline
+```
 
 Node diagnostics report actual child PID, argv and executable hash without replacing the runner.
 The harness verifies exact executable paths before normalizing their prefixes in emitted evidence.

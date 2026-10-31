@@ -3,20 +3,22 @@
   "source": {
     "repository": "https://github.com/knowttl/artium-axi",
     "baseline": "63719968d6dfae0d1d8c5b59a284fab388626a3a",
-    "fixtureRevision": "bfe22bd26ae49e71134349fa75cba8406587274c",
-    "manifestSha256": "0aa59168ff2265b894745ec6d6447eaa522f3f431486d61969adc949b98a7bf7",
+    "fixtureRevision": "f250c46fe177ddaa85b2a9cdc7fe6e9e41f234f9",
+    "manifestSha256": "0092ce3ccc7c9170f21e049c08b87d4ff750141e65fb08cdf7126f3c527306db",
     "files": {
-      "src/shared/api.ts": "32901be14a0cf27f294c389ddd1b36bce9e05bd78d6d24c61f0bf08959828a1d",
-      "src/server/app.ts": "f9c4f05be5802f009e3a5a1545bc2cd647499a71ca0f18fd7045eed8f191d9b7",
-      "src/server/adapters/technitium.ts": "7c1d5e5f75f74c5dc28e7a298f1f4b7c9496333ff40667690bc40de2ec3b99a7",
-      "tools/pnpm-lock.yaml": "cd0e1a7b946d51b10c0720d3ae08adb18f3c3ab9b15f6a1aed9ad9e3cd231031"
+      "src/shared/api.ts": "8262a709d30296743b6724f3d8e0d41de0d4cac6dca336c4347b835c46bf4037",
+      "src/server/app.ts": "5acdc1e1e2b2ae05c8c68042727c89a6867ad913a548d8496ec7cec9f26335b0",
+      "src/server/adapters/technitium.ts": "160937048aa9165f168e21873caeab53debcc52d2be746ac93c3e27321033a92",
+      "src/server/protected-results.ts": "7bbbf79caa217b4d0adf599b8061374cc26d9c7a21e97bebff72672a67c021de",
+      "src/server/adapters/fixture-arguments.ts": "130dd3dda4c0f960e7531748113b5d1f7258602b00555737c0d8eda5b852f5b0",
+      "tools/pnpm-lock.yaml": "def625ea9551bf0afed17e4b6b5f14f13c8425774f939d9de49addd0ecf7937c"
     }
   },
   "seed": {
     "callers": ["alpha", "beta"],
     "granted": ["alpha"],
     "vendorIdentities": ["alpha", "beta"],
-    "credentialPolicy": "The admission fixture injects one shared tool credential into an isolated artium profile using v2 SecretRefs. Status is unauthenticated. Session results are bound to caller, operation and credential revision and retrieved once through an authenticated route."
+    "credentialPolicy": "The admission fixture injects one shared tool credential into an isolated artium profile using v2 SecretRefs. Status is unauthenticated. All authenticated read results are bound to caller, operation and credential revision and retrieved once through an authenticated route."
   },
   "request": {
     "run": {
@@ -34,6 +36,7 @@
       "unknownFields": "rejected",
       "example": { "name": "input.json", "size": 2, "contentBase64": "e30=" }
     },
+    "protectedResult": { "method": "GET", "path": "/v1/results/technitium-axi/:operation/:id", "authentication": "current caller grant and credential revision", "limits": { "bytes": 1048576, "lifetimeMs": 300000, "resultsPerCaller": 4 }, "mismatchedOperation": "NOT_FOUND" },
     "transfer": {
       "method": "POST",
       "prefixes": ["/v1/transfers/hybrid", "/v1/transfers/checkpoint", "/v1/transfers/mg", "/v1/transfers/beyondtrust"],

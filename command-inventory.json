@@ -106,6 +106,2116 @@
         "--config",
         "--profile"
       ]
+    },
+    {
+      "command": "user profile get",
+      "description": "Read user profile get",
+      "effect": "read",
+      "operation": "OP-012",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms"
+      ]
+    },
+    {
+      "command": "user check-for-update",
+      "description": "Read user check-for-update",
+      "effect": "read",
+      "operation": "OP-014",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms"
+      ]
+    },
+    {
+      "command": "dashboard metrics json",
+      "description": "Read dashboard metrics json",
+      "effect": "read",
+      "operation": "OP-015",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms"
+      ]
+    },
+    {
+      "command": "dashboard metrics text",
+      "description": "Read dashboard metrics text",
+      "effect": "read",
+      "operation": "OP-016",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms"
+      ]
+    },
+    {
+      "command": "dashboard stats get",
+      "description": "Read dashboard stats get",
+      "effect": "read",
+      "operation": "OP-017",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "type",
+          "flag": "--type",
+          "type": "string",
+          "required": false,
+          "location": "form",
+          "values": [
+            "LastHour",
+            "LastDay",
+            "LastWeek",
+            "LastMonth",
+            "LastYear",
+            "Custom"
+          ]
+        },
+        {
+          "name": "utc",
+          "flag": "--utc",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "dontTrimQueryTypeData",
+          "flag": "--dont-trim-query-type-data",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "start",
+          "flag": "--start",
+          "type": "date",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "end",
+          "flag": "--end",
+          "type": "date",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--type",
+        "--utc",
+        "--dont-trim-query-type-data",
+        "--start",
+        "--end"
+      ]
+    },
+    {
+      "command": "dashboard stats get-top",
+      "description": "Read dashboard stats get-top",
+      "effect": "read",
+      "operation": "OP-018",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "type",
+          "flag": "--type",
+          "type": "string",
+          "required": false,
+          "location": "form",
+          "values": [
+            "LastHour",
+            "LastDay",
+            "LastWeek",
+            "LastMonth",
+            "LastYear",
+            "custom"
+          ]
+        },
+        {
+          "name": "start",
+          "flag": "--start",
+          "type": "date",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "end",
+          "flag": "--end",
+          "type": "date",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "statsType",
+          "flag": "--stats-type",
+          "type": "string",
+          "required": true,
+          "location": "form",
+          "values": [
+            "TopClients",
+            "TopDomains",
+            "TopBlockedDomains"
+          ]
+        },
+        {
+          "name": "limit",
+          "flag": "--limit",
+          "type": "integer",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "noReverseLookup",
+          "flag": "--no-reverse-lookup",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "onlyRateLimitedClients",
+          "flag": "--only-rate-limited-clients",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--type",
+        "--start",
+        "--end",
+        "--stats-type",
+        "--limit",
+        "--no-reverse-lookup",
+        "--only-rate-limited-clients"
+      ]
+    },
+    {
+      "command": "zone list",
+      "description": "Read zone list",
+      "effect": "read",
+      "operation": "OP-020",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "filterName",
+          "flag": "--filter-name",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "filterType",
+          "flag": "--filter-type",
+          "type": "string",
+          "required": false,
+          "location": "form",
+          "values": [
+            "Primary",
+            "Secondary",
+            "Stub",
+            "Forwarder",
+            "SecondaryForwarder",
+            "Catalog",
+            "SecondaryCatalog"
+          ]
+        },
+        {
+          "name": "pageNumber",
+          "flag": "--page-number",
+          "type": "integer",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "zonesPerPage",
+          "flag": "--zones-per-page",
+          "type": "integer",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--filter-name",
+        "--filter-type",
+        "--page-number",
+        "--zones-per-page"
+      ]
+    },
+    {
+      "command": "zone catalog list",
+      "description": "Read zone catalog list",
+      "effect": "read",
+      "operation": "OP-021",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node"
+      ]
+    },
+    {
+      "command": "zone export",
+      "description": "Read zone export",
+      "effect": "read",
+      "operation": "OP-024",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "zone",
+          "flag": "--zone",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--zone"
+      ]
+    },
+    {
+      "command": "zone options get",
+      "description": "Read zone options get",
+      "effect": "read",
+      "operation": "OP-031",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "zone",
+          "flag": "--zone",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        },
+        {
+          "name": "includeAvailableCatalogZoneNames",
+          "flag": "--include-available-catalog-zone-names",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "includeAvailableTsigKeyNames",
+          "flag": "--include-available-tsig-key-names",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--zone",
+        "--include-available-catalog-zone-names",
+        "--include-available-tsig-key-names"
+      ]
+    },
+    {
+      "command": "zone permission get",
+      "description": "Read zone permission get",
+      "effect": "read",
+      "operation": "OP-033",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "zone",
+          "flag": "--zone",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        },
+        {
+          "name": "includeUsersAndGroups",
+          "flag": "--include-users-and-groups",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--zone",
+        "--include-users-and-groups"
+      ]
+    },
+    {
+      "command": "zone dnssec view-ds",
+      "description": "Read zone dnssec view-ds",
+      "effect": "read",
+      "operation": "OP-037",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "zone",
+          "flag": "--zone",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--zone"
+      ]
+    },
+    {
+      "command": "zone dnssec properties get",
+      "description": "Read zone dnssec properties get",
+      "effect": "read",
+      "operation": "OP-038",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "zone",
+          "flag": "--zone",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--zone"
+      ]
+    },
+    {
+      "command": "zone record get",
+      "description": "Read zone record get",
+      "effect": "read",
+      "operation": "OP-050",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        },
+        {
+          "name": "zone",
+          "flag": "--zone",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "listZone",
+          "flag": "--list-zone",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--domain",
+        "--zone",
+        "--list-zone"
+      ]
+    },
+    {
+      "command": "cache list",
+      "description": "Read cache list",
+      "effect": "read",
+      "operation": "OP-053",
+      "arguments": [
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "direction",
+          "flag": "--direction",
+          "type": "string",
+          "required": false,
+          "location": "form",
+          "values": [
+            "up",
+            "down"
+          ]
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--domain",
+        "--direction"
+      ]
+    },
+    {
+      "command": "allowed list",
+      "description": "Read allowed list",
+      "effect": "read",
+      "operation": "OP-056",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "direction",
+          "flag": "--direction",
+          "type": "string",
+          "required": false,
+          "location": "form",
+          "values": [
+            "up",
+            "down"
+          ]
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--domain",
+        "--direction"
+      ]
+    },
+    {
+      "command": "allowed export",
+      "description": "Read allowed export",
+      "effect": "read",
+      "operation": "OP-061",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node"
+      ]
+    },
+    {
+      "command": "blocked list",
+      "description": "Read blocked list",
+      "effect": "read",
+      "operation": "OP-062",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "direction",
+          "flag": "--direction",
+          "type": "string",
+          "required": false,
+          "location": "form",
+          "values": [
+            "up",
+            "down"
+          ]
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--domain",
+        "--direction"
+      ]
+    },
+    {
+      "command": "blocked export",
+      "description": "Read blocked export",
+      "effect": "read",
+      "operation": "OP-067",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node"
+      ]
+    },
+    {
+      "command": "app list",
+      "description": "Read app list",
+      "effect": "read",
+      "operation": "OP-068",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node"
+      ]
+    },
+    {
+      "command": "app list-store-apps",
+      "description": "Read app list-store-apps",
+      "effect": "read",
+      "operation": "OP-069",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node"
+      ]
+    },
+    {
+      "command": "app config get",
+      "description": "Read app config get",
+      "effect": "read",
+      "operation": "OP-075",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "name",
+          "flag": "--name",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--name"
+      ]
+    },
+    {
+      "command": "dns-client health-check",
+      "description": "Read dns-client health-check",
+      "effect": "read",
+      "operation": "OP-078",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "type",
+          "flag": "--type",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--domain",
+        "--type"
+      ]
+    },
+    {
+      "command": "settings get",
+      "description": "Read settings get",
+      "effect": "read",
+      "operation": "OP-079",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms"
+      ]
+    },
+    {
+      "command": "settings get-tsig-key-names",
+      "description": "Read settings get-tsig-key-names",
+      "effect": "read",
+      "operation": "OP-081",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms"
+      ]
+    },
+    {
+      "command": "settings backup",
+      "description": "Read settings backup",
+      "effect": "read",
+      "operation": "OP-084",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "authConfig",
+          "flag": "--auth-config",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "clusterConfig",
+          "flag": "--cluster-config",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "webServiceSettings",
+          "flag": "--web-service-settings",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "dnsSettings",
+          "flag": "--dns-settings",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "logSettings",
+          "flag": "--log-settings",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "zones",
+          "flag": "--zones",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "allowedZones",
+          "flag": "--allowed-zones",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "blockedZones",
+          "flag": "--blocked-zones",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "blockLists",
+          "flag": "--block-lists",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "apps",
+          "flag": "--apps",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "scopes",
+          "flag": "--scopes",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "stats",
+          "flag": "--stats",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "logs",
+          "flag": "--logs",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--auth-config",
+        "--cluster-config",
+        "--web-service-settings",
+        "--dns-settings",
+        "--log-settings",
+        "--zones",
+        "--allowed-zones",
+        "--blocked-zones",
+        "--block-lists",
+        "--apps",
+        "--scopes",
+        "--stats",
+        "--logs"
+      ],
+      "archive": {
+        "sourceRevision": "0dd592aad21eced4221a9a46204cb1a299972ca0",
+        "sources": {
+          "DnsWebService.cs": "1e2f492baa3113d09704589bf0109fd4c9bbc05f65204918d0d485ba8ae5753e",
+          "WebServiceClusterApi.cs": "2bb0efaa14335f9bfa74844db917021a2d2869604d1531b2e85e3105cad1e6d5",
+          "Cluster/ClusterManager.cs": "787086de7f3a2b625e788042d4f8ef2aa8d6ef27c9d235be2ffc94922d4ff496"
+        },
+        "backup": {
+          "authConfig": [
+            "auth.config"
+          ],
+          "clusterConfig": [
+            "cluster.config"
+          ],
+          "webServiceSettings": [
+            "webservice.config",
+            "<certificate-relative-path-within-config>"
+          ],
+          "dnsSettings": [
+            "dns.config",
+            "<certificate-relative-path-within-config>"
+          ],
+          "logSettings": [
+            "log.config"
+          ],
+          "zones": [
+            "zones/*.zone"
+          ],
+          "allowedZones": [
+            "allowed.config"
+          ],
+          "blockedZones": [
+            "blocked.config"
+          ],
+          "blockLists": [
+            "blocklist.config",
+            "blocklists/*"
+          ],
+          "apps": [
+            "apps/**/*"
+          ],
+          "scopes": [
+            "scopes/*.scope"
+          ],
+          "stats": [
+            "stats/*.stat",
+            "stats/*.dstat"
+          ],
+          "logs": [
+            "logs/*.log"
+          ]
+        },
+        "transfer": {
+          "changedFiles": [
+            "auth.config",
+            "dns.config",
+            "allowed.config",
+            "blocked.config",
+            "blocklist.config"
+          ],
+          "excludedComponents": [
+            "clusterConfig",
+            "webServiceSettings",
+            "logSettings",
+            "scopes",
+            "stats",
+            "logs"
+          ],
+          "excludedEntries": [
+            "zones/*.zone",
+            "blocklists/*",
+            "<certificate-relative-path-within-config>"
+          ],
+          "comparison": "file mtime > If-Modified-Since; DNSSEC key StateChangedOn > If-Modified-Since",
+          "keys": "zones/<zone-name>.keys: signed Primary members of the cluster catalog; includeZones forces eligible selected names, changed unselected keys remain eligible",
+          "appEntries": {
+            "unchanged": "apps/<name>/.exists",
+            "package": "apps/<name>/<name>.zip",
+            "config": "apps/<name>/dnsApp.config"
+          },
+          "appMarker": "Emit zero-byte .exists only when neither package nor config is newer; empty and key-only worlds have no app directories",
+          "response": {
+            "status": 200,
+            "contentType": "application/zip",
+            "lastModified": "RFC 1123 GMT response time",
+            "emptyZip": "valid protected result"
+          }
+        }
+      }
+    },
+    {
+      "command": "dhcp lease list",
+      "description": "Read dhcp lease list",
+      "effect": "read",
+      "operation": "OP-086",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms"
+      ]
+    },
+    {
+      "command": "dhcp scope list",
+      "description": "Read dhcp scope list",
+      "effect": "read",
+      "operation": "OP-090",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms"
+      ]
+    },
+    {
+      "command": "dhcp scope get",
+      "description": "Read dhcp scope get",
+      "effect": "read",
+      "operation": "OP-091",
+      "arguments": [
+        {
+          "name": "name",
+          "flag": "--name",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--name"
+      ]
+    },
+    {
+      "command": "admin session list",
+      "description": "Read admin session list",
+      "effect": "read",
+      "operation": "OP-098",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node"
+      ]
+    },
+    {
+      "command": "admin user list",
+      "description": "Read admin user list",
+      "effect": "read",
+      "operation": "OP-101",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node"
+      ]
+    },
+    {
+      "command": "admin user get",
+      "description": "Read admin user get",
+      "effect": "read",
+      "operation": "OP-103",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "user",
+          "flag": "--user",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        },
+        {
+          "name": "includeGroups",
+          "flag": "--include-groups",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--user",
+        "--include-groups"
+      ]
+    },
+    {
+      "command": "admin group list",
+      "description": "Read admin group list",
+      "effect": "read",
+      "operation": "OP-106",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node"
+      ]
+    },
+    {
+      "command": "admin group get",
+      "description": "Read admin group get",
+      "effect": "read",
+      "operation": "OP-108",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "group",
+          "flag": "--group",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        },
+        {
+          "name": "includeUsers",
+          "flag": "--include-users",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--group",
+        "--include-users"
+      ]
+    },
+    {
+      "command": "admin permission list",
+      "description": "Read admin permission list",
+      "effect": "read",
+      "operation": "OP-111",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node"
+      ]
+    },
+    {
+      "command": "admin permission get",
+      "description": "Read admin permission get",
+      "effect": "read",
+      "operation": "OP-112",
+      "arguments": [
+        {
+          "name": "section",
+          "flag": "--section",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        },
+        {
+          "name": "includeUsersAndGroups",
+          "flag": "--include-users-and-groups",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--section",
+        "--include-users-and-groups"
+      ]
+    },
+    {
+      "command": "admin sso get",
+      "description": "Read admin sso get",
+      "effect": "read",
+      "operation": "OP-114",
+      "arguments": [
+        {
+          "name": "includeGroups",
+          "flag": "--include-groups",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--include-groups"
+      ]
+    },
+    {
+      "command": "admin cluster state",
+      "description": "Read admin cluster state",
+      "effect": "read",
+      "operation": "OP-118",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "includeServerIpAddresses",
+          "flag": "--include-server-ip-addresses",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--include-server-ip-addresses"
+      ]
+    },
+    {
+      "command": "admin cluster primary transfer-config",
+      "description": "Read admin cluster primary transfer-config",
+      "effect": "read",
+      "operation": "OP-125",
+      "arguments": [
+        {
+          "name": "includeZones",
+          "flag": "--include-zones",
+          "type": "zone-list",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "If-Modified-Since",
+          "flag": "--if-modified-since",
+          "type": "http-date",
+          "required": false,
+          "location": "header"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--include-zones",
+        "--if-modified-since"
+      ],
+      "archive": {
+        "sourceRevision": "0dd592aad21eced4221a9a46204cb1a299972ca0",
+        "sources": {
+          "DnsWebService.cs": "1e2f492baa3113d09704589bf0109fd4c9bbc05f65204918d0d485ba8ae5753e",
+          "WebServiceClusterApi.cs": "2bb0efaa14335f9bfa74844db917021a2d2869604d1531b2e85e3105cad1e6d5",
+          "Cluster/ClusterManager.cs": "787086de7f3a2b625e788042d4f8ef2aa8d6ef27c9d235be2ffc94922d4ff496"
+        },
+        "backup": {
+          "authConfig": [
+            "auth.config"
+          ],
+          "clusterConfig": [
+            "cluster.config"
+          ],
+          "webServiceSettings": [
+            "webservice.config",
+            "<certificate-relative-path-within-config>"
+          ],
+          "dnsSettings": [
+            "dns.config",
+            "<certificate-relative-path-within-config>"
+          ],
+          "logSettings": [
+            "log.config"
+          ],
+          "zones": [
+            "zones/*.zone"
+          ],
+          "allowedZones": [
+            "allowed.config"
+          ],
+          "blockedZones": [
+            "blocked.config"
+          ],
+          "blockLists": [
+            "blocklist.config",
+            "blocklists/*"
+          ],
+          "apps": [
+            "apps/**/*"
+          ],
+          "scopes": [
+            "scopes/*.scope"
+          ],
+          "stats": [
+            "stats/*.stat",
+            "stats/*.dstat"
+          ],
+          "logs": [
+            "logs/*.log"
+          ]
+        },
+        "transfer": {
+          "changedFiles": [
+            "auth.config",
+            "dns.config",
+            "allowed.config",
+            "blocked.config",
+            "blocklist.config"
+          ],
+          "excludedComponents": [
+            "clusterConfig",
+            "webServiceSettings",
+            "logSettings",
+            "scopes",
+            "stats",
+            "logs"
+          ],
+          "excludedEntries": [
+            "zones/*.zone",
+            "blocklists/*",
+            "<certificate-relative-path-within-config>"
+          ],
+          "comparison": "file mtime > If-Modified-Since; DNSSEC key StateChangedOn > If-Modified-Since",
+          "keys": "zones/<zone-name>.keys: signed Primary members of the cluster catalog; includeZones forces eligible selected names, changed unselected keys remain eligible",
+          "appEntries": {
+            "unchanged": "apps/<name>/.exists",
+            "package": "apps/<name>/<name>.zip",
+            "config": "apps/<name>/dnsApp.config"
+          },
+          "appMarker": "Emit zero-byte .exists only when neither package nor config is newer; empty and key-only worlds have no app directories",
+          "response": {
+            "status": 200,
+            "contentType": "application/zip",
+            "lastModified": "RFC 1123 GMT response time",
+            "emptyZip": "valid protected result"
+          }
+        }
+      }
+    },
+    {
+      "command": "log list",
+      "description": "Read log list",
+      "effect": "read",
+      "operation": "OP-134",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node"
+      ]
+    },
+    {
+      "command": "log download",
+      "description": "Read log download",
+      "effect": "read",
+      "operation": "OP-135",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "fileName",
+          "flag": "--file-name",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        },
+        {
+          "name": "limit",
+          "flag": "--limit",
+          "type": "integer",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--file-name",
+        "--limit"
+      ]
+    },
+    {
+      "command": "log query",
+      "description": "Read log query",
+      "effect": "read",
+      "operation": "OP-138",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "name",
+          "flag": "--name",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        },
+        {
+          "name": "classPath",
+          "flag": "--class-path",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        },
+        {
+          "name": "pageNumber",
+          "flag": "--page-number",
+          "type": "integer",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "entriesPerPage",
+          "flag": "--entries-per-page",
+          "type": "integer",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "descendingOrder",
+          "flag": "--descending-order",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "start",
+          "flag": "--start",
+          "type": "date",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "end",
+          "flag": "--end",
+          "type": "date",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "clientIpAddress",
+          "flag": "--client-ip-address",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "protocol",
+          "flag": "--protocol",
+          "type": "string",
+          "required": false,
+          "location": "form",
+          "values": [
+            "Udp",
+            "Tcp",
+            "Tls",
+            "Https",
+            "Quic"
+          ]
+        },
+        {
+          "name": "responseType",
+          "flag": "--response-type",
+          "type": "string",
+          "required": false,
+          "location": "form",
+          "values": [
+            "Authoritative",
+            "Recursive",
+            "Cached",
+            "Blocked",
+            "UpstreamBlocked",
+            "CacheBlocked"
+          ]
+        },
+        {
+          "name": "rcode",
+          "flag": "--rcode",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "qname",
+          "flag": "--qname",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "qtype",
+          "flag": "--qtype",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "qclass",
+          "flag": "--qclass",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--name",
+        "--class-path",
+        "--page-number",
+        "--entries-per-page",
+        "--descending-order",
+        "--start",
+        "--end",
+        "--client-ip-address",
+        "--protocol",
+        "--response-type",
+        "--rcode",
+        "--qname",
+        "--qtype",
+        "--qclass"
+      ]
+    },
+    {
+      "command": "log export",
+      "description": "Read log export",
+      "effect": "read",
+      "operation": "OP-139",
+      "arguments": [
+        {
+          "name": "node",
+          "flag": "--node",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "name",
+          "flag": "--name",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        },
+        {
+          "name": "classPath",
+          "flag": "--class-path",
+          "type": "string",
+          "required": true,
+          "location": "form"
+        },
+        {
+          "name": "start",
+          "flag": "--start",
+          "type": "date",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "end",
+          "flag": "--end",
+          "type": "date",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "clientIpAddress",
+          "flag": "--client-ip-address",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "protocol",
+          "flag": "--protocol",
+          "type": "string",
+          "required": false,
+          "location": "form",
+          "values": [
+            "Udp",
+            "Tcp",
+            "Tls",
+            "Https",
+            "Quic"
+          ]
+        },
+        {
+          "name": "responseType",
+          "flag": "--response-type",
+          "type": "string",
+          "required": false,
+          "location": "form",
+          "values": [
+            "Authoritative",
+            "Recursive",
+            "Cached",
+            "Blocked",
+            "UpstreamBlocked",
+            "CacheBlocked"
+          ]
+        },
+        {
+          "name": "rcode",
+          "flag": "--rcode",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "qname",
+          "flag": "--qname",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "qtype",
+          "flag": "--qtype",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        },
+        {
+          "name": "qclass",
+          "flag": "--qclass",
+          "type": "string",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--node",
+        "--name",
+        "--class-path",
+        "--start",
+        "--end",
+        "--client-ip-address",
+        "--protocol",
+        "--response-type",
+        "--rcode",
+        "--qname",
+        "--qtype",
+        "--qclass"
+      ]
+    },
+    {
+      "command": "admin ldap get",
+      "description": "Read admin ldap get",
+      "effect": "read",
+      "operation": "OP-141",
+      "arguments": [
+        {
+          "name": "includeGroups",
+          "flag": "--include-groups",
+          "type": "boolean",
+          "required": false,
+          "location": "form"
+        }
+      ],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--result-file",
+        "--fields",
+        "--full",
+        "--max-bytes",
+        "--max-requests",
+        "--max-pages",
+        "--max-elapsed-ms",
+        "--include-groups"
+      ]
     }
   ]
 }

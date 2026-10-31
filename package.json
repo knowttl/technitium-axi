@@ -11,14 +11,14 @@
   "engines": { "node": ">=24.14.0 <25", "npm": ">=11.9.0 <12" },
   "packageManager": "npm@11.9.0",
   "scripts": {
-    "build": "tsc && node scripts/inventory.mjs",
+    "build": "tsc && node scripts/inventory.mjs && node scripts/read-matrix.mjs",
     "typecheck": "tsc --noEmit",
-    "check:generated": "node scripts/inventory.mjs --check",
+    "check:generated": "node scripts/inventory.mjs --check && node scripts/read-matrix.mjs --check",
     "check:journey": "node scripts/journey.mjs",
-    "test": "npm run check:journey -- --task B1.01 --paths native --offline && npm run check:journey -- --task B1.02 --paths native --offline",
+    "test": "npm run check:journey -- --task B1.01 --paths native --offline && npm run check:journey -- --task B1.02 --paths native --offline && npm run check:journey -- --task B2.01 --paths native --offline && npm run check:journey -- --task B2.02 --paths native --offline && npm run check:journey -- --task B2.03 --paths native --offline && npm run check:journey -- --task B2.04 --paths native --offline",
     "test:release": "node --test tests/vendor.test.mjs tests/private-file.test.mjs",
     "prepack": "npm run build && npm run check:generated"
   },
-  "dependencies": { "@toon-format/toon": "4.4.0", "ajv": "8.17.1" },
+  "dependencies": { "@toon-format/toon": "2.3.1", "ajv": "8.17.1" },
   "devDependencies": { "@types/node": "24.10.0", "typescript": "5.9.3" }
 }

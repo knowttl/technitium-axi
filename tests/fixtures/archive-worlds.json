@@ -1,0 +1,29 @@
+{
+  "provenance": "Synthetic worlds reviewed against DnsWebService.BackupConfigAsync, WebServiceClusterApi.TransferConfigAsync and ClusterManager.TransferConfigAsync at 0dd592aad21eced4221a9a46204cb1a299972ca0",
+  "baseline": "Mon, 01 Jan 2024 00:00:00 GMT",
+  "backupComponents": {
+    "authConfig": ["auth.config"],
+    "clusterConfig": ["cluster.config"],
+    "webServiceSettings": ["webservice.config", "certs/web.pfx"],
+    "dnsSettings": ["dns.config", "certs/dns.pfx"],
+    "logSettings": ["log.config"],
+    "zones": ["zones/example.test.zone"],
+    "allowedZones": ["allowed.config"],
+    "blockedZones": ["blocked.config"],
+    "blockLists": ["blocklist.config", "blocklists/cache"],
+    "apps": ["apps/TestApp/TestApp.zip", "apps/TestApp/dnsApp.config", "apps/TestApp/dependency.dll"],
+    "scopes": ["scopes/default.scope"],
+    "stats": ["stats/hour.stat", "stats/day.dstat"],
+    "logs": ["logs/2024-01-01.log"]
+  },
+  "transferWorlds": [
+    { "name": "empty-no-apps", "includeZones": "", "entries": [] },
+    { "name": "equal-key-no-apps", "includeZones": "", "entries": [] },
+    { "name": "old-selected-key-no-apps", "includeZones": "selected.example.test", "entries": ["zones/selected.example.test.keys"] },
+    { "name": "new-unselected-key-no-apps", "includeZones": "selected.example.test", "entries": ["zones/selected.example.test.keys", "zones/new.example.test.keys"] },
+    { "name": "unchanged-app", "includeZones": "", "entries": ["apps/TestApp/.exists"] },
+    { "name": "changed-package", "includeZones": "", "entries": ["apps/TestApp/TestApp.zip"] },
+    { "name": "changed-config", "includeZones": "", "entries": ["apps/TestApp/dnsApp.config"] },
+    { "name": "both-app-files-changed", "includeZones": "", "entries": ["apps/TestApp/TestApp.zip", "apps/TestApp/dnsApp.config"] }
+  ]
+}
