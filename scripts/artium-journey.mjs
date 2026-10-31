@@ -243,9 +243,10 @@ export async function artiumJourney({ temporary, sha256, env, run, packageRoot, 
             const destination = resultIndex < 0 ? undefined : clientArgs[resultIndex + 1];
             if (resultIndex >= 0) clientArgs.splice(resultIndex, 2);
             const result = await run(process.execPath, [cli, 'technitium-axi', ...clientArgs, ...(json ? ['--json'] : [])], { env: clientEnv('alpha') });
-            assert.equal(result.stderr, '');
-            const value = json ? JSON.parse(result.stdout) : decode(result.stdout);
-            for (const canary of [vendorToken, 'SYNTHETIC-opaque-canary', 'SYNTHETIC-tsig-canary', 'SYNTHETIC-proxy-canary']) assert.ok(!result.stdout.includes(canary));
+            if (result.code === 0) assert.equal(result.stderr, '');
+            else if (result.stderr) assert.match(result.stderr, /^artium-axi: request_id [a-f0-9-]{36}\n$/);
+            const value = result.stdout.trimStart().startsWith('{') ? JSON.parse(result.stdout) : decode(result.stdout);
+            for (const canary of [vendorToken, 'SYNTHETIC-opaque-canary', 'SYNTHETIC-tsig-canary', 'SYNTHETIC-proxy-canary']) assert.ok(!`${result.stdout}${result.stderr}`.includes(canary));
             if (result.code === 0 && value.result) {
               assert.match(value.result.operation, /^OP-\d{3}$/);
               assert.equal((await request(value.result.path, undefined, actors.beta, 'GET', 'beta')).value.error.code, 'NOT_FOUND');
