@@ -3,15 +3,15 @@
   "source": {
     "repository": "https://github.com/knowttl/artium-axi",
     "baseline": "63719968d6dfae0d1d8c5b59a284fab388626a3a",
-    "fixtureRevision": "83c3e32d9017623dcfbad6935d68c57427e4f7de",
-    "manifestSha256": "82eca8380d18ee6f01a29d1fca2b8a61300260419fffc8cff00141ed5d614f7a",
+    "fixtureRevision": "75a6d2decba3f2500484b95115d9ba9bcef145ab",
+    "manifestSha256": "cb9dce36eedb9c7b33d5e2b2ff50ecc880f7a0fa25ef168a7c0bce8720db9114",
     "files": {
-      "src/shared/api.ts": "32901be14a0cf27f294c389ddd1b36bce9e05bd78d6d24c61f0bf08959828a1d",
-      "src/server/app.ts": "43dbf457977528e10521199c2df76a69de60d5c8319c5eca6860ccbd3b33185f",
+      "src/shared/api.ts": "5089211e01559e07533cd4c91be01247177a6964366a2dec06287c70ca529cb5",
+      "src/server/app.ts": "35c4530d863b23e1bc77717417e9b911fe9c2416f1f7407d38fd5d8d3ce66f71",
       "src/server/adapters/technitium.ts": "160937048aa9165f168e21873caeab53debcc52d2be746ac93c3e27321033a92",
       "src/server/protected-results.ts": "7bbbf79caa217b4d0adf599b8061374cc26d9c7a21e97bebff72672a67c021de",
-      "src/server/adapters/fixture-arguments.ts": "4cbde47e364d12d290416ce9b33764d662f45f1055f138bab94f66e409674512",
-      "tools/pnpm-lock.yaml": "5acffab27905e0500dacb5ffa278c3f7793c4a406193e9c5277d851ce49d20cd"
+      "src/server/adapters/fixture-arguments.ts": "130dd3dda4c0f960e7531748113b5d1f7258602b00555737c0d8eda5b852f5b0",
+      "tools/pnpm-lock.yaml": "cea0e77ce79cdb40335e449baeb00ca98566d716795b1dab860bf029c319c95c"
     }
   },
   "seed": {
