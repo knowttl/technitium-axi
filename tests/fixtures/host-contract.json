@@ -3,20 +3,22 @@
   "source": {
     "repository": "https://github.com/knowttl/artium-axi",
     "baseline": "63719968d6dfae0d1d8c5b59a284fab388626a3a",
-    "fixtureRevision": "bfe22bd26ae49e71134349fa75cba8406587274c",
-    "manifestSha256": "0aa59168ff2265b894745ec6d6447eaa522f3f431486d61969adc949b98a7bf7",
+    "fixtureRevision": "3d22b81d7a1289c7325878d8a1a5a26f23da734e",
+    "manifestSha256": "c4ae92c687abb431ebd9a89869d33d2cdffa372ebe52af196129cb066f2f3414",
     "files": {
       "src/shared/api.ts": "32901be14a0cf27f294c389ddd1b36bce9e05bd78d6d24c61f0bf08959828a1d",
-      "src/server/app.ts": "f9c4f05be5802f009e3a5a1545bc2cd647499a71ca0f18fd7045eed8f191d9b7",
-      "src/server/adapters/technitium.ts": "7c1d5e5f75f74c5dc28e7a298f1f4b7c9496333ff40667690bc40de2ec3b99a7",
-      "tools/pnpm-lock.yaml": "cd0e1a7b946d51b10c0720d3ae08adb18f3c3ab9b15f6a1aed9ad9e3cd231031"
+      "src/server/app.ts": "43dbf457977528e10521199c2df76a69de60d5c8319c5eca6860ccbd3b33185f",
+      "src/server/adapters/technitium.ts": "160937048aa9165f168e21873caeab53debcc52d2be746ac93c3e27321033a92",
+      "src/server/protected-results.ts": "7bbbf79caa217b4d0adf599b8061374cc26d9c7a21e97bebff72672a67c021de",
+      "src/server/adapters/fixture-arguments.ts": "4cbde47e364d12d290416ce9b33764d662f45f1055f138bab94f66e409674512",
+      "tools/pnpm-lock.yaml": "40c9412a91132c0d0810127c4d8faf86f699752ab3925c766d3f22a5b018dac7"
     }
   },
   "seed": {
     "callers": ["alpha", "beta"],
     "granted": ["alpha"],
     "vendorIdentities": ["alpha", "beta"],
-    "credentialPolicy": "The admission fixture injects one shared tool credential into an isolated artium profile using v2 SecretRefs. Status is unauthenticated. Session results are bound to caller, operation and credential revision and retrieved once through an authenticated route."
+    "credentialPolicy": "The admission fixture injects one shared tool credential into an isolated artium profile using v2 SecretRefs. Status is unauthenticated. All authenticated read results are bound to caller, operation and credential revision and retrieved once through an authenticated route."
   },
   "request": {
     "run": {
@@ -34,6 +36,7 @@
       "unknownFields": "rejected",
       "example": { "name": "input.json", "size": 2, "contentBase64": "e30=" }
     },
+    "protectedResult": { "method": "GET", "path": "/v1/results/technitium-axi/:operation/:id", "authentication": "current caller grant and credential revision", "limits": { "bytes": 1048576, "lifetimeMs": 300000, "resultsPerCaller": 4 }, "mismatchedOperation": "NOT_FOUND" },
     "transfer": {
       "method": "POST",
       "prefixes": ["/v1/transfers/hybrid", "/v1/transfers/checkpoint", "/v1/transfers/mg", "/v1/transfers/beyondtrust"],

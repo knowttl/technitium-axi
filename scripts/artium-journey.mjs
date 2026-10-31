@@ -245,6 +245,10 @@ export async function artiumJourney({ temporary, sha256, env, run, packageRoot, 
             if (result.code === 0 && value.result) {
               assert.match(value.result.operation, /^OP-\d{3}$/);
               assert.equal((await request(value.result.path, undefined, actors.beta, 'GET', 'beta')).value.error.code, 'NOT_FOUND');
+              const wrongOperation = value.result.operation === 'OP-079' ? 'OP-075' : 'OP-079';
+              const changedOperationPath = value.result.path.replace(`/${value.result.operation}/`, `/${wrongOperation}/`);
+              assert.notEqual(changedOperationPath, value.result.path);
+              assert.equal((await request(changedOperationPath, undefined, actors.alpha)).value.error.code, 'NOT_FOUND');
               const received = await fetch(`${origin}${value.result.path}`, { headers: actors.alpha, signal });
               assert.equal(received.status, 200);
               const bytes = Buffer.from(await received.arrayBuffer());

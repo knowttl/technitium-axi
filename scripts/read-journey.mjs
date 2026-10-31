@@ -69,6 +69,17 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
   const respond = row => vendors.responders.set(row.path, () => ({ body: row.response }));
   const checks = [];
   if (task === 'B2.01') {
+    const codec = JSON.parse(await readFile(new URL('../package.json', import.meta.resolve('@toon-format/toon')), 'utf8'));
+    assert.equal(codec.version, '2.3.1', 'The journey decoder must match the Artium TOON contract');
+    const profileRow = matrix.operations.find(row => row.operation === 'OP-012');
+    respond(profileRow);
+    const profileOutput = await success([...argumentsFor(profileRow), '--full'], false);
+    assert.deepEqual(profileOutput.response, profileRow.ordinaryResponse);
+    assert.deepEqual(profileOutput.output.collections, {
+      memberOfGroups: { returned: 1, available: 1, complete: true },
+      sessions: { returned: 1, available: 1, complete: true },
+    });
+    checks.push('packaged-toon-2.3.1-collections-compatibility');
     const inventory = await success(['inventory']);
     assert.deepEqual(inventory.commands.filter(command => command.operation).map(command => command.operation).sort(),
       ['OP-001', 'OP-006', ...matrix.operations.map(row => row.operation)].sort());
@@ -84,8 +95,10 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
       assert.equal(trace.method, 'POST');
       assert.equal(trace.inputHash, hash(expectedForm.toString()));
       assert.equal(trace.bearerHash, hash(token));
-      const toon = await success(args, false);
-      assert.deepEqual({ ...toon, result: undefined }, { ...actual, result: undefined });
+      if (row.operation !== 'OP-012') {
+        const toon = await success(args, false);
+        assert.deepEqual({ ...toon, result: undefined }, { ...actual, result: undefined });
+      }
       const invalid = row.parameters.find(parameter => parameter.invalid !== null);
       const required = row.parameters.find(parameter => parameter.required);
       if (invalid || required) {

@@ -17,6 +17,7 @@ technitium-axi admin cluster primary transfer-config --include-zones example.tes
 ```
 
 TOON is the default output; `--json` serializes the same approved projection.
+The encoder is pinned to TOON 2.3.1 to match the Artium host decoder contract.
 Unknown vendor fields are tolerated and omitted from ordinary output.
 Required envelope and collection fields and the types of projected fields are validated before output.
 Known passwords, TSIG shared secrets and token values are excluded from generic projections.

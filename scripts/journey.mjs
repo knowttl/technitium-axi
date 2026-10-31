@@ -74,7 +74,7 @@ if (!inside) {
   const checks = [];
   const identityTask = Object.hasOwn(credentialTasks, task);
   const readTask = readTasks.includes(task);
-  const expected = (paths.includes('native') ? (readTask ? 1 : identityTask ? credentialTasks[task].length : task === 'B1.02' ? 7 : 5) : 0) + (paths.includes('artium') ? (readTask ? 6 : identityTask ? 5 : 4) : 0);
+  const expected = (paths.includes('native') ? (readTask ? (task === 'B2.01' ? 2 : 1) : identityTask ? credentialTasks[task].length : task === 'B1.02' ? 7 : 5) : 0) + (paths.includes('artium') ? (readTask ? 6 : identityTask ? 5 : 4) : 0);
   try {
     const home = join(temporary, 'home');
     await mkdir(home, { mode: 0o700 });
