@@ -8,6 +8,8 @@ import { configPath, loadConfig, selectProfile } from './credentials.js';
 import { ToolError } from './errors.js';
 import { PrivateFiles } from './private-file.js';
 import { Redactor, saveResult, vendorRead } from './vendor.js';
+import { readContracts } from './read-contracts.js';
+import { readInputs, readOperation } from './reads.js';
 
 const help = {
   description: 'Manage Technitium DNS Server through one selected credential profile', commands,
@@ -21,6 +23,9 @@ export async function main(args: string[]): Promise<void> {
   const print = (value: unknown): void => { console.log(redactor.text(json ? JSON.stringify(value) : encode(value))); };
   try {
     const options: { config?: string; profile?: string; resultFile?: string; inputFile?: string } = {};
+    const readOptions: Record<string, string> = {};
+    const valueFlags = new Set(['--config', '--profile', '--result-file', '--input-file', '--fields', '--max-bytes', '--max-requests', '--max-pages', '--max-elapsed-ms',
+      ...readContracts.flatMap(item => item.parameters.map(parameter => parameter.flag))]);
     const positional: string[] = [];
     const flags = new Set<string>();
     for (let i = 0; i < args.length; i++) {
@@ -28,13 +33,14 @@ export async function main(args: string[]): Promise<void> {
       if (!arg.startsWith('-')) { positional.push(arg); continue; }
       if (flags.has(arg)) throw new ToolError('USAGE', 'Repeated flag', 'Provide each flag once');
       flags.add(arg);
-      if (['--config', '--profile', '--result-file', '--input-file'].includes(arg)) {
+      if (valueFlags.has(arg)) {
         const value = args[++i];
-        if (!value || value.startsWith('-')) throw new ToolError('USAGE', 'Flag requires a value', `Use ${arg} <value>`);
+        if (value === undefined || value.startsWith('-') || (value === '' && ['--config', '--profile', '--result-file', '--input-file'].includes(arg))) throw new ToolError('USAGE', 'Flag requires a value', `Use ${arg} <value>`);
         if (arg === '--config') options.config = value;
         else if (arg === '--profile') options.profile = value;
         else if (arg === '--result-file') options.resultFile = value;
-        else options.inputFile = value;
+        else if (arg === '--input-file') options.inputFile = value;
+        else readOptions[arg] = value;
       }
     }
     const command = positional.join(' ');
@@ -47,7 +53,7 @@ export async function main(args: string[]): Promise<void> {
       return;
     }
     if (flags.has('--help')) {
-      print(selected ? { command: selected.command, description: selected.description, flags: selected.flags,
+      print(selected ? { command: selected.command, description: selected.description, flags: selected.flags, arguments: selected.arguments,
         examples: [`technitium-axi ${selected.command}`, `technitium-axi ${selected.command} --json`] } : help);
       return;
     }
@@ -68,6 +74,8 @@ export async function main(args: string[]): Promise<void> {
       return;
     }
     if (options.resultFile && !isAbsolute(options.resultFile)) throw new ToolError('USAGE', 'Result file must be absolute', 'Use --result-file <absolute-path>');
+    const readContract = readContracts.find(item => item.command === command);
+    if (readContract) readInputs(readContract, readOptions);
     const credential = await selectProfile(options);
     let token: string | undefined;
     if (command && command !== 'status') { token = await credential.token(); redactor.add(token); }
@@ -76,8 +84,10 @@ export async function main(args: string[]): Promise<void> {
         tokenKind: credential.profile.tokenKind, tokenSource: credential.tokenSource });
       return;
     }
-    const result = await vendorRead(credential.profile, command === '' || command === 'status' ? 'status' : 'user session get', token);
-    if (result.secret) redactor.add(result.secret);
+    const result = readContract && !['OP-001', 'OP-006'].includes(readContract.id)
+      ? await readOperation(credential.profile, command, token, readOptions, flags.has('--full'))
+      : await vendorRead(credential.profile, command === '' || command === 'status' ? 'status' : 'user session get', token);
+    if ('secret' in result && typeof result.secret === 'string') redactor.add(result.secret);
     let reference;
     if (options.resultFile) {
       await saveResult(options.resultFile, result.bytes);

@@ -1,6 +1,6 @@
 # Offline package journeys
 
-The B1 package, credential and operation checks run the installed npm tarball, never a TypeScript loader.
+The B1 and B2 package, credential and read checks run the installed npm tarball, never a TypeScript loader.
 They require Linux with user, PID, mount and network namespaces, iproute2, OpenSSL and a C compiler for process-interruption checks.
 The namespace enables only loopback and contains the CLI, server, adapter and subprocesses.
 Follow the [README setup](../README.md) to fetch the pinned npm dependencies once, then keep all journeys offline.
@@ -54,6 +54,22 @@ The source-reviewed run, input-file and existing transfer contracts live in `tes
 The current host has no Technitium transfer route or transfer selection.
 The harness checks that limit without inventing a route or claiming a completed transfer.
 Later transfer slices require a host extension.
+
+B2.01 through B2.04 cover the generated read matrix, protected formats, bounded paging/errors and archive-entry review.
+They use the same task selector and paths as B1.
+The B2 hosted path requires a newly reviewed fixture admitting the complete read inventory and generalizing protected result custody beyond sessions.
+It uses the authenticated result path returned by the host rather than inventing a Technitium transfer endpoint.
+The response matrix is generated from typed contracts and retained public documentation example seeds; all POST fixtures are synthetic.
+The archive review task performs no successful backup or transfer request.
+The format task exercises independently defined ZIP entry worlds and exact protected bytes.
+Hosted expiry checks advance the server process clock boundary without sleeping.
+
+```sh
+npm run check:journey -- --task B2.01 --paths native,artium --offline
+npm run check:journey -- --task B2.02 --paths native,artium --offline
+npm run check:journey -- --task B2.03 --paths native,artium --offline
+npm run check:journey -- --task B2.04 --paths native,artium --offline
+```
 
 Node diagnostics report actual child PID, argv and executable hash without replacing the runner.
 The harness verifies exact executable paths before normalizing their prefixes in emitted evidence.

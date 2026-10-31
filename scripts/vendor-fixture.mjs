@@ -17,6 +17,7 @@ export async function fakeVendors(temporary, run, env) {
   const tokens = new Map();
   const tokenKinds = new Map();
   const faults = new Map();
+  const responders = new Map();
   const servers = [];
   try {
     for (const identity of ['alpha', 'beta']) {
@@ -26,9 +27,17 @@ export async function fakeVendors(temporary, run, env) {
         const body = Buffer.concat(chunks);
         const bearer = incoming.headers.authorization?.replace(/^Bearer /, '');
         traces.push({ method: incoming.method, path: incoming.url.split('?')[0],
-          headers: { 'content-type': incoming.headers['content-type'] ?? null },
+          headers: { 'content-type': incoming.headers['content-type'] ?? null,
+            ...(incoming.headers['if-modified-since'] ? { 'if-modified-since': incoming.headers['if-modified-since'] } : {}) },
           inputHash: createHash('sha256').update(body).digest('hex'),
           bearerHash: bearer ? createHash('sha256').update(bearer).digest('hex') : null, identity });
+        const responder = responders.get(incoming.url);
+        if (responder) {
+          const response = bearer !== tokens.get(identity) ? { body: { status: 'invalid-token' } } : responder(incoming, body);
+          outgoing.writeHead(response.status ?? 200, { 'content-type': response.contentType ?? 'application/json', ...response.headers });
+          outgoing.end(response.bytes ?? JSON.stringify(response.body));
+          return;
+        }
         outgoing.writeHead(200, { 'content-type': 'application/json' });
         if (incoming.url === '/api/status') {
           outgoing.end(JSON.stringify({ status: 'ok', server: `dns-${identity}.example.test`, hasDefaultCredentials: false, ssoEnabled: false }));
@@ -47,7 +56,7 @@ export async function fakeVendors(temporary, run, env) {
     }
     return {
       traces,
-      tokens, tokenKinds, faults, caFile: cert,
+      tokens, tokenKinds, faults, responders, caFile: cert,
       origins: servers.map(server => `https://127.0.0.1:${server.address().port}`),
       async check() {
         for (const [index, server] of servers.entries()) {

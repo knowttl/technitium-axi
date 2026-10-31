@@ -7,10 +7,12 @@ import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { decode } from '@toon-format/toon';
+import { readJourney } from './read-journey.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
-export async function artiumJourney({ temporary, sha256, env, run, packageRoot, origins, vendors, task, identityTask, signal }) {
+export async function artiumJourney({ temporary, sha256, env, run, packageRoot, origins, vendors, task, identityTask, readTask, signal }) {
+  const protectedTask = identityTask || readTask;
   const root = process.env.ARTIUM_FIXTURE_ROOT;
   const manifestPath = process.env.ARTIUM_FIXTURE_MANIFEST;
   assert.ok(root && manifestPath, 'Set ARTIUM_FIXTURE_ROOT and ARTIUM_FIXTURE_MANIFEST to the prepared local admission fixture');
@@ -28,7 +30,7 @@ export async function artiumJourney({ temporary, sha256, env, run, packageRoot, 
   const hostPackage = join(root, 'tools/node_modules/@knowttl/technitium-axi');
   assert.ok((await realpath(hostPackage)).startsWith(`${root}/tools/node_modules/`), 'Host package must be installed, not linked to a source checkout');
   const hostExecutable = join(hostPackage, 'bin/technitium-axi.js');
-  for (const file of ['package.json', 'bin/technitium-axi.js', 'dist/cli.js', 'dist/catalogue.js', 'dist/credentials.js', 'dist/private-file.js', 'dist/vendor.js', 'dist/errors.js', 'axi-credential.schema.json', 'command-inventory.json']) {
+  for (const file of ['package.json', 'bin/technitium-axi.js', 'dist/cli.js', 'dist/catalogue.js', 'dist/credentials.js', 'dist/private-file.js', 'dist/vendor.js', 'dist/errors.js', 'dist/reads.js', 'dist/read-contracts.js', 'dist/archive-contract.js', 'axi-credential.schema.json', 'command-inventory.json']) {
     assert.deepEqual(await readFile(join(hostPackage, file)), await readFile(join(packageRoot, file)), `Installed package differs: ${file}`);
   }
   const scratch = join(temporary, 'host');
@@ -36,9 +38,11 @@ export async function artiumJourney({ temporary, sha256, env, run, packageRoot, 
   const password = 'SYNTHETIC-bootstrap-password-1';
   const replacement = 'SYNTHETIC-replacement-password-2';
   const vendorToken = 'SYNTHETIC-host-"/+=alpha';
-  if (identityTask) vendors.tokens.set('alpha', vendorToken);
+  if (protectedTask) vendors.tokens.set('alpha', vendorToken);
   const bootstrap = join(scratch, 'bootstrap-password');
   await writeFile(bootstrap, password, { mode: 0o600 });
+  const clockOffset = join(scratch, 'clock-offset');
+  await writeFile(clockOffset, '0', { mode: 0o600 });
   const reservation = createServer();
   reservation.listen(0, '127.0.0.1');
   await once(reservation, 'listening');
@@ -48,6 +52,7 @@ export async function artiumJourney({ temporary, sha256, env, run, packageRoot, 
   const serverEnv = { ...env, ARTIUM_FIXTURE_ROOT: root, ARTIUM_FIXTURE_PORT: String(port), ARTIUM_FIXTURE_SCRATCH: scratch,
     ARTIUM_AXI_MASTER_KEY: Buffer.alloc(32, 17).toString('base64'), ARTIUM_AXI_DATABASE_FILE: join(scratch, 'data', 'artium.db'),
     ARTIUM_AXI_ADMIN_USERNAME: 'fixture-admin', ARTIUM_AXI_ADMIN_PASSWORD_FILE: bootstrap,
+    ARTIUM_FIXTURE_CLOCK_OFFSET_FILE: clockOffset,
     TECHNITIUM_AXI_ORIGIN: origins?.[1] ?? 'https://127.0.0.1:9444', TECHNITIUM_AXI_AUTH: 'token',
     TECHNITIUM_AXI_TOKEN_KIND: 'api', TECHNITIUM_AXI_TOKEN: 'SYNTHETIC-conflicting-developer-token' };
   const server = spawn(process.execPath, [fileURLToPath(new URL('./artium-server.mjs', import.meta.url))], {
@@ -116,8 +121,8 @@ export async function artiumJourney({ temporary, sha256, env, run, packageRoot, 
     const tool = await success('/v1/admin/tools/technitium-axi', undefined, admin);
     await success('/v1/admin/tools/technitium-axi/credential', {
       expectedRevision: 0, expectedToolRevision: tool.revision,
-      value: { origin: origins?.[0] ?? 'https://127.0.0.1:9443', auth: 'token', tokenKind: 'api', token: identityTask ? vendorToken : 'SYNTHETIC-staged-token-alpha',
-        ...(identityTask ? { caFile: await readFile(vendors.caFile, 'utf8'), tlsServerName: 'localhost' } : {}) },
+      value: { origin: origins?.[0] ?? 'https://127.0.0.1:9443', auth: 'token', tokenKind: 'api', token: protectedTask ? vendorToken : 'SYNTHETIC-staged-token-alpha',
+        ...(protectedTask ? { caFile: await readFile(vendors.caFile, 'utf8'), tlsServerName: 'localhost' } : {}) },
     }, admin, 'PUT');
     const current = await success('/v1/admin/tools/technitium-axi', undefined, admin);
     await success('/v1/admin/tools/technitium-axi', { enabled: true, expectedRevision: current.revision }, admin, 'PATCH');
@@ -150,7 +155,7 @@ export async function artiumJourney({ temporary, sha256, env, run, packageRoot, 
     assert.equal(result.source, 'technitium-axi');
     const denied = await request(runPath, { args: ['--help'] }, actors.beta, 'POST', 'beta');
     assert.equal(denied.value.error.code, fixture.expected.ungrantedCaller);
-    if (identityTask) {
+    if (protectedTask) {
       const invoke = async args => {
         const result = await run(process.execPath, [cli, 'technitium-axi', ...args, '--json'], { env: clientEnv('alpha') });
         assert.equal(result.code, 0, result.stdout + result.stderr);
@@ -225,6 +230,40 @@ export async function artiumJourney({ temporary, sha256, env, run, packageRoot, 
       assert.equal(vendors.traces.length, count);
       assert.equal((await request(pending.result.path, undefined, actors.alpha)).value.error.code, 'NOT_FOUND');
       await replace(hostProfile);
+      if (readTask) {
+        await readJourney({ task, temporary, env, run, vendors, selectedToken: vendorToken,
+          configureHosted: tokenKind => replace({ ...hostProfile, tokenKind }),
+          async invokeHosted(args, json) {
+            const clientArgs = [...args];
+            const resultIndex = clientArgs.indexOf('--result-file');
+            const destination = resultIndex < 0 ? undefined : clientArgs[resultIndex + 1];
+            if (resultIndex >= 0) clientArgs.splice(resultIndex, 2);
+            const result = await run(process.execPath, [cli, 'technitium-axi', ...clientArgs, ...(json ? ['--json'] : [])], { env: clientEnv('alpha') });
+            assert.equal(result.stderr, '');
+            const value = json ? JSON.parse(result.stdout) : decode(result.stdout);
+            for (const canary of [vendorToken, 'SYNTHETIC-opaque-canary', 'SYNTHETIC-tsig-canary', 'SYNTHETIC-proxy-canary']) assert.ok(!result.stdout.includes(canary));
+            if (result.code === 0 && value.result) {
+              assert.match(value.result.operation, /^OP-\d{3}$/);
+              assert.equal((await request(value.result.path, undefined, actors.beta, 'GET', 'beta')).value.error.code, 'NOT_FOUND');
+              const received = await fetch(`${origin}${value.result.path}`, { headers: actors.alpha, signal });
+              assert.equal(received.status, 200);
+              const bytes = Buffer.from(await received.arrayBuffer());
+              assert.equal(hash(bytes), value.result.sha256);
+              if (destination) await writeFile(destination, bytes, { mode: 0o600 });
+              assert.equal((await request(value.result.path, undefined, actors.alpha)).value.error.code, 'NOT_FOUND');
+            }
+            return { ...result, value };
+          },
+        });
+        const audit = await success('/v1/admin/audit?tool=technitium-axi', undefined, admin);
+        for (const canary of [vendorToken, 'SYNTHETIC-opaque-canary', 'SYNTHETIC-tsig-canary', 'SYNTHETIC-proxy-canary']) assert.ok(!JSON.stringify(audit).includes(canary));
+        if (task === 'B2.02') {
+          const pending = await invoke(['user', 'session', 'get']);
+          await writeFile(clockOffset, '360000');
+          assert.equal((await request(pending.result.path, undefined, actors.alpha)).value.error.code, 'NOT_FOUND');
+          await writeFile(clockOffset, '0');
+        }
+      }
     }
     const cases = [
       [{ args: ['--bogus'] }, fixture.expected.unknownFlag],
@@ -268,7 +307,8 @@ export async function artiumJourney({ temporary, sha256, env, run, packageRoot, 
     console.log(JSON.stringify({ host: { fixtureRevision: manifest.fixtureCommit, manifestSha256: hash(manifestBytes),
       packageSha256: sha256, argvPaths: 'normalized after exact installed-path checks', processStarts: publicStartups, requests: traces } }));
     return ['artium:public-discovery', 'artium:authenticated-run-and-denial', 'artium:file-and-transfer-contract', 'artium:installed-process-provenance',
-      ...(identityTask ? [`artium:${task}:credential-and-result-custody`] : [])];
+      ...(protectedTask ? [`artium:${task}:credential-and-result-custody`] : []),
+      ...(readTask ? [`artium:${task}:read-contract-journey`] : [])];
   } finally {
     server.kill('SIGTERM');
     const deadline = setTimeout(() => server.kill('SIGKILL'), 5000);
