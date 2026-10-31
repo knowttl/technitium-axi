@@ -3,8 +3,10 @@
 The B1.01 and B1.02 checks run the installed npm tarball, never a TypeScript loader.
 They require Linux with user, PID, mount and network namespaces, iproute2 and OpenSSL.
 The namespace enables only loopback and contains the CLI, server, adapter and subprocesses.
-The setup pins Node 24.14.0 and npm 11.9.0.
-Fetch the pinned npm dependencies once with `npm ci`, then keep all journeys offline.
+Follow the [README setup](../README.md) to fetch the pinned npm dependencies once, then keep all journeys offline.
+The runner removes inherited credentials and packs and installs the executable in an empty temporary prefix.
+Discovery commands make zero vendor requests.
+Only B1.02 starts and probes the two disposable HTTPS boundaries with synthetic identities; these probes do not implement vendor operations.
 
 ```sh
 npm test
@@ -13,7 +15,7 @@ npm run typecheck
 npm run check:generated
 ```
 
-The hosted checks require the separately prepared, unmerged Artium admission fixture at revision `6d1e406705803a657241295ddf322b4c21fb4ef9`.
+The hosted checks require the separately prepared, unmerged Artium admission fixture pinned by `source.fixtureRevision` in [the reviewed host contract](../tests/fixtures/host-contract.json).
 This is local test support, not a claim of stock Artium admission.
 Obtain the fixture export and its manifest from the fixture owner and follow its startup preparation instructions.
 Prepare its dependencies and build before entering the offline namespace.
@@ -30,13 +32,13 @@ npm run check:journey -- --task B1.02 --paths native,artium --offline
 
 The harness checks the manifest digest, source-contract digests and current package tarball against the reviewed pin before starting the server.
 The host registry must contain that exact installed package, with pnpm integrity checks intact.
-Missing fixture inputs and unselected or unknown paths fail explicitly.
+Missing fixture inputs for a selected Artium path, an omitted path selection and unknown paths fail explicitly.
+Native-only runs do not require the Artium fixture; every selected path must execute successfully.
 Each report separates expected, executed, failed, pending and skipped cases.
 
 Hosted setup uses public login, password replacement, recent authentication, credential, tool, user and role endpoints.
 The synthetic alpha caller has the tool grant; beta is authenticated without that grant.
 The fixture stages a shared tool credential and does not consume it during discovery.
-The two generated HTTPS boundaries are harness probes, not implemented vendor operations.
 Per-caller vendor identity conformance remains part of later credential slices.
 
 The source-reviewed run, input-file and existing transfer contracts live in `tests/fixtures/host-contract.json`.
