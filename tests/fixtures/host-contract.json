@@ -3,13 +3,13 @@
   "source": {
     "repository": "https://github.com/knowttl/artium-axi",
     "baseline": "63719968d6dfae0d1d8c5b59a284fab388626a3a",
-    "fixtureRevision": "10e8178fb26f06cd95300c02d17e18be5bd90c08",
-    "manifestSha256": "d55b04b99e8712af6beae84bc012605f6e088a4d35cf049df0c555857ed6da2f",
+    "fixtureRevision": "bfe22bd26ae49e71134349fa75cba8406587274c",
+    "manifestSha256": "0aa59168ff2265b894745ec6d6447eaa522f3f431486d61969adc949b98a7bf7",
     "files": {
       "src/shared/api.ts": "32901be14a0cf27f294c389ddd1b36bce9e05bd78d6d24c61f0bf08959828a1d",
       "src/server/app.ts": "f9c4f05be5802f009e3a5a1545bc2cd647499a71ca0f18fd7045eed8f191d9b7",
       "src/server/adapters/technitium.ts": "7c1d5e5f75f74c5dc28e7a298f1f4b7c9496333ff40667690bc40de2ec3b99a7",
-      "tools/pnpm-lock.yaml": "c9ffff7f5f5c9c6aa61b614c87ba53c460dcd48c711781eceea330bc46a17db8"
+      "tools/pnpm-lock.yaml": "cd0e1a7b946d51b10c0720d3ae08adb18f3c3ab9b15f6a1aed9ad9e3cd231031"
     }
   },
   "seed": {
