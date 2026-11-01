@@ -10,6 +10,8 @@ import { PrivateFiles } from './private-file.js';
 import { Redactor, saveResult, vendorRead } from './vendor.js';
 import { readContracts } from './read-contracts.js';
 import { readInputs, readOperation } from './reads.js';
+import { writeContracts } from './write-contracts.js';
+import { writeInput, writeOperation } from './writes.js';
 
 const help = {
   description: 'Manage Technitium DNS Server through one selected credential profile', commands,
@@ -25,6 +27,7 @@ export async function main(args: string[]): Promise<void> {
     const options: { config?: string; profile?: string; resultFile?: string; inputFile?: string } = {};
     const readOptions: Record<string, string> = {};
     const valueFlags = new Set(['--config', '--profile', '--result-file', '--input-file', '--fields', '--max-bytes', '--max-requests', '--max-pages', '--max-elapsed-ms',
+      '--confirm', '--reconcile',
       ...readContracts.flatMap(item => item.parameters.map(parameter => parameter.flag))]);
     const positional: string[] = [];
     const flags = new Set<string>();
@@ -76,6 +79,8 @@ export async function main(args: string[]): Promise<void> {
     if (options.resultFile && !isAbsolute(options.resultFile)) throw new ToolError('USAGE', 'Result file must be absolute', 'Use --result-file <absolute-path>');
     const readContract = readContracts.find(item => item.command === command);
     if (readContract) readInputs(readContract, readOptions);
+    const writeContract = writeContracts.find(item => item.command === command);
+    const input = writeContract ? await writeInput(writeContract, options.inputFile) : undefined;
     const credential = await selectProfile(options);
     let token: string | undefined;
     if (command && command !== 'status') { token = await credential.token(); redactor.add(token); }
@@ -84,7 +89,10 @@ export async function main(args: string[]): Promise<void> {
         tokenKind: credential.profile.tokenKind, tokenSource: credential.tokenSource });
       return;
     }
-    const result = readContract && !['OP-001', 'OP-006'].includes(readContract.id)
+    const result = writeContract && input ? await writeOperation(writeContract, input, credential.profile, credential.name, token!,
+      { execute: flags.has('--execute'), ...(readOptions['--confirm'] ? { confirm: readOptions['--confirm'] } : {}),
+        ...(readOptions['--reconcile'] ? { reconcile: readOptions['--reconcile'] } : {}) }, redactor)
+      : readContract && !['OP-001', 'OP-006'].includes(readContract.id)
       ? await readOperation(credential.profile, command, token, readOptions, flags.has('--full'))
       : await vendorRead(credential.profile, command === '' || command === 'status' ? 'status' : 'user session get', token);
     if ('secret' in result && typeof result.secret === 'string') redactor.add(result.secret);

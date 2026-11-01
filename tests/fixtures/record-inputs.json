@@ -1,0 +1,28 @@
+{
+  "provenance": "Synthetic values for DNS Server 0dd592aad21eced4221a9a46204cb1a299972ca0 record selectors; no live evidence. DNAME deletion remains pending.",
+  "rows": [
+    { "type": "A", "data": { "ipAddress": "192.0.2.1" }, "replacement": { "newIpAddress": "192.0.2.3" } },
+    { "type": "AAAA", "data": { "ipAddress": "2001:db8::1" }, "replacement": { "newIpAddress": "2001:db8::3" } },
+    { "type": "NS", "data": { "nameServer": "ns1.example.test" }, "replacement": { "newNameServer": "ns3.example.test" } },
+    { "type": "PTR", "data": { "ptrName": "one.example.test" }, "replacement": { "newPtrName": "three.example.test" } },
+    { "type": "CNAME", "singleton": true, "data": { "cname": "one.example.test" }, "replacement": { "cname": "three.example.test" } },
+    { "type": "DNAME", "singleton": true, "pendingDelete": true, "data": { "dname": "one.example.test" }, "replacement": { "dname": "three.example.test" } },
+    { "type": "MX", "data": { "preference": 0, "exchange": "mail1.example.test" }, "replacement": { "newPreference": 20, "newExchange": "mail3.example.test" } },
+    { "type": "TXT", "data": { "text": "one", "splitText": false }, "replacement": { "newText": "three", "newSplitText": false } },
+    { "type": "TXT", "variant": "base64", "data": { "characterStringsBase64": "b25l" }, "replacement": { "newCharacterStringsBase64": "dGhyZWU=" } },
+    { "type": "RP", "data": { "mailbox": "one.example.test", "txtDomain": "txt1.example.test" }, "replacement": { "newMailbox": "three.example.test", "newTxtDomain": "txt3.example.test" } },
+    { "type": "SRV", "data": { "priority": 0, "weight": 0, "port": 443, "target": "one.example.test" }, "replacement": { "newPriority": 10, "newWeight": 20, "newPort": 8443, "newTarget": "three.example.test" } },
+    { "type": "NAPTR", "data": { "naptrOrder": 0, "naptrPreference": 0, "naptrFlags": "S", "naptrServices": "SIP+D2U", "naptrRegexp": "", "naptrReplacement": "one.example.test" }, "replacement": { "naptrNewOrder": 10, "naptrNewPreference": 20, "naptrNewFlags": "S", "naptrNewServices": "SIP+D2T", "naptrNewRegexp": "", "naptrNewReplacement": "three.example.test" } },
+    { "type": "DS", "data": { "keyTag": 10, "algorithm": 13, "digestType": 2, "digest": "ABCD" }, "replacement": { "newKeyTag": 30, "newAlgorithm": 13, "newDigestType": 2, "newDigest": "1234" } },
+    { "type": "SSHFP", "data": { "sshfpAlgorithm": 1, "sshfpFingerprintType": 2, "sshfpFingerprint": "ABCD" }, "replacement": { "newSshfpAlgorithm": 2, "newSshfpFingerprintType": 2, "newSshfpFingerprint": "1234" } },
+    { "type": "TLSA", "data": { "tlsaCertificateUsage": 3, "tlsaSelector": 1, "tlsaMatchingType": 1, "tlsaCertificateAssociationData": "ABCD" }, "replacement": { "newTlsaCertificateUsage": 2, "newTlsaSelector": 1, "newTlsaMatchingType": 1, "newTlsaCertificateAssociationData": "1234" } },
+    { "type": "SVCB", "data": { "svcPriority": 1, "svcTargetName": "one.example.test", "svcParams": "port|443" }, "replacement": { "newSvcPriority": 2, "newSvcTargetName": "three.example.test", "newSvcParams": "port|8443" } },
+    { "type": "HTTPS", "data": { "svcPriority": 1, "svcTargetName": "one.example.test", "svcParams": "port|443" }, "replacement": { "newSvcPriority": 2, "newSvcTargetName": "three.example.test", "newSvcParams": "port|8443" } },
+    { "type": "URI", "data": { "uriPriority": 0, "uriWeight": 0, "uri": "https://one.example.test" }, "replacement": { "newUriPriority": 10, "newUriWeight": 20, "newUri": "https://three.example.test" } },
+    { "type": "CAA", "data": { "flags": 0, "tag": "issue", "value": "one.example.test" }, "replacement": { "newFlags": 128, "newTag": "issuewild", "newValue": "three.example.test" } },
+    { "type": "ANAME", "data": { "aname": "one.example.test" }, "replacement": { "newAName": "three.example.test" } },
+    { "type": "FWD", "data": { "protocol": "Udp", "forwarder": "192.0.2.1" }, "replacement": { "newProtocol": "Tcp", "newForwarder": "192.0.2.3" } },
+    { "type": "APP", "singleton": true, "data": { "appName": "Synthetic", "classPath": "Synthetic.Handler", "recordData": "one" }, "replacement": { "appName": "Synthetic", "classPath": "Synthetic.Handler", "recordData": "three" } },
+    { "type": "65280", "data": { "rdata": "010203" }, "replacement": { "newRData": "030405" } }
+  ]
+}

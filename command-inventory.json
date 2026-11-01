@@ -2216,6 +2216,1754 @@
         "--max-elapsed-ms",
         "--include-groups"
       ]
+    },
+    {
+      "command": "dashboard stats delete-all",
+      "description": "Preview or execute dashboard stats delete-all",
+      "effect": "write",
+      "operation": "OP-019",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node"
+        ],
+        "required": [],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone create",
+      "description": "Preview or execute zone create",
+      "effect": "write",
+      "operation": "OP-022",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "type",
+          "catalog",
+          "useSoaSerialDateScheme",
+          "primaryNameServerAddresses",
+          "zoneTransferProtocol",
+          "tsigKeyName",
+          "validateZone",
+          "initializeForwarder",
+          "protocol",
+          "forwarder",
+          "dnssecValidation",
+          "proxyType",
+          "proxyAddress",
+          "proxyPort",
+          "proxyUsername",
+          "proxyPassword",
+          "domain"
+        ],
+        "required": [
+          "zone",
+          "type"
+        ],
+        "secrets": [
+          "proxyPassword"
+        ],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone import",
+      "description": "Preview or execute zone import",
+      "effect": "write",
+      "operation": "OP-023",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "overwrite",
+          "overwriteZone",
+          "overwriteSoaSerial",
+          "records"
+        ],
+        "required": [
+          "zone"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone options set",
+      "description": "Preview or execute zone options set",
+      "effect": "write",
+      "operation": "OP-032",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "disabled",
+          "catalog",
+          "overrideCatalogQueryAccess",
+          "overrideCatalogZoneTransfer",
+          "overrideCatalogNotify",
+          "primaryNameServerAddresses",
+          "primaryZoneTransferProtocol",
+          "primaryZoneTransferTsigKeyName",
+          "validateZone",
+          "queryAccess",
+          "queryAccessNetworkACL",
+          "zoneTransfer",
+          "zoneTransferNetworkACL",
+          "zoneTransferTsigKeyNames",
+          "notify",
+          "notifyNameServers",
+          "notifySecondaryCatalogsNameServers",
+          "update",
+          "updateNetworkACL",
+          "updateSecurityPolicies"
+        ],
+        "required": [
+          "zone"
+        ],
+        "secrets": [],
+        "baseline": "/api/zones/options/get"
+      }
+    },
+    {
+      "command": "zone dnssec sign",
+      "description": "Preview or execute zone dnssec sign",
+      "effect": "write",
+      "operation": "OP-035",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "algorithm",
+          "pemKskPrivateKey",
+          "pemZskPrivateKey",
+          "hashAlgorithm",
+          "kskKeySize",
+          "zskKeySize",
+          "curve",
+          "dnsKeyTtl",
+          "zskRolloverDays",
+          "nxProof",
+          "iterations",
+          "saltLength"
+        ],
+        "required": [
+          "zone",
+          "algorithm"
+        ],
+        "secrets": [
+          "pemKskPrivateKey",
+          "pemZskPrivateKey"
+        ],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone dnssec properties add-private-key",
+      "description": "Preview or execute zone dnssec properties add-private-key",
+      "effect": "write",
+      "operation": "OP-043",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "keyType",
+          "rolloverDays",
+          "algorithm",
+          "pemPrivateKey",
+          "hashAlgorithm",
+          "keySize",
+          "curve"
+        ],
+        "required": [
+          "zone",
+          "keyType",
+          "algorithm"
+        ],
+        "secrets": [
+          "pemPrivateKey"
+        ],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone record add",
+      "description": "Preview or execute zone record add",
+      "effect": "write",
+      "operation": "OP-049",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "domain",
+          "type",
+          "ttl",
+          "overwrite",
+          "comments",
+          "expiryTtl",
+          "newDomain",
+          "disable",
+          "ipAddress",
+          "newIpAddress",
+          "ptr",
+          "createPtrZone",
+          "updateSvcbHints",
+          "nameServer",
+          "newNameServer",
+          "glue",
+          "cname",
+          "dname",
+          "ptrName",
+          "newPtrName",
+          "preference",
+          "exchange",
+          "newPreference",
+          "newExchange",
+          "text",
+          "newText",
+          "splitText",
+          "newSplitText",
+          "characterStringsBase64",
+          "newCharacterStringsBase64",
+          "mailbox",
+          "txtDomain",
+          "newMailbox",
+          "newTxtDomain",
+          "priority",
+          "weight",
+          "port",
+          "target",
+          "newPriority",
+          "newWeight",
+          "newPort",
+          "newTarget",
+          "naptrOrder",
+          "naptrPreference",
+          "naptrFlags",
+          "naptrServices",
+          "naptrRegexp",
+          "naptrReplacement",
+          "naptrNewOrder",
+          "naptrNewPreference",
+          "naptrNewFlags",
+          "naptrNewServices",
+          "naptrNewRegexp",
+          "naptrNewReplacement",
+          "keyTag",
+          "algorithm",
+          "digestType",
+          "digest",
+          "newKeyTag",
+          "newAlgorithm",
+          "newDigestType",
+          "newDigest",
+          "sshfpAlgorithm",
+          "sshfpFingerprintType",
+          "sshfpFingerprint",
+          "newSshfpAlgorithm",
+          "newSshfpFingerprintType",
+          "newSshfpFingerprint",
+          "tlsaCertificateUsage",
+          "tlsaSelector",
+          "tlsaMatchingType",
+          "tlsaCertificateAssociationData",
+          "newTlsaCertificateUsage",
+          "newTlsaSelector",
+          "newTlsaMatchingType",
+          "newTlsaCertificateAssociationData",
+          "svcPriority",
+          "svcTargetName",
+          "svcParams",
+          "newSvcPriority",
+          "newSvcTargetName",
+          "newSvcParams",
+          "autoIpv4Hint",
+          "autoIpv6Hint",
+          "uriPriority",
+          "uriWeight",
+          "uri",
+          "newUriPriority",
+          "newUriWeight",
+          "newUri",
+          "flags",
+          "tag",
+          "value",
+          "newFlags",
+          "newTag",
+          "newValue",
+          "aname",
+          "newAName",
+          "protocol",
+          "forwarder",
+          "newProtocol",
+          "newForwarder",
+          "dnssecValidation",
+          "proxyType",
+          "proxyAddress",
+          "proxyPort",
+          "proxyUsername",
+          "proxyPassword",
+          "forwarderPriority",
+          "appName",
+          "classPath",
+          "recordData",
+          "primaryNameServer",
+          "responsiblePerson",
+          "serial",
+          "refresh",
+          "retry",
+          "expire",
+          "minimum",
+          "useSerialDateScheme",
+          "rdata",
+          "newRData"
+        ],
+        "required": [
+          "zone",
+          "domain",
+          "type"
+        ],
+        "secrets": [
+          "proxyPassword"
+        ],
+        "baseline": null,
+        "recordFamilies": {
+          "A": {
+            "selector": [
+              "ipAddress"
+            ],
+            "replacement": [
+              "newIpAddress"
+            ],
+            "optional": [
+              "ptr",
+              "createPtrZone",
+              "updateSvcbHints"
+            ]
+          },
+          "AAAA": {
+            "selector": [
+              "ipAddress"
+            ],
+            "replacement": [
+              "newIpAddress"
+            ],
+            "optional": [
+              "ptr",
+              "createPtrZone",
+              "updateSvcbHints"
+            ]
+          },
+          "NS": {
+            "selector": [
+              "nameServer"
+            ],
+            "replacement": [
+              "newNameServer"
+            ],
+            "optional": [
+              "glue"
+            ]
+          },
+          "CNAME": {
+            "selector": [],
+            "replacement": [
+              "cname"
+            ]
+          },
+          "DNAME": {
+            "selector": [],
+            "replacement": [
+              "dname"
+            ]
+          },
+          "PTR": {
+            "selector": [
+              "ptrName"
+            ],
+            "replacement": [
+              "newPtrName"
+            ]
+          },
+          "MX": {
+            "selector": [
+              "preference",
+              "exchange"
+            ],
+            "replacement": [
+              "newPreference",
+              "newExchange"
+            ]
+          },
+          "TXT": {
+            "selector": [
+              "text"
+            ],
+            "replacement": [
+              "newText"
+            ],
+            "optional": [
+              "splitText",
+              "newSplitText",
+              "characterStringsBase64",
+              "newCharacterStringsBase64"
+            ]
+          },
+          "RP": {
+            "selector": [
+              "mailbox",
+              "txtDomain"
+            ],
+            "replacement": [
+              "newMailbox",
+              "newTxtDomain"
+            ]
+          },
+          "SRV": {
+            "selector": [
+              "priority",
+              "weight",
+              "port",
+              "target"
+            ],
+            "replacement": [
+              "newPriority",
+              "newWeight",
+              "newPort",
+              "newTarget"
+            ]
+          },
+          "NAPTR": {
+            "selector": [
+              "naptrOrder",
+              "naptrPreference",
+              "naptrFlags",
+              "naptrServices",
+              "naptrRegexp",
+              "naptrReplacement"
+            ],
+            "replacement": [
+              "naptrNewOrder",
+              "naptrNewPreference",
+              "naptrNewFlags",
+              "naptrNewServices",
+              "naptrNewRegexp",
+              "naptrNewReplacement"
+            ]
+          },
+          "DS": {
+            "selector": [
+              "keyTag",
+              "algorithm",
+              "digestType",
+              "digest"
+            ],
+            "replacement": [
+              "newKeyTag",
+              "newAlgorithm",
+              "newDigestType",
+              "newDigest"
+            ]
+          },
+          "SSHFP": {
+            "selector": [
+              "sshfpAlgorithm",
+              "sshfpFingerprintType",
+              "sshfpFingerprint"
+            ],
+            "replacement": [
+              "newSshfpAlgorithm",
+              "newSshfpFingerprintType",
+              "newSshfpFingerprint"
+            ]
+          },
+          "TLSA": {
+            "selector": [
+              "tlsaCertificateUsage",
+              "tlsaSelector",
+              "tlsaMatchingType",
+              "tlsaCertificateAssociationData"
+            ],
+            "replacement": [
+              "newTlsaCertificateUsage",
+              "newTlsaSelector",
+              "newTlsaMatchingType",
+              "newTlsaCertificateAssociationData"
+            ]
+          },
+          "SVCB": {
+            "selector": [
+              "svcPriority",
+              "svcTargetName",
+              "svcParams"
+            ],
+            "replacement": [
+              "newSvcPriority",
+              "newSvcTargetName",
+              "newSvcParams"
+            ],
+            "optional": [
+              "autoIpv4Hint",
+              "autoIpv6Hint"
+            ]
+          },
+          "HTTPS": {
+            "selector": [
+              "svcPriority",
+              "svcTargetName",
+              "svcParams"
+            ],
+            "replacement": [
+              "newSvcPriority",
+              "newSvcTargetName",
+              "newSvcParams"
+            ],
+            "optional": [
+              "autoIpv4Hint",
+              "autoIpv6Hint"
+            ]
+          },
+          "URI": {
+            "selector": [
+              "uriPriority",
+              "uriWeight",
+              "uri"
+            ],
+            "replacement": [
+              "newUriPriority",
+              "newUriWeight",
+              "newUri"
+            ]
+          },
+          "CAA": {
+            "selector": [
+              "flags",
+              "tag",
+              "value"
+            ],
+            "replacement": [
+              "newFlags",
+              "newTag",
+              "newValue"
+            ]
+          },
+          "ANAME": {
+            "selector": [
+              "aname"
+            ],
+            "replacement": [
+              "newAName"
+            ]
+          },
+          "FWD": {
+            "selector": [
+              "protocol",
+              "forwarder"
+            ],
+            "replacement": [
+              "newProtocol",
+              "newForwarder"
+            ],
+            "optional": [
+              "dnssecValidation",
+              "proxyType",
+              "proxyAddress",
+              "proxyPort",
+              "proxyUsername",
+              "proxyPassword",
+              "forwarderPriority"
+            ]
+          },
+          "APP": {
+            "selector": [],
+            "replacement": [
+              "appName",
+              "classPath",
+              "recordData"
+            ]
+          },
+          "SOA": {
+            "selector": [],
+            "replacement": [
+              "primaryNameServer",
+              "responsiblePerson",
+              "serial",
+              "refresh",
+              "retry",
+              "expire",
+              "minimum"
+            ],
+            "optional": [
+              "useSerialDateScheme"
+            ]
+          },
+          "raw": {
+            "selector": [
+              "rdata"
+            ],
+            "replacement": [
+              "newRData"
+            ]
+          }
+        },
+        "dnameDeletion": "pending shipped-library mapping and independent review"
+      }
+    },
+    {
+      "command": "zone record update",
+      "description": "Preview or execute zone record update",
+      "effect": "write",
+      "operation": "OP-051",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "domain",
+          "type",
+          "ttl",
+          "overwrite",
+          "comments",
+          "expiryTtl",
+          "newDomain",
+          "disable",
+          "ipAddress",
+          "newIpAddress",
+          "ptr",
+          "createPtrZone",
+          "updateSvcbHints",
+          "nameServer",
+          "newNameServer",
+          "glue",
+          "cname",
+          "dname",
+          "ptrName",
+          "newPtrName",
+          "preference",
+          "exchange",
+          "newPreference",
+          "newExchange",
+          "text",
+          "newText",
+          "splitText",
+          "newSplitText",
+          "characterStringsBase64",
+          "newCharacterStringsBase64",
+          "mailbox",
+          "txtDomain",
+          "newMailbox",
+          "newTxtDomain",
+          "priority",
+          "weight",
+          "port",
+          "target",
+          "newPriority",
+          "newWeight",
+          "newPort",
+          "newTarget",
+          "naptrOrder",
+          "naptrPreference",
+          "naptrFlags",
+          "naptrServices",
+          "naptrRegexp",
+          "naptrReplacement",
+          "naptrNewOrder",
+          "naptrNewPreference",
+          "naptrNewFlags",
+          "naptrNewServices",
+          "naptrNewRegexp",
+          "naptrNewReplacement",
+          "keyTag",
+          "algorithm",
+          "digestType",
+          "digest",
+          "newKeyTag",
+          "newAlgorithm",
+          "newDigestType",
+          "newDigest",
+          "sshfpAlgorithm",
+          "sshfpFingerprintType",
+          "sshfpFingerprint",
+          "newSshfpAlgorithm",
+          "newSshfpFingerprintType",
+          "newSshfpFingerprint",
+          "tlsaCertificateUsage",
+          "tlsaSelector",
+          "tlsaMatchingType",
+          "tlsaCertificateAssociationData",
+          "newTlsaCertificateUsage",
+          "newTlsaSelector",
+          "newTlsaMatchingType",
+          "newTlsaCertificateAssociationData",
+          "svcPriority",
+          "svcTargetName",
+          "svcParams",
+          "newSvcPriority",
+          "newSvcTargetName",
+          "newSvcParams",
+          "autoIpv4Hint",
+          "autoIpv6Hint",
+          "uriPriority",
+          "uriWeight",
+          "uri",
+          "newUriPriority",
+          "newUriWeight",
+          "newUri",
+          "flags",
+          "tag",
+          "value",
+          "newFlags",
+          "newTag",
+          "newValue",
+          "aname",
+          "newAName",
+          "protocol",
+          "forwarder",
+          "newProtocol",
+          "newForwarder",
+          "dnssecValidation",
+          "proxyType",
+          "proxyAddress",
+          "proxyPort",
+          "proxyUsername",
+          "proxyPassword",
+          "forwarderPriority",
+          "appName",
+          "classPath",
+          "recordData",
+          "primaryNameServer",
+          "responsiblePerson",
+          "serial",
+          "refresh",
+          "retry",
+          "expire",
+          "minimum",
+          "useSerialDateScheme",
+          "rdata",
+          "newRData"
+        ],
+        "required": [
+          "zone",
+          "domain",
+          "type"
+        ],
+        "secrets": [
+          "proxyPassword"
+        ],
+        "baseline": null,
+        "recordFamilies": {
+          "A": {
+            "selector": [
+              "ipAddress"
+            ],
+            "replacement": [
+              "newIpAddress"
+            ],
+            "optional": [
+              "ptr",
+              "createPtrZone",
+              "updateSvcbHints"
+            ]
+          },
+          "AAAA": {
+            "selector": [
+              "ipAddress"
+            ],
+            "replacement": [
+              "newIpAddress"
+            ],
+            "optional": [
+              "ptr",
+              "createPtrZone",
+              "updateSvcbHints"
+            ]
+          },
+          "NS": {
+            "selector": [
+              "nameServer"
+            ],
+            "replacement": [
+              "newNameServer"
+            ],
+            "optional": [
+              "glue"
+            ]
+          },
+          "CNAME": {
+            "selector": [],
+            "replacement": [
+              "cname"
+            ]
+          },
+          "DNAME": {
+            "selector": [],
+            "replacement": [
+              "dname"
+            ]
+          },
+          "PTR": {
+            "selector": [
+              "ptrName"
+            ],
+            "replacement": [
+              "newPtrName"
+            ]
+          },
+          "MX": {
+            "selector": [
+              "preference",
+              "exchange"
+            ],
+            "replacement": [
+              "newPreference",
+              "newExchange"
+            ]
+          },
+          "TXT": {
+            "selector": [
+              "text"
+            ],
+            "replacement": [
+              "newText"
+            ],
+            "optional": [
+              "splitText",
+              "newSplitText",
+              "characterStringsBase64",
+              "newCharacterStringsBase64"
+            ]
+          },
+          "RP": {
+            "selector": [
+              "mailbox",
+              "txtDomain"
+            ],
+            "replacement": [
+              "newMailbox",
+              "newTxtDomain"
+            ]
+          },
+          "SRV": {
+            "selector": [
+              "priority",
+              "weight",
+              "port",
+              "target"
+            ],
+            "replacement": [
+              "newPriority",
+              "newWeight",
+              "newPort",
+              "newTarget"
+            ]
+          },
+          "NAPTR": {
+            "selector": [
+              "naptrOrder",
+              "naptrPreference",
+              "naptrFlags",
+              "naptrServices",
+              "naptrRegexp",
+              "naptrReplacement"
+            ],
+            "replacement": [
+              "naptrNewOrder",
+              "naptrNewPreference",
+              "naptrNewFlags",
+              "naptrNewServices",
+              "naptrNewRegexp",
+              "naptrNewReplacement"
+            ]
+          },
+          "DS": {
+            "selector": [
+              "keyTag",
+              "algorithm",
+              "digestType",
+              "digest"
+            ],
+            "replacement": [
+              "newKeyTag",
+              "newAlgorithm",
+              "newDigestType",
+              "newDigest"
+            ]
+          },
+          "SSHFP": {
+            "selector": [
+              "sshfpAlgorithm",
+              "sshfpFingerprintType",
+              "sshfpFingerprint"
+            ],
+            "replacement": [
+              "newSshfpAlgorithm",
+              "newSshfpFingerprintType",
+              "newSshfpFingerprint"
+            ]
+          },
+          "TLSA": {
+            "selector": [
+              "tlsaCertificateUsage",
+              "tlsaSelector",
+              "tlsaMatchingType",
+              "tlsaCertificateAssociationData"
+            ],
+            "replacement": [
+              "newTlsaCertificateUsage",
+              "newTlsaSelector",
+              "newTlsaMatchingType",
+              "newTlsaCertificateAssociationData"
+            ]
+          },
+          "SVCB": {
+            "selector": [
+              "svcPriority",
+              "svcTargetName",
+              "svcParams"
+            ],
+            "replacement": [
+              "newSvcPriority",
+              "newSvcTargetName",
+              "newSvcParams"
+            ],
+            "optional": [
+              "autoIpv4Hint",
+              "autoIpv6Hint"
+            ]
+          },
+          "HTTPS": {
+            "selector": [
+              "svcPriority",
+              "svcTargetName",
+              "svcParams"
+            ],
+            "replacement": [
+              "newSvcPriority",
+              "newSvcTargetName",
+              "newSvcParams"
+            ],
+            "optional": [
+              "autoIpv4Hint",
+              "autoIpv6Hint"
+            ]
+          },
+          "URI": {
+            "selector": [
+              "uriPriority",
+              "uriWeight",
+              "uri"
+            ],
+            "replacement": [
+              "newUriPriority",
+              "newUriWeight",
+              "newUri"
+            ]
+          },
+          "CAA": {
+            "selector": [
+              "flags",
+              "tag",
+              "value"
+            ],
+            "replacement": [
+              "newFlags",
+              "newTag",
+              "newValue"
+            ]
+          },
+          "ANAME": {
+            "selector": [
+              "aname"
+            ],
+            "replacement": [
+              "newAName"
+            ]
+          },
+          "FWD": {
+            "selector": [
+              "protocol",
+              "forwarder"
+            ],
+            "replacement": [
+              "newProtocol",
+              "newForwarder"
+            ],
+            "optional": [
+              "dnssecValidation",
+              "proxyType",
+              "proxyAddress",
+              "proxyPort",
+              "proxyUsername",
+              "proxyPassword",
+              "forwarderPriority"
+            ]
+          },
+          "APP": {
+            "selector": [],
+            "replacement": [
+              "appName",
+              "classPath",
+              "recordData"
+            ]
+          },
+          "SOA": {
+            "selector": [],
+            "replacement": [
+              "primaryNameServer",
+              "responsiblePerson",
+              "serial",
+              "refresh",
+              "retry",
+              "expire",
+              "minimum"
+            ],
+            "optional": [
+              "useSerialDateScheme"
+            ]
+          },
+          "raw": {
+            "selector": [
+              "rdata"
+            ],
+            "replacement": [
+              "newRData"
+            ]
+          }
+        },
+        "dnameDeletion": "pending shipped-library mapping and independent review"
+      }
+    },
+    {
+      "command": "zone record delete",
+      "description": "Preview or execute zone record delete",
+      "effect": "write",
+      "operation": "OP-052",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "domain",
+          "type",
+          "ttl",
+          "overwrite",
+          "comments",
+          "expiryTtl",
+          "newDomain",
+          "disable",
+          "ipAddress",
+          "newIpAddress",
+          "ptr",
+          "createPtrZone",
+          "updateSvcbHints",
+          "nameServer",
+          "newNameServer",
+          "glue",
+          "cname",
+          "dname",
+          "ptrName",
+          "newPtrName",
+          "preference",
+          "exchange",
+          "newPreference",
+          "newExchange",
+          "text",
+          "newText",
+          "splitText",
+          "newSplitText",
+          "characterStringsBase64",
+          "newCharacterStringsBase64",
+          "mailbox",
+          "txtDomain",
+          "newMailbox",
+          "newTxtDomain",
+          "priority",
+          "weight",
+          "port",
+          "target",
+          "newPriority",
+          "newWeight",
+          "newPort",
+          "newTarget",
+          "naptrOrder",
+          "naptrPreference",
+          "naptrFlags",
+          "naptrServices",
+          "naptrRegexp",
+          "naptrReplacement",
+          "naptrNewOrder",
+          "naptrNewPreference",
+          "naptrNewFlags",
+          "naptrNewServices",
+          "naptrNewRegexp",
+          "naptrNewReplacement",
+          "keyTag",
+          "algorithm",
+          "digestType",
+          "digest",
+          "newKeyTag",
+          "newAlgorithm",
+          "newDigestType",
+          "newDigest",
+          "sshfpAlgorithm",
+          "sshfpFingerprintType",
+          "sshfpFingerprint",
+          "newSshfpAlgorithm",
+          "newSshfpFingerprintType",
+          "newSshfpFingerprint",
+          "tlsaCertificateUsage",
+          "tlsaSelector",
+          "tlsaMatchingType",
+          "tlsaCertificateAssociationData",
+          "newTlsaCertificateUsage",
+          "newTlsaSelector",
+          "newTlsaMatchingType",
+          "newTlsaCertificateAssociationData",
+          "svcPriority",
+          "svcTargetName",
+          "svcParams",
+          "newSvcPriority",
+          "newSvcTargetName",
+          "newSvcParams",
+          "autoIpv4Hint",
+          "autoIpv6Hint",
+          "uriPriority",
+          "uriWeight",
+          "uri",
+          "newUriPriority",
+          "newUriWeight",
+          "newUri",
+          "flags",
+          "tag",
+          "value",
+          "newFlags",
+          "newTag",
+          "newValue",
+          "aname",
+          "newAName",
+          "protocol",
+          "forwarder",
+          "newProtocol",
+          "newForwarder",
+          "dnssecValidation",
+          "proxyType",
+          "proxyAddress",
+          "proxyPort",
+          "proxyUsername",
+          "proxyPassword",
+          "forwarderPriority",
+          "appName",
+          "classPath",
+          "recordData",
+          "primaryNameServer",
+          "responsiblePerson",
+          "serial",
+          "refresh",
+          "retry",
+          "expire",
+          "minimum",
+          "useSerialDateScheme",
+          "rdata",
+          "newRData"
+        ],
+        "required": [
+          "zone",
+          "domain",
+          "type"
+        ],
+        "secrets": [
+          "proxyPassword"
+        ],
+        "baseline": null,
+        "recordFamilies": {
+          "A": {
+            "selector": [
+              "ipAddress"
+            ],
+            "replacement": [
+              "newIpAddress"
+            ],
+            "optional": [
+              "ptr",
+              "createPtrZone",
+              "updateSvcbHints"
+            ]
+          },
+          "AAAA": {
+            "selector": [
+              "ipAddress"
+            ],
+            "replacement": [
+              "newIpAddress"
+            ],
+            "optional": [
+              "ptr",
+              "createPtrZone",
+              "updateSvcbHints"
+            ]
+          },
+          "NS": {
+            "selector": [
+              "nameServer"
+            ],
+            "replacement": [
+              "newNameServer"
+            ],
+            "optional": [
+              "glue"
+            ]
+          },
+          "CNAME": {
+            "selector": [],
+            "replacement": [
+              "cname"
+            ]
+          },
+          "DNAME": {
+            "selector": [],
+            "replacement": [
+              "dname"
+            ]
+          },
+          "PTR": {
+            "selector": [
+              "ptrName"
+            ],
+            "replacement": [
+              "newPtrName"
+            ]
+          },
+          "MX": {
+            "selector": [
+              "preference",
+              "exchange"
+            ],
+            "replacement": [
+              "newPreference",
+              "newExchange"
+            ]
+          },
+          "TXT": {
+            "selector": [
+              "text"
+            ],
+            "replacement": [
+              "newText"
+            ],
+            "optional": [
+              "splitText",
+              "newSplitText",
+              "characterStringsBase64",
+              "newCharacterStringsBase64"
+            ]
+          },
+          "RP": {
+            "selector": [
+              "mailbox",
+              "txtDomain"
+            ],
+            "replacement": [
+              "newMailbox",
+              "newTxtDomain"
+            ]
+          },
+          "SRV": {
+            "selector": [
+              "priority",
+              "weight",
+              "port",
+              "target"
+            ],
+            "replacement": [
+              "newPriority",
+              "newWeight",
+              "newPort",
+              "newTarget"
+            ]
+          },
+          "NAPTR": {
+            "selector": [
+              "naptrOrder",
+              "naptrPreference",
+              "naptrFlags",
+              "naptrServices",
+              "naptrRegexp",
+              "naptrReplacement"
+            ],
+            "replacement": [
+              "naptrNewOrder",
+              "naptrNewPreference",
+              "naptrNewFlags",
+              "naptrNewServices",
+              "naptrNewRegexp",
+              "naptrNewReplacement"
+            ]
+          },
+          "DS": {
+            "selector": [
+              "keyTag",
+              "algorithm",
+              "digestType",
+              "digest"
+            ],
+            "replacement": [
+              "newKeyTag",
+              "newAlgorithm",
+              "newDigestType",
+              "newDigest"
+            ]
+          },
+          "SSHFP": {
+            "selector": [
+              "sshfpAlgorithm",
+              "sshfpFingerprintType",
+              "sshfpFingerprint"
+            ],
+            "replacement": [
+              "newSshfpAlgorithm",
+              "newSshfpFingerprintType",
+              "newSshfpFingerprint"
+            ]
+          },
+          "TLSA": {
+            "selector": [
+              "tlsaCertificateUsage",
+              "tlsaSelector",
+              "tlsaMatchingType",
+              "tlsaCertificateAssociationData"
+            ],
+            "replacement": [
+              "newTlsaCertificateUsage",
+              "newTlsaSelector",
+              "newTlsaMatchingType",
+              "newTlsaCertificateAssociationData"
+            ]
+          },
+          "SVCB": {
+            "selector": [
+              "svcPriority",
+              "svcTargetName",
+              "svcParams"
+            ],
+            "replacement": [
+              "newSvcPriority",
+              "newSvcTargetName",
+              "newSvcParams"
+            ],
+            "optional": [
+              "autoIpv4Hint",
+              "autoIpv6Hint"
+            ]
+          },
+          "HTTPS": {
+            "selector": [
+              "svcPriority",
+              "svcTargetName",
+              "svcParams"
+            ],
+            "replacement": [
+              "newSvcPriority",
+              "newSvcTargetName",
+              "newSvcParams"
+            ],
+            "optional": [
+              "autoIpv4Hint",
+              "autoIpv6Hint"
+            ]
+          },
+          "URI": {
+            "selector": [
+              "uriPriority",
+              "uriWeight",
+              "uri"
+            ],
+            "replacement": [
+              "newUriPriority",
+              "newUriWeight",
+              "newUri"
+            ]
+          },
+          "CAA": {
+            "selector": [
+              "flags",
+              "tag",
+              "value"
+            ],
+            "replacement": [
+              "newFlags",
+              "newTag",
+              "newValue"
+            ]
+          },
+          "ANAME": {
+            "selector": [
+              "aname"
+            ],
+            "replacement": [
+              "newAName"
+            ]
+          },
+          "FWD": {
+            "selector": [
+              "protocol",
+              "forwarder"
+            ],
+            "replacement": [
+              "newProtocol",
+              "newForwarder"
+            ],
+            "optional": [
+              "dnssecValidation",
+              "proxyType",
+              "proxyAddress",
+              "proxyPort",
+              "proxyUsername",
+              "proxyPassword",
+              "forwarderPriority"
+            ]
+          },
+          "APP": {
+            "selector": [],
+            "replacement": [
+              "appName",
+              "classPath",
+              "recordData"
+            ]
+          },
+          "SOA": {
+            "selector": [],
+            "replacement": [
+              "primaryNameServer",
+              "responsiblePerson",
+              "serial",
+              "refresh",
+              "retry",
+              "expire",
+              "minimum"
+            ],
+            "optional": [
+              "useSerialDateScheme"
+            ]
+          },
+          "raw": {
+            "selector": [
+              "rdata"
+            ],
+            "replacement": [
+              "newRData"
+            ]
+          }
+        },
+        "dnameDeletion": "pending shipped-library mapping and independent review"
+      }
+    },
+    {
+      "command": "dns-client resolve",
+      "description": "Preview or execute dns-client resolve",
+      "effect": "conditional",
+      "operation": "OP-077",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "server",
+          "domain",
+          "type",
+          "protocol",
+          "dnssec",
+          "eDnsClientSubnet",
+          "import"
+        ],
+        "required": [
+          "server",
+          "domain",
+          "type"
+        ],
+        "secrets": [],
+        "baseline": null,
+        "capabilities": [
+          "OP-077.resolve",
+          "OP-077.import"
+        ]
+      }
+    },
+    {
+      "command": "settings set",
+      "description": "Preview or execute settings set",
+      "effect": "write",
+      "operation": "OP-080",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "blockListUrls",
+          "forwarders",
+          "proxyBypass"
+        ],
+        "required": [],
+        "secrets": [],
+        "baseline": "/api/settings/get"
+      }
+    },
+    {
+      "command": "admin group set",
+      "description": "Preview or execute admin group set",
+      "effect": "write",
+      "operation": "OP-109",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "group",
+          "newGroup",
+          "description",
+          "members"
+        ],
+        "required": [
+          "group"
+        ],
+        "secrets": [],
+        "baseline": "/api/admin/groups/get"
+      }
+    },
+    {
+      "command": "admin ldap test",
+      "description": "Preview or execute admin ldap test",
+      "effect": "write",
+      "operation": "OP-143",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "ldapServer",
+          "ldapPort",
+          "ldapSslOption",
+          "ldapIgnoreSslErrors",
+          "ldapBindUsername",
+          "ldapBindPassword",
+          "ldapSearchBase",
+          "ldapUserSearchFilter",
+          "ldapGroupAttribute"
+        ],
+        "required": [],
+        "secrets": [
+          "ldapBindPassword"
+        ],
+        "baseline": null
+      }
     }
   ]
 }
