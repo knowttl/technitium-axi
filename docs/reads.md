@@ -23,6 +23,7 @@ Required envelope and collection fields and the types of projected fields are va
 Known passwords, TSIG shared secrets and token values are excluded from generic projections.
 Session output preserves the existing typed identity and permission projection.
 Opaque app configuration produces only metadata, even when its keys do not look like secrets.
+App configuration accepts string or null values; exact values remain available only in protected results.
 `--full` expands the approved projection, not the set of confidential fields allowed into stdout.
 The collection, field-selection, paging and retry controls below apply to the additional read commands; `status` and `user session get` retain the interfaces described in the [README](../README.md).
 
@@ -58,6 +59,9 @@ An incomplete, oversized or failed response cannot replace a previously valid re
 Zone exports, ZIP archives, CSV, logs and allowed/blocked exports produce metadata in ordinary output and exact bytes in the protected file.
 Prometheus output also permits a bounded text preview.
 Hosted result paths are supplied by the host; callers cannot choose server filesystem destinations.
+
+Log download `--limit` is the vendor's megabyte limit; `--max-bytes` is the separate local response cap.
+Log filenames cannot contain paths.
 
 # Archive entry review
 

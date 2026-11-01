@@ -56,10 +56,12 @@ The harness checks that limit without inventing a route or claiming a completed 
 Later transfer slices require a host extension.
 
 B2.01 through B2.04 cover the generated read matrix, protected formats, bounded paging/errors and archive-entry review.
+B2.05 covers the 19 monitor reads: dashboard metrics and charts, cache navigation, DNS health checks, apps, settings and backup, DHCP leases and scopes, and logs.
+Select one monitor operation with `--task B2.OP-015 --operation OP-015`, or run the group with `--task B2.05`.
 They use the same task selector and paths as B1.
 The B2 hosted path uses the same pinned fixture, which admits the complete read inventory and protected results beyond sessions.
 It uses the authenticated result path returned by the host rather than inventing a Technitium transfer endpoint.
-The response matrix is generated from typed contracts and retained public documentation example seeds; all POST fixtures are synthetic.
+The response matrix is generated from typed contracts, retained public documentation example seeds and the synthetic acceptance scenarios in [monitor-reads.json](../tests/fixtures/monitor-reads.json); all POST fixtures are synthetic.
 The archive review task performs no successful backup or transfer request.
 The format task exercises independently defined ZIP entry worlds and exact protected bytes.
 Hosted expiry checks advance the server process clock boundary without sleeping.
@@ -69,6 +71,7 @@ npm run check:journey -- --task B2.01 --paths native,artium --offline
 npm run check:journey -- --task B2.02 --paths native,artium --offline
 npm run check:journey -- --task B2.03 --paths native,artium --offline
 npm run check:journey -- --task B2.04 --paths native,artium --offline
+npm run check:journey -- --task B2.05 --paths native,artium --offline
 ```
 
 Node diagnostics report actual child PID, argv and executable hash without replacing the runner.

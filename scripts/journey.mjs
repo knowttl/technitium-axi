@@ -9,7 +9,7 @@ import Ajv from 'ajv';
 import { decode } from '@toon-format/toon';
 import { fakeVendors } from './vendor-fixture.mjs';
 import { credentialJourney, credentialTasks } from './credential-journey.mjs';
-import { readJourney, readTasks } from './read-journey.mjs';
+import { readJourney, readTasks, monitorTasks } from './read-journey.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2);
@@ -28,7 +28,7 @@ for (let i = 0; i < args.length; i++) {
   else throw new Error(`Unknown or repeated journey argument: ${arg}`);
 }
 assert.ok(['B1.01', 'B1.02', ...Object.keys(credentialTasks), ...readTasks].includes(task), 'Select a supported --task');
-assert.equal(operation, task?.startsWith('B1.OP-') ? task.slice(3) : undefined, 'Operation selection must match the operation task');
+assert.equal(operation, /B[12]\.OP-/.test(task) ? task.slice(3) : undefined, 'Operation selection must match the operation task');
 assert.ok(paths?.length && new Set(paths).size === paths.length && paths.every(path => ['native', 'artium'].includes(path)), 'Select --paths native,artium');
 assert.ok(offline, '--offline is required');
 
@@ -74,7 +74,7 @@ if (!inside) {
   const checks = [];
   const identityTask = Object.hasOwn(credentialTasks, task);
   const readTask = readTasks.includes(task);
-  const expected = (paths.includes('native') ? (readTask ? (task === 'B2.01' ? 2 : 1) : identityTask ? credentialTasks[task].length : task === 'B1.02' ? 7 : 5) : 0) + (paths.includes('artium') ? (readTask ? 6 : identityTask ? 5 : 4) : 0);
+  const expected = (paths.includes('native') ? (readTask ? (task === 'B2.05' ? monitorTasks.length : task === 'B2.01' ? 2 : 1) : identityTask ? credentialTasks[task].length : task === 'B1.02' ? 7 : 5) : 0) + (paths.includes('artium') ? (readTask ? 6 : identityTask ? 5 : 4) : 0);
   try {
     const home = join(temporary, 'home');
     await mkdir(home, { mode: 0o700 });

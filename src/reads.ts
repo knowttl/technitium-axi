@@ -26,6 +26,7 @@ export function readInputs(contract: ReadContract, options: Record<string, strin
     if (parameter.type === 'http-date' && (Number.isNaN(Date.parse(value)) || new Date(value).toUTCString() !== value)) usage(`${parameter.flag} requires an RFC 1123 GMT date`);
     if (parameter.type === 'date' && (!/^\d{4}-\d\d-\d\dT/.test(value) || Number.isNaN(Date.parse(value)))) usage(`${parameter.flag} requires an ISO 8601 date time`);
     if (parameter.type === 'zone-list' && value && value.split(',').some(zone => !/^(?=.{1,253}$)[\p{L}\p{N}_*-]+(?:\.[\p{L}\p{N}_*-]+)*\.?$/u.test(zone))) usage(`${parameter.flag} requires comma-separated zone names`);
+    if (contract.id === 'OP-135' && parameter.name === 'fileName' && (/[\\/]/.test(value) || value === '.' || value === '..')) usage('--file-name requires a log filename without a path');
     if (/[\x00-\x1f\x7f]/.test(value) || value.length > 65536) usage(`Invalid value for ${parameter.flag}`);
     if (parameter.location === 'header') headers[parameter.name] = value;
     else form.set(parameter.name, value);
@@ -146,6 +147,8 @@ export async function readOperation(profile: Profile, command: string, token: st
     }
     if (!record(value.response)) return invalid();
     const payload = value.response;
+    if (contract.id === 'OP-015' && (!record(payload.lifetimeCounters) || typeof payload.uptimeSeconds !== 'number')) invalid();
+    if (contract.id === 'OP-075' && payload.config !== null && typeof payload.config !== 'string') invalid();
     const required = contract.id === 'OP-018' ? ({ TopClients: 'topClients', TopDomains: 'topDomains', TopBlockedDomains: 'topBlockedDomains' }[form.get('statsType')!])
       : listKeys[contract.id] ?? Object.keys(contract.response)[0];
     if (required && !Object.hasOwn(payload, required)) invalid();
