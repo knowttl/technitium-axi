@@ -141,7 +141,8 @@
           "totalQueries": 17,
           "totalBlocked": 3
         }
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-016",
@@ -153,7 +154,9 @@
         "status": "ok",
         "response": {}
       },
-      "ordinaryResponse": {}
+      "ordinaryResponse": {},
+      "scenarios": [],
+      "text": "# TYPE total_queries counter\ntotal_queries 17\ntotal_blocked 3\n"
     },
     {
       "operation": "OP-017",
@@ -296,7 +299,8 @@
             }
           ]
         }
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-018",
@@ -412,7 +416,8 @@
             "rateLimited": true
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-020",
@@ -1230,7 +1235,8 @@
             }
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-056",
@@ -1498,7 +1504,8 @@
             ]
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-069",
@@ -1554,7 +1561,8 @@
             "installed": false
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-075",
@@ -1589,7 +1597,8 @@
       },
       "ordinaryResponse": {
         "config": "{\n  \"oddKey\": \"SYNTHETIC-opaque-canary\", \"nested\": {\"password\": \"SYNTHETIC-config-password\"}\n}\n"
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-078",
@@ -1632,7 +1641,8 @@
       "ordinaryResponse": {
         "status": "ok",
         "server": "SYNTHETIC-server"
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-079",
@@ -1680,7 +1690,8 @@
             "algorithmName": "hmac-sha256"
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-081",
@@ -1702,7 +1713,8 @@
           "key-1",
           "key-2"
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-084",
@@ -1841,7 +1853,8 @@
         "status": "ok",
         "response": {}
       },
-      "ordinaryResponse": {}
+      "ordinaryResponse": {},
+      "scenarios": []
     },
     {
       "operation": "OP-086",
@@ -1899,7 +1912,8 @@
             "leaseExpires": "01/08/2024 00:00:00"
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-090",
@@ -1949,7 +1963,8 @@
             "networkAddress": "198.51.100.0"
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-091",
@@ -2011,7 +2026,8 @@
             "comments": "fixture reservation"
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-098",
@@ -2875,7 +2891,8 @@
             "size": "5.6 KB"
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-135",
@@ -2915,7 +2932,9 @@
         "status": "ok",
         "response": {}
       },
-      "ordinaryResponse": {}
+      "ordinaryResponse": {},
+      "scenarios": [],
+      "text": "2024-01-01 α synthetic log\nSYNTHETIC-log-canary\n"
     },
     {
       "operation": "OP-138",
@@ -3140,7 +3159,8 @@
             "answer": ""
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-139",
@@ -3276,7 +3296,9 @@
         "status": "ok",
         "response": {}
       },
-      "ordinaryResponse": {}
+      "ordinaryResponse": {},
+      "scenarios": [],
+      "text": "qname,qtype,answer\r\nwww.example.test,TXT,\"quoted, answer\nsecond line\"\r\n"
     },
     {
       "operation": "OP-141",
