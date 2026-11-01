@@ -61,7 +61,7 @@ Select one monitor operation with `--task B2.OP-015 --operation OP-015`, or run 
 They use the same task selector and paths as B1.
 The B2 hosted path uses the same pinned fixture, which admits the complete read inventory and protected results beyond sessions.
 It uses the authenticated result path returned by the host rather than inventing a Technitium transfer endpoint.
-The response matrix is generated from typed contracts, retained public documentation example seeds and the synthetic acceptance scenarios in [monitor-reads.json](../tests/fixtures/monitor-reads.json); all POST fixtures are synthetic.
+The response matrix is generated from typed contracts, retained public documentation example seeds and synthetic acceptance scenarios in [monitor-reads.json](../tests/fixtures/monitor-reads.json) and [admin-read-cases.json](../tests/fixtures/admin-read-cases.json); all POST fixtures are synthetic.
 The archive review task performs no successful backup or transfer request.
 The format task exercises independently defined ZIP entry worlds and exact protected bytes.
 Hosted expiry checks advance the server process clock boundary without sleeping.
@@ -72,6 +72,15 @@ npm run check:journey -- --task B2.02 --paths native,artium --offline
 npm run check:journey -- --task B2.03 --paths native,artium --offline
 npm run check:journey -- --task B2.04 --paths native,artium --offline
 npm run check:journey -- --task B2.05 --paths native,artium --offline
+```
+
+`npm test` also runs `B2.admin-reads` on the native path for the admin, user, LDAP, zone, catalog, DNSSEC-view, record and allowed/blocked reads in the operation fixtures.
+Use the same prepared Artium fixture described above to run this slice on both paths.
+Select an individual operation with a matching `--task B2.OP-…` and `--operation OP-…` pair; supported IDs are the keys in the operation fixtures.
+
+```sh
+npm run check:journey -- --task B2.admin-reads --paths native,artium --offline
+npm run check:journey -- --task B2.OP-141 --operation OP-141 --paths native,artium --offline
 ```
 
 Node diagnostics report actual child PID, argv and executable hash without replacing the runner.
