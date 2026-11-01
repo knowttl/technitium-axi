@@ -23,6 +23,7 @@ Required envelope and collection fields and the types of projected fields are va
 Known passwords, TSIG shared secrets and token values are excluded from generic projections.
 Session output preserves the existing typed identity and permission projection.
 Opaque app configuration produces only metadata, even when its keys do not look like secrets.
+App configuration accepts string or null values; exact values remain available only in protected results.
 `--full` expands the approved projection, not the set of confidential fields allowed into stdout.
 The collection, field-selection, paging and retry controls below apply to the additional read commands; `status` and `user session get` retain the interfaces described in the [README](../README.md).
 
@@ -59,12 +60,8 @@ Zone exports, ZIP archives, CSV, logs and allowed/blocked exports produce metada
 Prometheus output also permits a bounded text preview.
 Hosted result paths are supplied by the host; callers cannot choose server filesystem destinations.
 
-The monitor read journeys cover dashboard metrics and charts, cache navigation, DNS health checks, app and settings reads, DHCP leases and scopes, and logs.
-Run `npm run check:journey -- --task B2.05 --paths native --offline` for this group, or select an individual operation with `--task B2.OP-015 --operation OP-015`.
-Use `--paths artium` with the reviewed frozen fixture environment to exercise authenticated host result custody.
 Log download `--limit` is the vendor's megabyte limit; `--max-bytes` is the separate local response cap.
 Log filenames cannot contain paths.
-Opaque app configurations accept string or null values and remain available only in protected results.
 
 # Archive entry review
 
