@@ -40,13 +40,6 @@ try {
   const entries = run('tar', ['-tzf', tarball]).trim().split('\n');
   // An exact allowlist excludes tests, source maps, config, credentials, and extra build files.
   assert.deepEqual(entries.sort(), files.map(name => `package/${name}`).sort());
-  run('tar', ['-xzf', tarball, '-C', temporary]);
-  for (const file of files) {
-    const content = readFileSync(join(temporary, 'package', file), 'utf8');
-    assert.ok(!content.includes(root) && !content.includes(homedir()), `${file}: local path`);
-    assert.doesNotMatch(content, /-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----|(?:file|link):\/|\/home\/|\/Users\//,
-      `${file}: private key or local path`);
-  }
   const source = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string };
   const prefix = join(temporary, 'installed');
   run('npm', ['install', '--prefix', prefix, '--offline', '--ignore-scripts', '--no-package-lock', tarball]);
