@@ -139,6 +139,8 @@ Native checks run on Linux with `unshare`, `ip` and `openssl` installed.
 See [Offline package journeys](docs/offline-checks.md) for isolation, synthetic harness boundaries, cleanup and the full native and Artium checks.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for test-quality rules.
 Release automation runs `npm run test:release` and installs the packed package for CLI smoke checks.
+`npm test` also checks the packed file list, offline installation, CLI help/version, and published module imports in a network namespace.
+Run this check alone with `npm run test:contract`.
 
 ## Security
 
@@ -146,5 +148,4 @@ No `SECURITY.md` ships yet; this is PENDING.
 
 ## License
 
-No license file ships yet; this is PENDING.
-`package.json` declares `UNLICENSED`.
+`LICENSE` and `package.json` declare `UNLICENSED`.
