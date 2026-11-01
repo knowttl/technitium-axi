@@ -3,6 +3,7 @@ import { readContracts } from '../dist/read-contracts.js';
 
 const seeds = JSON.parse(await readFile(new URL('../tests/fixtures/read-seeds.json', import.meta.url), 'utf8')).responses;
 const monitor = JSON.parse(await readFile(new URL('../tests/fixtures/monitor-reads.json', import.meta.url), 'utf8')).operations;
+const adminCases = JSON.parse(await readFile(new URL('../tests/fixtures/admin-read-cases.json', import.meta.url), 'utf8')).operations;
 const ordinary = value => Array.isArray(value) ? value.map(ordinary) : value && typeof value === 'object'
   ? Object.fromEntries(Object.entries(value).filter(([key]) => !/password|secret|^token$/i.test(key)).map(([key, field]) => [key, ordinary(field)])) : value;
 const input = parameter => parameter.values?.[0] ?? (parameter.type === 'boolean' ? 'true'
@@ -15,8 +16,10 @@ const matrix = {
     revision: '0dd592aad21eced4221a9a46204cb1a299972ca0',
     requests: 'POST form with profile bearer header; these fixtures are synthetic, not live observations' },
   operations: readContracts.filter(contract => !['OP-001', 'OP-006'].includes(contract.id)).map(contract => {
-    const scenario = monitor[contract.id];
-    const response = structuredClone(scenario?.response ?? seeds[contract.id] ?? {});
+    const scenario = monitor[contract.id] ?? adminCases[contract.id];
+    const response = monitor[contract.id]
+      ? structuredClone(scenario.response ?? seeds[contract.id] ?? {})
+      : { ...structuredClone(seeds[contract.id] ?? {}), ...scenario?.response };
     if (contract.id === 'OP-018') { delete response.topDomains; delete response.topBlockedDomains; }
     if (['OP-020', 'OP-138'].includes(contract.id)) {
       const key = contract.id === 'OP-020' ? 'zones' : 'entries';
@@ -26,11 +29,12 @@ const matrix = {
     }
     const ordinaryResponse = ordinary(response);
     return { operation: contract.id, command: contract.command, path: contract.path, kind: contract.kind,
-      parameters: contract.parameters.map(parameter => ({ ...parameter, requested: scenario?.parameters?.[parameter.name] ?? input(parameter),
+      parameters: contract.parameters.map(parameter => ({ ...parameter, requested: scenario?.parameters?.[parameter.name] ?? scenario?.inputs?.[parameter.name] ?? input(parameter),
         invalid: parameter.type === 'boolean' ? 'yes' : parameter.type === 'integer' ? '-1'
           : parameter.type === 'date' || parameter.type === 'http-date' ? 'yesterday' : parameter.values ? 'not-an-option' : null })),
       response: contract.id === 'OP-078' ? { status: 'ok', server: 'SYNTHETIC-server' } : { status: 'ok', response },
       ordinaryResponse: contract.id === 'OP-078' ? { status: 'ok', server: 'SYNTHETIC-server' } : ordinaryResponse,
+      ...(scenario ? { scenarios: scenario.scenarios ?? [], ...(scenario.text === undefined ? {} : { text: scenario.text }) } : {}),
     };
   }),
 };

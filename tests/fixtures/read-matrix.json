@@ -15,8 +15,8 @@
       "response": {
         "status": "ok",
         "response": {
-          "displayName": "Administrator",
-          "username": "admin",
+          "displayName": "Planner",
+          "username": "planner",
           "isSsoUser": false,
           "totpEnabled": false,
           "disabled": false,
@@ -26,25 +26,29 @@
           "recentSessionRemoteAddress": "127.0.0.1",
           "sessionTimeoutSeconds": 1800,
           "memberOfGroups": [
-            "Administrators"
+            "Operators"
           ],
           "sessions": [
             {
-              "username": "admin",
-              "isCurrentSession": true,
-              "partialToken": "620c3bfcd09d0a07",
+              "username": "planner",
               "type": "Standard",
               "tokenName": null,
-              "lastSeen": "2022-09-15T13:58:02.4728Z",
-              "lastSeenRemoteAddress": "127.0.0.1",
-              "lastSeenUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0"
+              "isCurrentSession": true,
+              "partialToken": "1111"
+            },
+            {
+              "username": "planner",
+              "type": "ApiToken",
+              "tokenName": "automation",
+              "isCurrentSession": false,
+              "partialToken": "2222"
             }
           ]
         }
       },
       "ordinaryResponse": {
-        "displayName": "Administrator",
-        "username": "admin",
+        "displayName": "Planner",
+        "username": "planner",
         "isSsoUser": false,
         "totpEnabled": false,
         "disabled": false,
@@ -54,21 +58,26 @@
         "recentSessionRemoteAddress": "127.0.0.1",
         "sessionTimeoutSeconds": 1800,
         "memberOfGroups": [
-          "Administrators"
+          "Operators"
         ],
         "sessions": [
           {
-            "username": "admin",
-            "isCurrentSession": true,
-            "partialToken": "620c3bfcd09d0a07",
+            "username": "planner",
             "type": "Standard",
             "tokenName": null,
-            "lastSeen": "2022-09-15T13:58:02.4728Z",
-            "lastSeenRemoteAddress": "127.0.0.1",
-            "lastSeenUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0"
+            "isCurrentSession": true,
+            "partialToken": "1111"
+          },
+          {
+            "username": "planner",
+            "type": "ApiToken",
+            "tokenName": "automation",
+            "isCurrentSession": false,
+            "partialToken": "2222"
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-014",
@@ -80,8 +89,8 @@
         "status": "ok",
         "response": {
           "updateAvailable": true,
-          "updateVersion": "9.0",
-          "currentVersion": "8.1.4",
+          "updateVersion": "15.6.2",
+          "currentVersion": "15.4",
           "updateTitle": "New Update Available!",
           "updateMessage": "Follow the instructions from the link below to update the DNS server to the latest version. Read the change logs before installing the update to know if there are any breaking changes.",
           "downloadLink": "https://download.technitium.com/dns/DnsServerSetup.zip",
@@ -91,14 +100,22 @@
       },
       "ordinaryResponse": {
         "updateAvailable": true,
-        "updateVersion": "9.0",
-        "currentVersion": "8.1.4",
+        "updateVersion": "15.6.2",
+        "currentVersion": "15.4",
         "updateTitle": "New Update Available!",
         "updateMessage": "Follow the instructions from the link below to update the DNS server to the latest version. Read the change logs before installing the update to know if there are any breaking changes.",
         "downloadLink": "https://download.technitium.com/dns/DnsServerSetup.zip",
         "instructionsLink": "https://blog.technitium.com/2017/11/running-dns-server-on-ubuntu-linux.html",
         "changeLogLink": "https://github.com/TechnitiumSoftware/DnsServer/blob/master/CHANGELOG.md"
-      }
+      },
+      "scenarios": [
+        {
+          "name": "no update",
+          "response": {
+            "updateAvailable": false
+          }
+        }
+      ]
     },
     {
       "operation": "OP-015",
@@ -124,7 +141,8 @@
           "totalQueries": 17,
           "totalBlocked": 3
         }
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-016",
@@ -136,7 +154,9 @@
         "status": "ok",
         "response": {}
       },
-      "ordinaryResponse": {}
+      "ordinaryResponse": {},
+      "scenarios": [],
+      "text": "# TYPE total_queries counter\ntotal_queries 17\ntotal_blocked 3\n"
     },
     {
       "operation": "OP-017",
@@ -279,7 +299,8 @@
             }
           ]
         }
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-018",
@@ -395,7 +416,8 @@
             "rateLimited": true
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-020",
@@ -418,7 +440,7 @@
           "type": "string",
           "required": false,
           "location": "form",
-          "requested": "SyntheticfilterName",
+          "requested": "example.test",
           "invalid": null
         },
         {
@@ -466,24 +488,16 @@
           "totalZones": 2,
           "zones": [
             {
-              "name": "",
-              "type": "Secondary",
-              "dnssecStatus": "SignedWithNSEC",
-              "soaSerial": 1,
-              "expiry": "2022-02-26T07:57:08.1842183Z",
-              "isExpired": false,
-              "syncFailed": false,
-              "lastModified": "2022-02-26T07:57:08.1842183Z",
-              "disabled": false
+              "name": "example.test",
+              "type": "Primary",
+              "disabled": false,
+              "soaSerial": 42
             },
             {
-              "name": "0.in-addr.arpa",
+              "name": "sub.example.test",
               "type": "Primary",
-              "internal": true,
-              "dnssecStatus": "Unsigned",
-              "soaSerial": 1,
-              "lastModified": "2022-02-26T07:57:08.1842183Z",
-              "disabled": false
+              "disabled": false,
+              "soaSerial": 43
             }
           ]
         }
@@ -494,27 +508,20 @@
         "totalZones": 2,
         "zones": [
           {
-            "name": "",
-            "type": "Secondary",
-            "dnssecStatus": "SignedWithNSEC",
-            "soaSerial": 1,
-            "expiry": "2022-02-26T07:57:08.1842183Z",
-            "isExpired": false,
-            "syncFailed": false,
-            "lastModified": "2022-02-26T07:57:08.1842183Z",
-            "disabled": false
+            "name": "example.test",
+            "type": "Primary",
+            "disabled": false,
+            "soaSerial": 42
           },
           {
-            "name": "0.in-addr.arpa",
+            "name": "sub.example.test",
             "type": "Primary",
-            "internal": true,
-            "dnssecStatus": "Unsigned",
-            "soaSerial": 1,
-            "lastModified": "2022-02-26T07:57:08.1842183Z",
-            "disabled": false
+            "disabled": false,
+            "soaSerial": 43
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-021",
@@ -536,15 +543,22 @@
         "status": "ok",
         "response": {
           "catalogZoneNames": [
-            "catalog1"
+            "cat-ok.test"
           ]
         }
       },
       "ordinaryResponse": {
         "catalogZoneNames": [
-          "catalog1"
+          "cat-ok.test"
         ]
-      }
+      },
+      "scenarios": [
+        {
+          "name": "missing section view",
+          "httpStatus": 403,
+          "error": "PERMISSION_DENIED"
+        }
+      ]
     },
     {
       "operation": "OP-024",
@@ -567,7 +581,7 @@
           "type": "string",
           "required": true,
           "location": "form",
-          "requested": "alpha.example.test",
+          "requested": "example.test",
           "invalid": null
         }
       ],
@@ -575,7 +589,9 @@
         "status": "ok",
         "response": {}
       },
-      "ordinaryResponse": {}
+      "ordinaryResponse": {},
+      "scenarios": [],
+      "text": "example.test. 300 IN SOA ns.example.test. hostmaster.example.test. 42 900 300 604800 300\nwww.example.test. 300 IN A 192.0.2.10\nexample.test. 300 IN TXT \"quoted \\\"text\\\"\"\n"
     },
     {
       "operation": "OP-031",
@@ -598,7 +614,7 @@
           "type": "string",
           "required": true,
           "location": "form",
-          "requested": "alpha.example.test",
+          "requested": "example.test",
           "invalid": null
         },
         {
@@ -623,7 +639,7 @@
       "response": {
         "status": "ok",
         "response": {
-          "name": "example.com",
+          "name": "example.test",
           "type": "Primary",
           "internal": false,
           "dnssecStatus": "Unsigned",
@@ -647,7 +663,7 @@
           "notifyNameServers": [],
           "update": "UseSpecifiedNetworkACL",
           "updateNetworkACL": [
-            "192.168.180.0/24"
+            "192.0.2.0/24"
           ],
           "updateSecurityPolicies": [
             {
@@ -667,16 +683,15 @@
             }
           ],
           "availableCatalogZoneNames": [
-            "catalog1"
+            "cat-ok.test"
           ],
           "availableTsigKeyNames": [
-            "key.example.com",
-            "catalog"
+            "zone-key"
           ]
         }
       },
       "ordinaryResponse": {
-        "name": "example.com",
+        "name": "example.test",
         "type": "Primary",
         "internal": false,
         "dnssecStatus": "Unsigned",
@@ -700,7 +715,7 @@
         "notifyNameServers": [],
         "update": "UseSpecifiedNetworkACL",
         "updateNetworkACL": [
-          "192.168.180.0/24"
+          "192.0.2.0/24"
         ],
         "updateSecurityPolicies": [
           {
@@ -720,13 +735,25 @@
           }
         ],
         "availableCatalogZoneNames": [
-          "catalog1"
+          "cat-ok.test"
         ],
         "availableTsigKeyNames": [
-          "key.example.com",
-          "catalog"
+          "zone-key"
         ]
-      }
+      },
+      "scenarios": [
+        {
+          "name": "candidate lists omitted",
+          "omitInputs": [
+            "includeAvailableCatalogZoneNames",
+            "includeAvailableTsigKeyNames"
+          ],
+          "omit": [
+            "availableCatalogZoneNames",
+            "availableTsigKeyNames"
+          ]
+        }
+      ]
     },
     {
       "operation": "OP-033",
@@ -749,7 +776,7 @@
           "type": "string",
           "required": true,
           "location": "form",
-          "requested": "alpha.example.test",
+          "requested": "example.test",
           "invalid": null
         },
         {
@@ -766,77 +793,60 @@
         "status": "ok",
         "response": {
           "section": "Zones",
-          "subItem": "example.com",
+          "subItem": "example.test",
           "userPermissions": [
             {
-              "username": "admin",
+              "username": "reader",
               "canView": true,
-              "canModify": true,
-              "canDelete": true
+              "canModify": false,
+              "canDelete": false
             }
           ],
           "groupPermissions": [
             {
-              "name": "Administrators",
+              "name": "Operators",
               "canView": true,
-              "canModify": true,
-              "canDelete": true
-            },
-            {
-              "name": "DNS Administrators",
-              "canView": true,
-              "canModify": true,
-              "canDelete": true
+              "canModify": false,
+              "canDelete": false
             }
           ],
           "users": [
-            "admin",
-            "shreyas"
+            "reader",
+            "planner"
           ],
           "groups": [
-            "Administrators",
-            "DHCP Administrators",
-            "DNS Administrators",
-            "Everyone"
+            "Operators"
           ]
         }
       },
       "ordinaryResponse": {
         "section": "Zones",
-        "subItem": "example.com",
+        "subItem": "example.test",
         "userPermissions": [
           {
-            "username": "admin",
+            "username": "reader",
             "canView": true,
-            "canModify": true,
-            "canDelete": true
+            "canModify": false,
+            "canDelete": false
           }
         ],
         "groupPermissions": [
           {
-            "name": "Administrators",
+            "name": "Operators",
             "canView": true,
-            "canModify": true,
-            "canDelete": true
-          },
-          {
-            "name": "DNS Administrators",
-            "canView": true,
-            "canModify": true,
-            "canDelete": true
+            "canModify": false,
+            "canDelete": false
           }
         ],
         "users": [
-          "admin",
-          "shreyas"
+          "reader",
+          "planner"
         ],
         "groups": [
-          "Administrators",
-          "DHCP Administrators",
-          "DNS Administrators",
-          "Everyone"
+          "Operators"
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-037",
@@ -859,33 +869,27 @@
           "type": "string",
           "required": true,
           "location": "form",
-          "requested": "alpha.example.test",
+          "requested": "example.test",
           "invalid": null
         }
       ],
       "response": {
         "status": "ok",
         "response": {
-          "name": "example.com",
+          "name": "example.test",
           "type": "Primary",
           "internal": false,
           "disabled": false,
           "dnssecStatus": "SignedWithNSEC",
           "dsRecords": [
             {
-              "keyTag": 47972,
+              "keyTag": 15048,
               "dnsKeyState": "Published",
-              "dnsKeyStateReadyBy": "2023-10-29T16:20:08.8007369Z",
-              "algorithm": "ECDSAP256SHA256",
-              "publicKey": "TK5a8pXPMspDwuh4Z3evOfNZm9kkc8IzwZDiCgIX6imxwkbpY9FTvhoI/ttZiLWZ5hvLbvrpsbd0liqSwqNmPg==",
+              "dnsKeyStateReadyBy": "2024-01-01T00:00:00Z",
               "digests": [
                 {
                   "digestType": "SHA256",
-                  "digest": "D59EBB413C88576B519B2980DF50493689A4A260383D0CB2F260251D5CA2E144"
-                },
-                {
-                  "digestType": "SHA384",
-                  "digest": "F8235EEAB1AEBCFAD28096DF8DCF820F25C685041562AAB63E1A3E1AC89D2FC3836E97114A64EC0E057DCA234451E50C"
+                  "digest": "8EAFAE3305DB57A27CA5A261525515461CB7232A34A44AD96441B88BCA9B9849"
                 }
               ]
             }
@@ -893,31 +897,34 @@
         }
       },
       "ordinaryResponse": {
-        "name": "example.com",
+        "name": "example.test",
         "type": "Primary",
         "internal": false,
         "disabled": false,
         "dnssecStatus": "SignedWithNSEC",
         "dsRecords": [
           {
-            "keyTag": 47972,
+            "keyTag": 15048,
             "dnsKeyState": "Published",
-            "dnsKeyStateReadyBy": "2023-10-29T16:20:08.8007369Z",
-            "algorithm": "ECDSAP256SHA256",
-            "publicKey": "TK5a8pXPMspDwuh4Z3evOfNZm9kkc8IzwZDiCgIX6imxwkbpY9FTvhoI/ttZiLWZ5hvLbvrpsbd0liqSwqNmPg==",
+            "dnsKeyStateReadyBy": "2024-01-01T00:00:00Z",
             "digests": [
               {
                 "digestType": "SHA256",
-                "digest": "D59EBB413C88576B519B2980DF50493689A4A260383D0CB2F260251D5CA2E144"
-              },
-              {
-                "digestType": "SHA384",
-                "digest": "F8235EEAB1AEBCFAD28096DF8DCF820F25C685041562AAB63E1A3E1AC89D2FC3836E97114A64EC0E057DCA234451E50C"
+                "digest": "8EAFAE3305DB57A27CA5A261525515461CB7232A34A44AD96441B88BCA9B9849"
               }
             ]
           }
         ]
-      }
+      },
+      "scenarios": [
+        {
+          "name": "unsigned zone",
+          "patch": {
+            "dnssecStatus": "Unsigned",
+            "dsRecords": []
+          }
+        }
+      ]
     },
     {
       "operation": "OP-038",
@@ -940,14 +947,14 @@
           "type": "string",
           "required": true,
           "location": "form",
-          "requested": "alpha.example.test",
+          "requested": "example.test",
           "invalid": null
         }
       ],
       "response": {
         "status": "ok",
         "response": {
-          "name": "example.com",
+          "name": "example.test",
           "type": "Primary",
           "internal": false,
           "disabled": false,
@@ -977,7 +984,7 @@
         }
       },
       "ordinaryResponse": {
-        "name": "example.com",
+        "name": "example.test",
         "type": "Primary",
         "internal": false,
         "disabled": false,
@@ -1004,7 +1011,8 @@
             "rolloverDays": 90
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-050",
@@ -1027,7 +1035,7 @@
           "type": "string",
           "required": true,
           "location": "form",
-          "requested": "alpha.example.test",
+          "requested": "www.example.test",
           "invalid": null
         },
         {
@@ -1036,7 +1044,7 @@
           "type": "string",
           "required": false,
           "location": "form",
-          "requested": "alpha.example.test",
+          "requested": "example.test",
           "invalid": null
         },
         {
@@ -1045,7 +1053,7 @@
           "type": "boolean",
           "required": false,
           "location": "form",
-          "requested": "true",
+          "requested": "false",
           "invalid": "yes"
         }
       ],
@@ -1053,1025 +1061,116 @@
         "status": "ok",
         "response": {
           "zone": {
-            "name": "example.com",
+            "name": "example.test",
             "type": "Primary",
-            "internal": false,
-            "dnssecStatus": "SignedWithNSEC3",
             "disabled": false
           },
           "records": [
             {
-              "disabled": false,
-              "name": "example.com",
+              "name": "www.example.test",
               "type": "A",
-              "ttl": 3600,
+              "ttl": 300,
               "rData": {
-                "ipAddress": "1.1.1.1"
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "example.com",
-              "type": "NS",
-              "ttl": 3600,
-              "rData": {
-                "nameServer": "server1"
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "example.com",
-              "type": "SOA",
-              "ttl": 900,
-              "rData": {
-                "primaryNameServer": "server1",
-                "responsiblePerson": "hostadmin.example.com",
-                "serial": 35,
-                "refresh": 900,
-                "retry": 300,
-                "expire": 604800,
-                "minimum": 900
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "example.com",
-              "type": "RRSIG",
-              "ttl": 900,
-              "rData": {
-                "typeCovered": "NSEC3PARAM",
-                "algorithm": "ECDSAP256SHA256",
-                "labels": 2,
-                "originalTtl": 900,
-                "signatureExpiration": "2022-03-15T11:45:31Z",
-                "signatureInception": "2022-03-05T10:45:31Z",
-                "keyTag": 61009,
-                "signersName": "example.com",
-                "signature": "vJ/fXkGKsapdvWjDhcfHsBxpZhSzMRLZv3/bEGJ4N3/K7jiM92Ik336W680SI7g+NyPCQ3gqE7ta/JEL4bht4Q=="
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "example.com",
-              "type": "RRSIG",
-              "ttl": 900,
-              "rData": {
-                "typeCovered": "SOA",
-                "algorithm": "ECDSAP256SHA256",
-                "labels": 2,
-                "originalTtl": 900,
-                "signatureExpiration": "2022-03-15T12:53:39Z",
-                "signatureInception": "2022-03-05T11:53:39Z",
-                "keyTag": 61009,
-                "signersName": "example.com",
-                "signature": "9PQHH3ZGCuFRYkn28SoilS8y8zszgeOpCfJpIOAaE5ao+iBPCXudHacr/EpgB2wLzXpRjR+WgiYjmJH17+6bKg=="
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "example.com",
-              "type": "RRSIG",
-              "ttl": 3600,
-              "rData": {
-                "typeCovered": "A",
-                "algorithm": "ECDSAP256SHA256",
-                "labels": 2,
-                "originalTtl": 3600,
-                "signatureExpiration": "2022-03-15T11:25:35Z",
-                "signatureInception": "2022-03-05T10:25:35Z",
-                "keyTag": 61009,
-                "signersName": "example.com",
-                "signature": "dWjn5hTWuEq57ncwGdVq+kdbMuFtuxLuZhYCcQMdsTxYkM/64RrPY6eYwfYQ7+fY1+QBSX2WudAM4dzbmL/s2A=="
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "example.com",
-              "type": "RRSIG",
-              "ttl": 3600,
-              "rData": {
-                "typeCovered": "NS",
-                "algorithm": "ECDSAP256SHA256",
-                "labels": 2,
-                "originalTtl": 3600,
-                "signatureExpiration": "2022-03-15T11:25:35Z",
-                "signatureInception": "2022-03-05T10:25:35Z",
-                "keyTag": 61009,
-                "signersName": "example.com",
-                "signature": "Yx+leBcYNFf0gUfN6rECWrUZwCDhJbAGk1BNOJN01nPakS5meSbDApUHJZeAzfSBcPzodK3ddmEuhho1MABaZw=="
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "example.com",
-              "type": "RRSIG",
-              "ttl": 86400,
-              "rData": {
-                "typeCovered": "DNSKEY",
-                "algorithm": "ECDSAP256SHA256",
-                "labels": 2,
-                "originalTtl": 86400,
-                "signatureExpiration": "2022-03-15T12:27:09Z",
-                "signatureInception": "2022-03-05T11:27:09Z",
-                "keyTag": 65078,
-                "signersName": "example.com",
-                "signature": "KWAK7o+FjJ2/6ZvX4C1wB41yRzlmec5pR2TTeNWlY/weg0MNKCLRs3uTopSjoTih+uq3IRR7Zx0iOcy7evOitA=="
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "example.com",
-              "type": "RRSIG",
-              "ttl": 86400,
-              "rData": {
-                "typeCovered": "DNSKEY",
-                "algorithm": "ECDSAP256SHA256",
-                "labels": 2,
-                "originalTtl": 86400,
-                "signatureExpiration": "2022-03-15T12:27:09Z",
-                "signatureInception": "2022-03-05T11:27:09Z",
-                "keyTag": 52896,
-                "signersName": "example.com",
-                "signature": "oHtt1gUmDXxI5GMfS+LJ6uxKUcuUu+5EELXdhLrbk5V/yganP6sMgA4hGkzokYM22LDowjSdO5qwzCW6IDgKxg=="
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "example.com",
-              "type": "DNSKEY",
-              "ttl": 86400,
-              "rData": {
-                "flags": "SecureEntryPoint, ZoneKey",
-                "protocol": 3,
-                "algorithm": "ECDSAP256SHA256",
-                "publicKey": "dMRyc/Pji31mF3iHNrybPzbgvtb2NKtmXhjQq433BHI= ZveDa1z00VxDnugV1x7EDvpt+42TDh8OQwp1kOrpX0E=",
-                "computedKeyTag": 65078,
-                "dnsKeyState": "Ready",
-                "computedDigests": [
-                  {
-                    "digestType": "SHA256",
-                    "digest": "BBE017B17E5CB5FFFF1EC2C7815367DF80D8E7EAEE4832D3ED192159D79B1EEB"
-                  },
-                  {
-                    "digestType": "SHA384",
-                    "digest": "0B0C9F1019BD3FE62C8B71F8C80E7A833BA468A7E303ABC819C0CB9BEDE8E26BB50CB1729547BFCCE2AE22390E44CDA3"
-                  }
-                ]
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "example.com",
-              "type": "DNSKEY",
-              "ttl": 86400,
-              "rData": {
-                "flags": "ZoneKey",
-                "protocol": 3,
-                "algorithm": "ECDSAP256SHA256",
-                "publicKey": "IUvzTkf4JPg+7k57cQw7n7SR6/1dH7FaKxu9Cf+kcvo= UU+uoKRWnYAFHDNF0X3U8ZYetUyDF7fcNAwEaSQnIUM=",
-                "computedKeyTag": 61009,
-                "dnsKeyState": "Active"
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "example.com",
-              "type": "DNSKEY",
-              "ttl": 3600,
-              "rData": {
-                "flags": "SecureEntryPoint, ZoneKey",
-                "protocol": 3,
-                "algorithm": "ECDSAP256SHA256",
-                "publicKey": "KOJWFitKm58EgjO43GDnsFbnkGoqVKeLRkP8FGPAdhqA2F758Ta1mkxieEu0YN0EoX+u5bVuc5DEBFSv+U63CA==",
-                "computedKeyTag": 15048,
-                "dnsKeyState": "Published",
-                "dnsKeyStateReadyBy": "2022-12-18T16:14:50.0328321Z",
-                "computedDigests": [
-                  {
-                    "digestType": "SHA256",
-                    "digest": "8EAFAE3305DB57A27CA5A261525515461CB7232A34A44AD96441B88BCA9B9849"
-                  },
-                  {
-                    "digestType": "SHA384",
-                    "digest": "4A6DA59E91872B5B835FCEE5987B17151A6F10FE409B595BEEEDB28FE64315C9C268493B59A0BF72EA84BE0F20A33F96"
-                  }
-                ]
-              },
-              "dnssecStatus": "Unknown",
-              "lastUsedOn": "0001-01-01T00:00:00"
-            },
-            {
-              "disabled": false,
-              "name": "example.com",
-              "type": "DNSKEY",
-              "ttl": 86400,
-              "rData": {
-                "flags": "ZoneKey",
-                "protocol": 3,
-                "algorithm": "ECDSAP256SHA256",
-                "publicKey": "337uQ11fdKbr6sKYq9mwwBC2xdnu0geuIkfHcIauKNI= rKk7pfVKlLfcGBOIn5hEVeod2aIRIyUiivdTPzrmpIo=",
-                "computedKeyTag": 4811,
-                "dnsKeyState": "Published"
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "example.com",
-              "type": "NSEC3PARAM",
-              "ttl": 900,
-              "rData": {
-                "hashAlgorithm": "SHA1",
-                "flags": "None",
-                "iterations": 0,
-                "salt": ""
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "*.example.com",
-              "type": "A",
-              "ttl": 3600,
-              "rData": {
-                "ipAddress": "7.7.7.7"
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "*.example.com",
-              "type": "RRSIG",
-              "ttl": 3600,
-              "rData": {
-                "typeCovered": "A",
-                "algorithm": "ECDSAP256SHA256",
-                "labels": 2,
-                "originalTtl": 3600,
-                "signatureExpiration": "2022-03-15T11:25:35Z",
-                "signatureInception": "2022-03-05T10:25:35Z",
-                "keyTag": 61009,
-                "signersName": "example.com",
-                "signature": "ZoUNNEdb8XWqHHi5o4BcUe7deRVlJZLhQtc3sjRtuJ68DNPDmQ0GfCrNTigJcomspr7CYqWcXfoSOqu6f2AyyQ=="
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "4F3CNT8CU22TNGEC382JJ4GDE4RB47UB.example.com",
-              "type": "RRSIG",
-              "ttl": 900,
-              "rData": {
-                "typeCovered": "NSEC3",
-                "algorithm": "ECDSAP256SHA256",
-                "labels": 3,
-                "originalTtl": 900,
-                "signatureExpiration": "2022-03-15T11:45:31Z",
-                "signatureInception": "2022-03-05T10:45:31Z",
-                "keyTag": 61009,
-                "signersName": "example.com",
-                "signature": "piZeLYa6WpHyiJerPlXq2s+JKBjHznNALXHJCOfiQ4o/iTqWILoqYHfKB5AWrLwLmkxXcbKf63CnEMGlinRidg=="
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "4F3CNT8CU22TNGEC382JJ4GDE4RB47UB.example.com",
-              "type": "NSEC3",
-              "ttl": 900,
-              "rData": {
-                "hashAlgorithm": "SHA1",
-                "flags": "None",
-                "iterations": 0,
-                "salt": "",
-                "nextHashedOwnerName": "KG19N32806C832KIJDNGLQ8P9M2R5MDJ",
-                "types": [
-                  "A"
-                ]
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "KG19N32806C832KIJDNGLQ8P9M2R5MDJ.example.com",
-              "type": "RRSIG",
-              "ttl": 900,
-              "rData": {
-                "typeCovered": "NSEC3",
-                "algorithm": "ECDSAP256SHA256",
-                "labels": 3,
-                "originalTtl": 900,
-                "signatureExpiration": "2022-03-15T11:45:31Z",
-                "signatureInception": "2022-03-05T10:45:31Z",
-                "keyTag": 61009,
-                "signersName": "example.com",
-                "signature": "i/PMxc1LFA9a8jLxju7SSpoY7y8aZYkAILcCRIxE3lTundPJmzFG0U9kve04kqT7+Klmzj3OzXnCvjTA54+DZA=="
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "KG19N32806C832KIJDNGLQ8P9M2R5MDJ.example.com",
-              "type": "NSEC3",
-              "ttl": 900,
-              "rData": {
-                "hashAlgorithm": "SHA1",
-                "flags": "None",
-                "iterations": 0,
-                "salt": "",
-                "nextHashedOwnerName": "MIFDNDT3NFF3OD53O7TLA1HRFF95JKUK",
-                "types": [
-                  "NS",
-                  "DS"
-                ]
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "MIFDNDT3NFF3OD53O7TLA1HRFF95JKUK.example.com",
-              "type": "RRSIG",
-              "ttl": 900,
-              "rData": {
-                "typeCovered": "NSEC3",
-                "algorithm": "ECDSAP256SHA256",
-                "labels": 3,
-                "originalTtl": 900,
-                "signatureExpiration": "2022-03-15T11:45:31Z",
-                "signatureInception": "2022-03-05T10:45:31Z",
-                "keyTag": 61009,
-                "signersName": "example.com",
-                "signature": "mr37TDMmWJ3YLNtpYy++S9eAeHIXKajX6jB8zLscJyC1uI0OFnSTuesfhIlLDbj0SDgrzRQWsLmvMKzfq89TJA=="
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "MIFDNDT3NFF3OD53O7TLA1HRFF95JKUK.example.com",
-              "type": "NSEC3",
-              "ttl": 900,
-              "rData": {
-                "hashAlgorithm": "SHA1",
-                "flags": "None",
-                "iterations": 0,
-                "salt": "",
-                "nextHashedOwnerName": "ONIB9MGUB9H0RML3CDF5BGRJ59DKJHVK",
-                "types": [
-                  "CNAME"
-                ]
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "ONIB9MGUB9H0RML3CDF5BGRJ59DKJHVK.example.com",
-              "type": "RRSIG",
-              "ttl": 900,
-              "rData": {
-                "typeCovered": "NSEC3",
-                "algorithm": "ECDSAP256SHA256",
-                "labels": 3,
-                "originalTtl": 900,
-                "signatureExpiration": "2022-03-15T11:45:31Z",
-                "signatureInception": "2022-03-05T10:45:31Z",
-                "keyTag": 61009,
-                "signersName": "example.com",
-                "signature": "GGh/KkB6C2D55xRJa0zFbZ8As3DZK9btUamryZVmyo7FaLPyltkeRZor9OExgQ6HC1SLXNGJIfCO9cM4K6P8iw=="
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "ONIB9MGUB9H0RML3CDF5BGRJ59DKJHVK.example.com",
-              "type": "NSEC3",
-              "ttl": 900,
-              "rData": {
-                "hashAlgorithm": "SHA1",
-                "flags": "None",
-                "iterations": 0,
-                "salt": "",
-                "nextHashedOwnerName": "4F3CNT8CU22TNGEC382JJ4GDE4RB47UB",
-                "types": [
-                  "A",
-                  "NS",
-                  "SOA",
-                  "DNSKEY",
-                  "NSEC3PARAM"
-                ]
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "sub.example.com",
-              "type": "NS",
-              "ttl": 3600,
-              "rData": {
-                "nameServer": "server1"
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "sub.example.com",
-              "type": "DS",
-              "ttl": 3600,
-              "rData": {
-                "keyTag": 46125,
-                "algorithm": "ECDSAP384SHA384",
-                "digestType": "SHA1",
-                "digest": "5590E425472785A16DC0F853000557DB5543C39E"
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "sub.example.com",
-              "type": "RRSIG",
-              "ttl": 3600,
-              "rData": {
-                "typeCovered": "NS",
-                "algorithm": "ECDSAP256SHA256",
-                "labels": 3,
-                "originalTtl": 3600,
-                "signatureExpiration": "2022-03-15T11:25:35Z",
-                "signatureInception": "2022-03-05T10:25:35Z",
-                "keyTag": 61009,
-                "signersName": "example.com",
-                "signature": "hFzYTL9V0/0UQZlvZpRWCOvu/2udvhswKoxpe4+quNuC6K59W7uCJLuDm/z0aFK5nW8Of4oTk2YjSBZo0nBSlg=="
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "sub.example.com",
-              "type": "RRSIG",
-              "ttl": 3600,
-              "rData": {
-                "typeCovered": "DS",
-                "algorithm": "ECDSAP256SHA256",
-                "labels": 3,
-                "originalTtl": 3600,
-                "signatureExpiration": "2022-03-15T12:53:39Z",
-                "signatureInception": "2022-03-05T11:53:39Z",
-                "keyTag": 61009,
-                "signersName": "example.com",
-                "signature": "UYpUKV5Uq7DM3rltg3sPFOwYgRa2yBzT/j9U8xCh5oyXt27fIn3eemvqqe9qV4xeQaAN0QfQPkj9vmOZSAYafg=="
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "www.example.com",
-              "type": "CNAME",
-              "ttl": 3600,
-              "rData": {
-                "cname": "example.com"
-              },
-              "dnssecStatus": "Unknown"
-            },
-            {
-              "disabled": false,
-              "name": "www.example.com",
-              "type": "RRSIG",
-              "ttl": 3600,
-              "rData": {
-                "typeCovered": "CNAME",
-                "algorithm": "ECDSAP256SHA256",
-                "labels": 3,
-                "originalTtl": 3600,
-                "signatureExpiration": "2022-03-15T11:25:35Z",
-                "signatureInception": "2022-03-05T10:25:35Z",
-                "keyTag": 61009,
-                "signersName": "example.com",
-                "signature": "cAbYvDJhZGLS/uI5I4mSrh7S5gEUy6bmX2sY7zEd1XVFPqrUOZHbVZuwXPjA6r9/m0rCaww9RiG90JhNNDLEtA=="
-              },
-              "dnssecStatus": "Unknown"
+                "ipAddress": "192.0.2.10"
+              }
             }
           ]
         }
       },
       "ordinaryResponse": {
         "zone": {
-          "name": "example.com",
+          "name": "example.test",
           "type": "Primary",
-          "internal": false,
-          "dnssecStatus": "SignedWithNSEC3",
           "disabled": false
         },
         "records": [
           {
-            "disabled": false,
-            "name": "example.com",
+            "name": "www.example.test",
             "type": "A",
-            "ttl": 3600,
+            "ttl": 300,
             "rData": {
-              "ipAddress": "1.1.1.1"
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "example.com",
-            "type": "NS",
-            "ttl": 3600,
-            "rData": {
-              "nameServer": "server1"
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "example.com",
-            "type": "SOA",
-            "ttl": 900,
-            "rData": {
-              "primaryNameServer": "server1",
-              "responsiblePerson": "hostadmin.example.com",
-              "serial": 35,
-              "refresh": 900,
-              "retry": 300,
-              "expire": 604800,
-              "minimum": 900
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "example.com",
-            "type": "RRSIG",
-            "ttl": 900,
-            "rData": {
-              "typeCovered": "NSEC3PARAM",
-              "algorithm": "ECDSAP256SHA256",
-              "labels": 2,
-              "originalTtl": 900,
-              "signatureExpiration": "2022-03-15T11:45:31Z",
-              "signatureInception": "2022-03-05T10:45:31Z",
-              "keyTag": 61009,
-              "signersName": "example.com",
-              "signature": "vJ/fXkGKsapdvWjDhcfHsBxpZhSzMRLZv3/bEGJ4N3/K7jiM92Ik336W680SI7g+NyPCQ3gqE7ta/JEL4bht4Q=="
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "example.com",
-            "type": "RRSIG",
-            "ttl": 900,
-            "rData": {
-              "typeCovered": "SOA",
-              "algorithm": "ECDSAP256SHA256",
-              "labels": 2,
-              "originalTtl": 900,
-              "signatureExpiration": "2022-03-15T12:53:39Z",
-              "signatureInception": "2022-03-05T11:53:39Z",
-              "keyTag": 61009,
-              "signersName": "example.com",
-              "signature": "9PQHH3ZGCuFRYkn28SoilS8y8zszgeOpCfJpIOAaE5ao+iBPCXudHacr/EpgB2wLzXpRjR+WgiYjmJH17+6bKg=="
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "example.com",
-            "type": "RRSIG",
-            "ttl": 3600,
-            "rData": {
-              "typeCovered": "A",
-              "algorithm": "ECDSAP256SHA256",
-              "labels": 2,
-              "originalTtl": 3600,
-              "signatureExpiration": "2022-03-15T11:25:35Z",
-              "signatureInception": "2022-03-05T10:25:35Z",
-              "keyTag": 61009,
-              "signersName": "example.com",
-              "signature": "dWjn5hTWuEq57ncwGdVq+kdbMuFtuxLuZhYCcQMdsTxYkM/64RrPY6eYwfYQ7+fY1+QBSX2WudAM4dzbmL/s2A=="
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "example.com",
-            "type": "RRSIG",
-            "ttl": 3600,
-            "rData": {
-              "typeCovered": "NS",
-              "algorithm": "ECDSAP256SHA256",
-              "labels": 2,
-              "originalTtl": 3600,
-              "signatureExpiration": "2022-03-15T11:25:35Z",
-              "signatureInception": "2022-03-05T10:25:35Z",
-              "keyTag": 61009,
-              "signersName": "example.com",
-              "signature": "Yx+leBcYNFf0gUfN6rECWrUZwCDhJbAGk1BNOJN01nPakS5meSbDApUHJZeAzfSBcPzodK3ddmEuhho1MABaZw=="
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "example.com",
-            "type": "RRSIG",
-            "ttl": 86400,
-            "rData": {
-              "typeCovered": "DNSKEY",
-              "algorithm": "ECDSAP256SHA256",
-              "labels": 2,
-              "originalTtl": 86400,
-              "signatureExpiration": "2022-03-15T12:27:09Z",
-              "signatureInception": "2022-03-05T11:27:09Z",
-              "keyTag": 65078,
-              "signersName": "example.com",
-              "signature": "KWAK7o+FjJ2/6ZvX4C1wB41yRzlmec5pR2TTeNWlY/weg0MNKCLRs3uTopSjoTih+uq3IRR7Zx0iOcy7evOitA=="
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "example.com",
-            "type": "RRSIG",
-            "ttl": 86400,
-            "rData": {
-              "typeCovered": "DNSKEY",
-              "algorithm": "ECDSAP256SHA256",
-              "labels": 2,
-              "originalTtl": 86400,
-              "signatureExpiration": "2022-03-15T12:27:09Z",
-              "signatureInception": "2022-03-05T11:27:09Z",
-              "keyTag": 52896,
-              "signersName": "example.com",
-              "signature": "oHtt1gUmDXxI5GMfS+LJ6uxKUcuUu+5EELXdhLrbk5V/yganP6sMgA4hGkzokYM22LDowjSdO5qwzCW6IDgKxg=="
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "example.com",
-            "type": "DNSKEY",
-            "ttl": 86400,
-            "rData": {
-              "flags": "SecureEntryPoint, ZoneKey",
-              "protocol": 3,
-              "algorithm": "ECDSAP256SHA256",
-              "publicKey": "dMRyc/Pji31mF3iHNrybPzbgvtb2NKtmXhjQq433BHI= ZveDa1z00VxDnugV1x7EDvpt+42TDh8OQwp1kOrpX0E=",
-              "computedKeyTag": 65078,
-              "dnsKeyState": "Ready",
-              "computedDigests": [
-                {
-                  "digestType": "SHA256",
-                  "digest": "BBE017B17E5CB5FFFF1EC2C7815367DF80D8E7EAEE4832D3ED192159D79B1EEB"
-                },
-                {
-                  "digestType": "SHA384",
-                  "digest": "0B0C9F1019BD3FE62C8B71F8C80E7A833BA468A7E303ABC819C0CB9BEDE8E26BB50CB1729547BFCCE2AE22390E44CDA3"
-                }
-              ]
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "example.com",
-            "type": "DNSKEY",
-            "ttl": 86400,
-            "rData": {
-              "flags": "ZoneKey",
-              "protocol": 3,
-              "algorithm": "ECDSAP256SHA256",
-              "publicKey": "IUvzTkf4JPg+7k57cQw7n7SR6/1dH7FaKxu9Cf+kcvo= UU+uoKRWnYAFHDNF0X3U8ZYetUyDF7fcNAwEaSQnIUM=",
-              "computedKeyTag": 61009,
-              "dnsKeyState": "Active"
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "example.com",
-            "type": "DNSKEY",
-            "ttl": 3600,
-            "rData": {
-              "flags": "SecureEntryPoint, ZoneKey",
-              "protocol": 3,
-              "algorithm": "ECDSAP256SHA256",
-              "publicKey": "KOJWFitKm58EgjO43GDnsFbnkGoqVKeLRkP8FGPAdhqA2F758Ta1mkxieEu0YN0EoX+u5bVuc5DEBFSv+U63CA==",
-              "computedKeyTag": 15048,
-              "dnsKeyState": "Published",
-              "dnsKeyStateReadyBy": "2022-12-18T16:14:50.0328321Z",
-              "computedDigests": [
-                {
-                  "digestType": "SHA256",
-                  "digest": "8EAFAE3305DB57A27CA5A261525515461CB7232A34A44AD96441B88BCA9B9849"
-                },
-                {
-                  "digestType": "SHA384",
-                  "digest": "4A6DA59E91872B5B835FCEE5987B17151A6F10FE409B595BEEEDB28FE64315C9C268493B59A0BF72EA84BE0F20A33F96"
-                }
-              ]
-            },
-            "dnssecStatus": "Unknown",
-            "lastUsedOn": "0001-01-01T00:00:00"
-          },
-          {
-            "disabled": false,
-            "name": "example.com",
-            "type": "DNSKEY",
-            "ttl": 86400,
-            "rData": {
-              "flags": "ZoneKey",
-              "protocol": 3,
-              "algorithm": "ECDSAP256SHA256",
-              "publicKey": "337uQ11fdKbr6sKYq9mwwBC2xdnu0geuIkfHcIauKNI= rKk7pfVKlLfcGBOIn5hEVeod2aIRIyUiivdTPzrmpIo=",
-              "computedKeyTag": 4811,
-              "dnsKeyState": "Published"
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "example.com",
-            "type": "NSEC3PARAM",
-            "ttl": 900,
-            "rData": {
-              "hashAlgorithm": "SHA1",
-              "flags": "None",
-              "iterations": 0,
-              "salt": ""
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "*.example.com",
-            "type": "A",
-            "ttl": 3600,
-            "rData": {
-              "ipAddress": "7.7.7.7"
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "*.example.com",
-            "type": "RRSIG",
-            "ttl": 3600,
-            "rData": {
-              "typeCovered": "A",
-              "algorithm": "ECDSAP256SHA256",
-              "labels": 2,
-              "originalTtl": 3600,
-              "signatureExpiration": "2022-03-15T11:25:35Z",
-              "signatureInception": "2022-03-05T10:25:35Z",
-              "keyTag": 61009,
-              "signersName": "example.com",
-              "signature": "ZoUNNEdb8XWqHHi5o4BcUe7deRVlJZLhQtc3sjRtuJ68DNPDmQ0GfCrNTigJcomspr7CYqWcXfoSOqu6f2AyyQ=="
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "4F3CNT8CU22TNGEC382JJ4GDE4RB47UB.example.com",
-            "type": "RRSIG",
-            "ttl": 900,
-            "rData": {
-              "typeCovered": "NSEC3",
-              "algorithm": "ECDSAP256SHA256",
-              "labels": 3,
-              "originalTtl": 900,
-              "signatureExpiration": "2022-03-15T11:45:31Z",
-              "signatureInception": "2022-03-05T10:45:31Z",
-              "keyTag": 61009,
-              "signersName": "example.com",
-              "signature": "piZeLYa6WpHyiJerPlXq2s+JKBjHznNALXHJCOfiQ4o/iTqWILoqYHfKB5AWrLwLmkxXcbKf63CnEMGlinRidg=="
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "4F3CNT8CU22TNGEC382JJ4GDE4RB47UB.example.com",
-            "type": "NSEC3",
-            "ttl": 900,
-            "rData": {
-              "hashAlgorithm": "SHA1",
-              "flags": "None",
-              "iterations": 0,
-              "salt": "",
-              "nextHashedOwnerName": "KG19N32806C832KIJDNGLQ8P9M2R5MDJ",
-              "types": [
-                "A"
-              ]
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "KG19N32806C832KIJDNGLQ8P9M2R5MDJ.example.com",
-            "type": "RRSIG",
-            "ttl": 900,
-            "rData": {
-              "typeCovered": "NSEC3",
-              "algorithm": "ECDSAP256SHA256",
-              "labels": 3,
-              "originalTtl": 900,
-              "signatureExpiration": "2022-03-15T11:45:31Z",
-              "signatureInception": "2022-03-05T10:45:31Z",
-              "keyTag": 61009,
-              "signersName": "example.com",
-              "signature": "i/PMxc1LFA9a8jLxju7SSpoY7y8aZYkAILcCRIxE3lTundPJmzFG0U9kve04kqT7+Klmzj3OzXnCvjTA54+DZA=="
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "KG19N32806C832KIJDNGLQ8P9M2R5MDJ.example.com",
-            "type": "NSEC3",
-            "ttl": 900,
-            "rData": {
-              "hashAlgorithm": "SHA1",
-              "flags": "None",
-              "iterations": 0,
-              "salt": "",
-              "nextHashedOwnerName": "MIFDNDT3NFF3OD53O7TLA1HRFF95JKUK",
-              "types": [
-                "NS",
-                "DS"
-              ]
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "MIFDNDT3NFF3OD53O7TLA1HRFF95JKUK.example.com",
-            "type": "RRSIG",
-            "ttl": 900,
-            "rData": {
-              "typeCovered": "NSEC3",
-              "algorithm": "ECDSAP256SHA256",
-              "labels": 3,
-              "originalTtl": 900,
-              "signatureExpiration": "2022-03-15T11:45:31Z",
-              "signatureInception": "2022-03-05T10:45:31Z",
-              "keyTag": 61009,
-              "signersName": "example.com",
-              "signature": "mr37TDMmWJ3YLNtpYy++S9eAeHIXKajX6jB8zLscJyC1uI0OFnSTuesfhIlLDbj0SDgrzRQWsLmvMKzfq89TJA=="
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "MIFDNDT3NFF3OD53O7TLA1HRFF95JKUK.example.com",
-            "type": "NSEC3",
-            "ttl": 900,
-            "rData": {
-              "hashAlgorithm": "SHA1",
-              "flags": "None",
-              "iterations": 0,
-              "salt": "",
-              "nextHashedOwnerName": "ONIB9MGUB9H0RML3CDF5BGRJ59DKJHVK",
-              "types": [
-                "CNAME"
-              ]
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "ONIB9MGUB9H0RML3CDF5BGRJ59DKJHVK.example.com",
-            "type": "RRSIG",
-            "ttl": 900,
-            "rData": {
-              "typeCovered": "NSEC3",
-              "algorithm": "ECDSAP256SHA256",
-              "labels": 3,
-              "originalTtl": 900,
-              "signatureExpiration": "2022-03-15T11:45:31Z",
-              "signatureInception": "2022-03-05T10:45:31Z",
-              "keyTag": 61009,
-              "signersName": "example.com",
-              "signature": "GGh/KkB6C2D55xRJa0zFbZ8As3DZK9btUamryZVmyo7FaLPyltkeRZor9OExgQ6HC1SLXNGJIfCO9cM4K6P8iw=="
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "ONIB9MGUB9H0RML3CDF5BGRJ59DKJHVK.example.com",
-            "type": "NSEC3",
-            "ttl": 900,
-            "rData": {
-              "hashAlgorithm": "SHA1",
-              "flags": "None",
-              "iterations": 0,
-              "salt": "",
-              "nextHashedOwnerName": "4F3CNT8CU22TNGEC382JJ4GDE4RB47UB",
-              "types": [
-                "A",
-                "NS",
-                "SOA",
-                "DNSKEY",
-                "NSEC3PARAM"
-              ]
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "sub.example.com",
-            "type": "NS",
-            "ttl": 3600,
-            "rData": {
-              "nameServer": "server1"
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "sub.example.com",
-            "type": "DS",
-            "ttl": 3600,
-            "rData": {
-              "keyTag": 46125,
-              "algorithm": "ECDSAP384SHA384",
-              "digestType": "SHA1",
-              "digest": "5590E425472785A16DC0F853000557DB5543C39E"
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "sub.example.com",
-            "type": "RRSIG",
-            "ttl": 3600,
-            "rData": {
-              "typeCovered": "NS",
-              "algorithm": "ECDSAP256SHA256",
-              "labels": 3,
-              "originalTtl": 3600,
-              "signatureExpiration": "2022-03-15T11:25:35Z",
-              "signatureInception": "2022-03-05T10:25:35Z",
-              "keyTag": 61009,
-              "signersName": "example.com",
-              "signature": "hFzYTL9V0/0UQZlvZpRWCOvu/2udvhswKoxpe4+quNuC6K59W7uCJLuDm/z0aFK5nW8Of4oTk2YjSBZo0nBSlg=="
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "sub.example.com",
-            "type": "RRSIG",
-            "ttl": 3600,
-            "rData": {
-              "typeCovered": "DS",
-              "algorithm": "ECDSAP256SHA256",
-              "labels": 3,
-              "originalTtl": 3600,
-              "signatureExpiration": "2022-03-15T12:53:39Z",
-              "signatureInception": "2022-03-05T11:53:39Z",
-              "keyTag": 61009,
-              "signersName": "example.com",
-              "signature": "UYpUKV5Uq7DM3rltg3sPFOwYgRa2yBzT/j9U8xCh5oyXt27fIn3eemvqqe9qV4xeQaAN0QfQPkj9vmOZSAYafg=="
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "www.example.com",
-            "type": "CNAME",
-            "ttl": 3600,
-            "rData": {
-              "cname": "example.com"
-            },
-            "dnssecStatus": "Unknown"
-          },
-          {
-            "disabled": false,
-            "name": "www.example.com",
-            "type": "RRSIG",
-            "ttl": 3600,
-            "rData": {
-              "typeCovered": "CNAME",
-              "algorithm": "ECDSAP256SHA256",
-              "labels": 3,
-              "originalTtl": 3600,
-              "signatureExpiration": "2022-03-15T11:25:35Z",
-              "signatureInception": "2022-03-05T10:25:35Z",
-              "keyTag": 61009,
-              "signersName": "example.com",
-              "signature": "cAbYvDJhZGLS/uI5I4mSrh7S5gEUy6bmX2sY7zEd1XVFPqrUOZHbVZuwXPjA6r9/m0rCaww9RiG90JhNNDLEtA=="
-            },
-            "dnssecStatus": "Unknown"
+              "ipAddress": "192.0.2.10"
+            }
           }
         ]
-      }
+      },
+      "scenarios": [
+        {
+          "name": "full zone includes TXT and safe FWD metadata",
+          "inputs": {
+            "listZone": "true"
+          },
+          "response": {
+            "zone": {
+              "name": "example.test",
+              "type": "Primary",
+              "disabled": false
+            },
+            "records": [
+              {
+                "name": "www.example.test",
+                "type": "A",
+                "ttl": 300,
+                "rData": {
+                  "ipAddress": "192.0.2.10"
+                }
+              },
+              {
+                "name": "example.test",
+                "type": "TXT",
+                "ttl": 300,
+                "rData": {
+                  "text": "quoted \"text\"\nsecond line"
+                }
+              },
+              {
+                "name": "example.test",
+                "type": "FWD",
+                "ttl": 0,
+                "rData": {
+                  "protocol": "Tls",
+                  "forwarder": "192.0.2.53",
+                  "proxyPassword": "SYNTHETIC-record-password-canary"
+                }
+              }
+            ]
+          },
+          "expected": {
+            "zone": {
+              "name": "example.test",
+              "type": "Primary",
+              "disabled": false
+            },
+            "records": [
+              {
+                "name": "www.example.test",
+                "type": "A",
+                "ttl": 300,
+                "rData": {
+                  "ipAddress": "192.0.2.10"
+                }
+              },
+              {
+                "name": "example.test",
+                "type": "TXT",
+                "ttl": 300,
+                "rData": {
+                  "text": "quoted \"text\"\nsecond line"
+                }
+              },
+              {
+                "name": "example.test",
+                "type": "FWD",
+                "ttl": 0,
+                "rData": {
+                  "protocol": "Tls",
+                  "forwarder": "192.0.2.53"
+                }
+              }
+            ]
+          }
+        }
+      ]
     },
     {
       "operation": "OP-053",
@@ -2136,7 +1235,8 @@
             }
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-056",
@@ -2159,7 +1259,7 @@
           "type": "string",
           "required": false,
           "location": "form",
-          "requested": "alpha.example.test",
+          "requested": "allow.example.test",
           "invalid": null
         },
         {
@@ -2172,69 +1272,57 @@
             "up",
             "down"
           ],
-          "requested": "up",
+          "requested": "down",
           "invalid": "not-an-option"
         }
       ],
       "response": {
         "status": "ok",
         "response": {
-          "domain": "google.com",
+          "domain": "allow.example.test",
           "zones": [],
           "records": [
             {
-              "name": "google.com",
+              "name": "allow.example.test",
               "type": "NS",
-              "ttl": "14400 (4 hours)",
+              "ttl": "300",
               "rData": {
-                "value": "server1"
-              }
-            },
-            {
-              "name": "google.com",
-              "type": "SOA",
-              "ttl": "14400 (4 hours)",
-              "rData": {
-                "primaryNameServer": "server1",
-                "responsiblePerson": "hostadmin.server1",
-                "serial": 1,
-                "refresh": 14400,
-                "retry": 3600,
-                "expire": 604800,
-                "minimum": 900
+                "value": "ns.example.test"
               }
             }
           ]
         }
       },
       "ordinaryResponse": {
-        "domain": "google.com",
+        "domain": "allow.example.test",
         "zones": [],
         "records": [
           {
-            "name": "google.com",
+            "name": "allow.example.test",
             "type": "NS",
-            "ttl": "14400 (4 hours)",
+            "ttl": "300",
             "rData": {
-              "value": "server1"
-            }
-          },
-          {
-            "name": "google.com",
-            "type": "SOA",
-            "ttl": "14400 (4 hours)",
-            "rData": {
-              "primaryNameServer": "server1",
-              "responsiblePerson": "hostadmin.server1",
-              "serial": 1,
-              "refresh": 14400,
-              "retry": 3600,
-              "expire": 604800,
-              "minimum": 900
+              "value": "ns.example.test"
             }
           }
         ]
-      }
+      },
+      "scenarios": [
+        {
+          "name": "allowed parent navigation",
+          "inputs": {
+            "direction": "up"
+          },
+          "response": {
+            "domain": "example.test",
+            "zones": [
+              "allow.example.test",
+              "allow2.example.test"
+            ],
+            "records": []
+          }
+        }
+      ]
     },
     {
       "operation": "OP-061",
@@ -2256,7 +1344,9 @@
         "status": "ok",
         "response": {}
       },
-      "ordinaryResponse": {}
+      "ordinaryResponse": {},
+      "scenarios": [],
+      "text": "a.test\nb.test\n"
     },
     {
       "operation": "OP-062",
@@ -2279,7 +1369,7 @@
           "type": "string",
           "required": false,
           "location": "form",
-          "requested": "alpha.example.test",
+          "requested": "block.example.test",
           "invalid": null
         },
         {
@@ -2292,69 +1382,57 @@
             "up",
             "down"
           ],
-          "requested": "up",
+          "requested": "down",
           "invalid": "not-an-option"
         }
       ],
       "response": {
         "status": "ok",
         "response": {
-          "domain": "google.com",
+          "domain": "block.example.test",
           "zones": [],
           "records": [
             {
-              "name": "google.com",
+              "name": "block.example.test",
               "type": "NS",
-              "ttl": "14400 (4 hours)",
+              "ttl": "300",
               "rData": {
-                "value": "server1"
-              }
-            },
-            {
-              "name": "google.com",
-              "type": "SOA",
-              "ttl": "14400 (4 hours)",
-              "rData": {
-                "primaryNameServer": "server1",
-                "responsiblePerson": "hostadmin.server1",
-                "serial": 1,
-                "refresh": 14400,
-                "retry": 3600,
-                "expire": 604800,
-                "minimum": 900
+                "value": "ns.example.test"
               }
             }
           ]
         }
       },
       "ordinaryResponse": {
-        "domain": "google.com",
+        "domain": "block.example.test",
         "zones": [],
         "records": [
           {
-            "name": "google.com",
+            "name": "block.example.test",
             "type": "NS",
-            "ttl": "14400 (4 hours)",
+            "ttl": "300",
             "rData": {
-              "value": "server1"
-            }
-          },
-          {
-            "name": "google.com",
-            "type": "SOA",
-            "ttl": "14400 (4 hours)",
-            "rData": {
-              "primaryNameServer": "server1",
-              "responsiblePerson": "hostadmin.server1",
-              "serial": 1,
-              "refresh": 14400,
-              "retry": 3600,
-              "expire": 604800,
-              "minimum": 900
+              "value": "ns.example.test"
             }
           }
         ]
-      }
+      },
+      "scenarios": [
+        {
+          "name": "blocked parent navigation",
+          "inputs": {
+            "direction": "up"
+          },
+          "response": {
+            "domain": "example.test",
+            "zones": [
+              "block.example.test",
+              "block2.example.test"
+            ],
+            "records": []
+          }
+        }
+      ]
     },
     {
       "operation": "OP-067",
@@ -2376,7 +1454,9 @@
         "status": "ok",
         "response": {}
       },
-      "ordinaryResponse": {}
+      "ordinaryResponse": {},
+      "scenarios": [],
+      "text": "block.example.test\nblock2.example.test\n"
     },
     {
       "operation": "OP-068",
@@ -2424,7 +1504,8 @@
             ]
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-069",
@@ -2480,7 +1561,8 @@
             "installed": false
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-075",
@@ -2515,7 +1597,8 @@
       },
       "ordinaryResponse": {
         "config": "{\n  \"oddKey\": \"SYNTHETIC-opaque-canary\", \"nested\": {\"password\": \"SYNTHETIC-config-password\"}\n}\n"
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-078",
@@ -2558,7 +1641,8 @@
       "ordinaryResponse": {
         "status": "ok",
         "server": "SYNTHETIC-server"
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-079",
@@ -2606,7 +1690,8 @@
             "algorithmName": "hmac-sha256"
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-081",
@@ -2628,7 +1713,8 @@
           "key-1",
           "key-2"
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-084",
@@ -2767,7 +1853,8 @@
         "status": "ok",
         "response": {}
       },
-      "ordinaryResponse": {}
+      "ordinaryResponse": {},
+      "scenarios": []
     },
     {
       "operation": "OP-086",
@@ -2825,7 +1912,8 @@
             "leaseExpires": "01/08/2024 00:00:00"
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-090",
@@ -2875,7 +1963,8 @@
             "networkAddress": "198.51.100.0"
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-091",
@@ -2937,7 +2026,8 @@
             "comments": "fixture reservation"
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-098",
@@ -2951,7 +2041,7 @@
           "type": "string",
           "required": false,
           "location": "form",
-          "requested": "alpha.example.test",
+          "requested": "S",
           "invalid": null
         }
       ],
@@ -2960,24 +2050,18 @@
         "response": {
           "sessions": [
             {
-              "username": "admin",
-              "isCurrentSession": true,
-              "partialToken": "272f4890427b9ab5",
+              "username": "planner",
               "type": "Standard",
               "tokenName": null,
-              "lastSeen": "2022-09-17T13:23:44.9972772Z",
-              "lastSeenRemoteAddress": "127.0.0.1",
-              "lastSeenUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0"
+              "isCurrentSession": true,
+              "partialToken": "1111"
             },
             {
-              "username": "admin",
-              "isCurrentSession": false,
-              "partialToken": "ddfaecb8e9325e77",
+              "username": "keep-user",
               "type": "ApiToken",
-              "tokenName": "MyToken1",
-              "lastSeen": "2022-09-17T13:22:45.6710766Z",
-              "lastSeenRemoteAddress": "127.0.0.1",
-              "lastSeenUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0"
+              "tokenName": "automation",
+              "isCurrentSession": false,
+              "partialToken": "2222"
             }
           ]
         }
@@ -2985,27 +2069,22 @@
       "ordinaryResponse": {
         "sessions": [
           {
-            "username": "admin",
-            "isCurrentSession": true,
-            "partialToken": "272f4890427b9ab5",
+            "username": "planner",
             "type": "Standard",
             "tokenName": null,
-            "lastSeen": "2022-09-17T13:23:44.9972772Z",
-            "lastSeenRemoteAddress": "127.0.0.1",
-            "lastSeenUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0"
+            "isCurrentSession": true,
+            "partialToken": "1111"
           },
           {
-            "username": "admin",
-            "isCurrentSession": false,
-            "partialToken": "ddfaecb8e9325e77",
+            "username": "keep-user",
             "type": "ApiToken",
-            "tokenName": "MyToken1",
-            "lastSeen": "2022-09-17T13:22:45.6710766Z",
-            "lastSeenRemoteAddress": "127.0.0.1",
-            "lastSeenUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0"
+            "tokenName": "automation",
+            "isCurrentSession": false,
+            "partialToken": "2222"
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-101",
@@ -3028,24 +2107,18 @@
         "response": {
           "users": [
             {
-              "displayName": "Administrator",
-              "username": "admin",
-              "isSsoUser": false,
+              "displayName": "Planner",
+              "username": "planner",
               "disabled": false,
-              "previousSessionLoggedOn": "2022-09-17T13:20:32.7933783Z",
-              "previousSessionRemoteAddress": "127.0.0.1",
-              "recentSessionLoggedOn": "2022-09-17T13:22:45.671081Z",
-              "recentSessionRemoteAddress": "127.0.0.1"
+              "isSsoUser": false,
+              "recentSessionLoggedOn": "2024-01-01T00:00:00Z",
+              "recentSessionRemoteAddress": "192.0.2.10"
             },
             {
-              "displayName": "Shreyas Zare",
-              "username": "shreyas",
-              "isSsoUser": false,
+              "displayName": "SSO user",
+              "username": "sso-user",
               "disabled": false,
-              "previousSessionLoggedOn": "0001-01-01T00:00:00Z",
-              "previousSessionRemoteAddress": "0.0.0.0",
-              "recentSessionLoggedOn": "0001-01-01T00:00:00Z",
-              "recentSessionRemoteAddress": "0.0.0.0"
+              "isSsoUser": true
             }
           ]
         }
@@ -3053,27 +2126,22 @@
       "ordinaryResponse": {
         "users": [
           {
-            "displayName": "Administrator",
-            "username": "admin",
-            "isSsoUser": false,
+            "displayName": "Planner",
+            "username": "planner",
             "disabled": false,
-            "previousSessionLoggedOn": "2022-09-17T13:20:32.7933783Z",
-            "previousSessionRemoteAddress": "127.0.0.1",
-            "recentSessionLoggedOn": "2022-09-17T13:22:45.671081Z",
-            "recentSessionRemoteAddress": "127.0.0.1"
+            "isSsoUser": false,
+            "recentSessionLoggedOn": "2024-01-01T00:00:00Z",
+            "recentSessionRemoteAddress": "192.0.2.10"
           },
           {
-            "displayName": "Shreyas Zare",
-            "username": "shreyas",
-            "isSsoUser": false,
+            "displayName": "SSO user",
+            "username": "sso-user",
             "disabled": false,
-            "previousSessionLoggedOn": "0001-01-01T00:00:00Z",
-            "previousSessionRemoteAddress": "0.0.0.0",
-            "recentSessionLoggedOn": "0001-01-01T00:00:00Z",
-            "recentSessionRemoteAddress": "0.0.0.0"
+            "isSsoUser": true
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-103",
@@ -3096,7 +2164,7 @@
           "type": "string",
           "required": true,
           "location": "form",
-          "requested": "Syntheticuser",
+          "requested": "planner",
           "invalid": null
         },
         {
@@ -3112,8 +2180,8 @@
       "response": {
         "status": "ok",
         "response": {
-          "displayName": "Administrator",
-          "username": "admin",
+          "displayName": "Planner",
+          "username": "planner",
           "isSsoUser": false,
           "totpEnabled": false,
           "disabled": false,
@@ -3123,7 +2191,7 @@
           "recentSessionRemoteAddress": "127.0.0.1",
           "sessionTimeoutSeconds": 1800,
           "memberOfGroups": [
-            "Administrators"
+            "Operators"
           ],
           "sessions": [
             {
@@ -3148,15 +2216,14 @@
             }
           ],
           "groups": [
-            "Administrators",
-            "DHCP Administrators",
-            "DNS Administrators"
+            "Operators",
+            "Keepers"
           ]
         }
       },
       "ordinaryResponse": {
-        "displayName": "Administrator",
-        "username": "admin",
+        "displayName": "Planner",
+        "username": "planner",
         "isSsoUser": false,
         "totpEnabled": false,
         "disabled": false,
@@ -3166,7 +2233,7 @@
         "recentSessionRemoteAddress": "127.0.0.1",
         "sessionTimeoutSeconds": 1800,
         "memberOfGroups": [
-          "Administrators"
+          "Operators"
         ],
         "sessions": [
           {
@@ -3191,11 +2258,22 @@
           }
         ],
         "groups": [
-          "Administrators",
-          "DHCP Administrators",
-          "DNS Administrators"
+          "Operators",
+          "Keepers"
         ]
-      }
+      },
+      "scenarios": [
+        {
+          "name": "denied user read",
+          "httpStatus": 403,
+          "error": "PERMISSION_DENIED"
+        },
+        {
+          "name": "nonexistent user",
+          "httpStatus": 404,
+          "error": "UNSUPPORTED_OPERATION"
+        }
+      ]
     },
     {
       "operation": "OP-106",
@@ -3218,16 +2296,12 @@
         "response": {
           "groups": [
             {
-              "name": "Administrators",
-              "description": "Super administrators"
+              "name": "Operators",
+              "description": "DNS operators"
             },
             {
-              "name": "DHCP Administrators",
-              "description": "DHCP service administrators"
-            },
-            {
-              "name": "DNS Administrators",
-              "description": "DNS service administrators"
+              "name": "Keepers",
+              "description": "Retained group"
             }
           ]
         }
@@ -3235,19 +2309,32 @@
       "ordinaryResponse": {
         "groups": [
           {
-            "name": "Administrators",
-            "description": "Super administrators"
+            "name": "Operators",
+            "description": "DNS operators"
           },
           {
-            "name": "DHCP Administrators",
-            "description": "DHCP service administrators"
-          },
-          {
-            "name": "DNS Administrators",
-            "description": "DNS service administrators"
+            "name": "Keepers",
+            "description": "Retained group"
           }
         ]
-      }
+      },
+      "scenarios": [
+        {
+          "name": "empty groups",
+          "response": {
+            "groups": []
+          }
+        },
+        {
+          "name": "malformed group row",
+          "response": {
+            "groups": [
+              "Operators"
+            ]
+          },
+          "error": "UPSTREAM_INVALID"
+        }
+      ]
     },
     {
       "operation": "OP-108",
@@ -3270,7 +2357,7 @@
           "type": "string",
           "required": true,
           "location": "form",
-          "requested": "Syntheticgroup",
+          "requested": "Operators",
           "invalid": null
         },
         {
@@ -3286,28 +2373,39 @@
       "response": {
         "status": "ok",
         "response": {
-          "name": "Administrators",
-          "description": "Super administrators",
+          "name": "Operators",
+          "description": "DNS operators",
           "members": [
-            "admin"
+            "planner"
           ],
           "users": [
-            "admin",
-            "shreyas"
+            "planner",
+            "keep-user"
           ]
         }
       },
       "ordinaryResponse": {
-        "name": "Administrators",
-        "description": "Super administrators",
+        "name": "Operators",
+        "description": "DNS operators",
         "members": [
-          "admin"
+          "planner"
         ],
         "users": [
-          "admin",
-          "shreyas"
+          "planner",
+          "keep-user"
         ]
-      }
+      },
+      "scenarios": [
+        {
+          "name": "candidates omitted",
+          "omitInputs": [
+            "includeUsers"
+          ],
+          "omit": [
+            "users"
+          ]
+        }
+      ]
     },
     {
       "operation": "OP-111",
@@ -3331,23 +2429,10 @@
           "permissions": [
             {
               "section": "Dashboard",
-              "userPermissions": [
-                {
-                  "username": "shreyas",
-                  "canView": true,
-                  "canModify": false,
-                  "canDelete": false
-                }
-              ],
+              "userPermissions": [],
               "groupPermissions": [
                 {
-                  "name": "Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "Everyone",
+                  "name": "Operators",
                   "canView": true,
                   "canModify": false,
                   "canDelete": false
@@ -3359,25 +2444,7 @@
               "userPermissions": [],
               "groupPermissions": [
                 {
-                  "name": "Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "DHCP Administrators",
-                  "canView": true,
-                  "canModify": false,
-                  "canDelete": false
-                },
-                {
-                  "name": "DNS Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "Everyone",
+                  "name": "Operators",
                   "canView": true,
                   "canModify": false,
                   "canDelete": false
@@ -3387,212 +2454,47 @@
             {
               "section": "Cache",
               "userPermissions": [],
-              "groupPermissions": [
-                {
-                  "name": "Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "DNS Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "Everyone",
-                  "canView": true,
-                  "canModify": false,
-                  "canDelete": false
-                }
-              ]
+              "groupPermissions": []
             },
             {
               "section": "Allowed",
               "userPermissions": [],
-              "groupPermissions": [
-                {
-                  "name": "Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "DNS Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "Everyone",
-                  "canView": true,
-                  "canModify": false,
-                  "canDelete": false
-                }
-              ]
+              "groupPermissions": []
             },
             {
               "section": "Blocked",
               "userPermissions": [],
-              "groupPermissions": [
-                {
-                  "name": "Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "DNS Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "Everyone",
-                  "canView": true,
-                  "canModify": false,
-                  "canDelete": false
-                }
-              ]
+              "groupPermissions": []
             },
             {
               "section": "Apps",
               "userPermissions": [],
-              "groupPermissions": [
-                {
-                  "name": "Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "DNS Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "Everyone",
-                  "canView": true,
-                  "canModify": false,
-                  "canDelete": false
-                }
-              ]
+              "groupPermissions": []
             },
             {
               "section": "DnsClient",
               "userPermissions": [],
-              "groupPermissions": [
-                {
-                  "name": "Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "DHCP Administrators",
-                  "canView": true,
-                  "canModify": false,
-                  "canDelete": false
-                },
-                {
-                  "name": "DNS Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "Everyone",
-                  "canView": true,
-                  "canModify": false,
-                  "canDelete": false
-                }
-              ]
+              "groupPermissions": []
             },
             {
               "section": "Settings",
               "userPermissions": [],
-              "groupPermissions": [
-                {
-                  "name": "Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "DNS Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                }
-              ]
+              "groupPermissions": []
             },
             {
               "section": "DhcpServer",
               "userPermissions": [],
-              "groupPermissions": [
-                {
-                  "name": "Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "DHCP Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "Everyone",
-                  "canView": true,
-                  "canModify": false,
-                  "canDelete": false
-                }
-              ]
+              "groupPermissions": []
             },
             {
               "section": "Administration",
               "userPermissions": [],
-              "groupPermissions": [
-                {
-                  "name": "Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                }
-              ]
+              "groupPermissions": []
             },
             {
               "section": "Logs",
               "userPermissions": [],
-              "groupPermissions": [
-                {
-                  "name": "Administrators",
-                  "canView": true,
-                  "canModify": true,
-                  "canDelete": true
-                },
-                {
-                  "name": "DHCP Administrators",
-                  "canView": true,
-                  "canModify": false,
-                  "canDelete": false
-                },
-                {
-                  "name": "DNS Administrators",
-                  "canView": true,
-                  "canModify": false,
-                  "canDelete": false
-                },
-                {
-                  "name": "Everyone",
-                  "canView": true,
-                  "canModify": false,
-                  "canDelete": false
-                }
-              ]
+              "groupPermissions": []
             }
           ]
         }
@@ -3601,23 +2503,10 @@
         "permissions": [
           {
             "section": "Dashboard",
-            "userPermissions": [
-              {
-                "username": "shreyas",
-                "canView": true,
-                "canModify": false,
-                "canDelete": false
-              }
-            ],
+            "userPermissions": [],
             "groupPermissions": [
               {
-                "name": "Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "Everyone",
+                "name": "Operators",
                 "canView": true,
                 "canModify": false,
                 "canDelete": false
@@ -3629,25 +2518,7 @@
             "userPermissions": [],
             "groupPermissions": [
               {
-                "name": "Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "DHCP Administrators",
-                "canView": true,
-                "canModify": false,
-                "canDelete": false
-              },
-              {
-                "name": "DNS Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "Everyone",
+                "name": "Operators",
                 "canView": true,
                 "canModify": false,
                 "canDelete": false
@@ -3657,215 +2528,51 @@
           {
             "section": "Cache",
             "userPermissions": [],
-            "groupPermissions": [
-              {
-                "name": "Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "DNS Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "Everyone",
-                "canView": true,
-                "canModify": false,
-                "canDelete": false
-              }
-            ]
+            "groupPermissions": []
           },
           {
             "section": "Allowed",
             "userPermissions": [],
-            "groupPermissions": [
-              {
-                "name": "Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "DNS Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "Everyone",
-                "canView": true,
-                "canModify": false,
-                "canDelete": false
-              }
-            ]
+            "groupPermissions": []
           },
           {
             "section": "Blocked",
             "userPermissions": [],
-            "groupPermissions": [
-              {
-                "name": "Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "DNS Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "Everyone",
-                "canView": true,
-                "canModify": false,
-                "canDelete": false
-              }
-            ]
+            "groupPermissions": []
           },
           {
             "section": "Apps",
             "userPermissions": [],
-            "groupPermissions": [
-              {
-                "name": "Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "DNS Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "Everyone",
-                "canView": true,
-                "canModify": false,
-                "canDelete": false
-              }
-            ]
+            "groupPermissions": []
           },
           {
             "section": "DnsClient",
             "userPermissions": [],
-            "groupPermissions": [
-              {
-                "name": "Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "DHCP Administrators",
-                "canView": true,
-                "canModify": false,
-                "canDelete": false
-              },
-              {
-                "name": "DNS Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "Everyone",
-                "canView": true,
-                "canModify": false,
-                "canDelete": false
-              }
-            ]
+            "groupPermissions": []
           },
           {
             "section": "Settings",
             "userPermissions": [],
-            "groupPermissions": [
-              {
-                "name": "Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "DNS Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              }
-            ]
+            "groupPermissions": []
           },
           {
             "section": "DhcpServer",
             "userPermissions": [],
-            "groupPermissions": [
-              {
-                "name": "Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "DHCP Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "Everyone",
-                "canView": true,
-                "canModify": false,
-                "canDelete": false
-              }
-            ]
+            "groupPermissions": []
           },
           {
             "section": "Administration",
             "userPermissions": [],
-            "groupPermissions": [
-              {
-                "name": "Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              }
-            ]
+            "groupPermissions": []
           },
           {
             "section": "Logs",
             "userPermissions": [],
-            "groupPermissions": [
-              {
-                "name": "Administrators",
-                "canView": true,
-                "canModify": true,
-                "canDelete": true
-              },
-              {
-                "name": "DHCP Administrators",
-                "canView": true,
-                "canModify": false,
-                "canDelete": false
-              },
-              {
-                "name": "DNS Administrators",
-                "canView": true,
-                "canModify": false,
-                "canDelete": false
-              },
-              {
-                "name": "Everyone",
-                "canView": true,
-                "canModify": false,
-                "canDelete": false
-              }
-            ]
+            "groupPermissions": []
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-112",
@@ -3879,7 +2586,7 @@
           "type": "string",
           "required": true,
           "location": "form",
-          "requested": "Syntheticsection",
+          "requested": "Dashboard",
           "invalid": null
         },
         {
@@ -3898,7 +2605,7 @@
           "section": "Dashboard",
           "userPermissions": [
             {
-              "username": "shreyas",
+              "username": "reader",
               "canView": true,
               "canModify": false,
               "canDelete": false
@@ -3906,27 +2613,18 @@
           ],
           "groupPermissions": [
             {
-              "name": "Administrators",
-              "canView": true,
-              "canModify": true,
-              "canDelete": true
-            },
-            {
-              "name": "Everyone",
+              "name": "Operators",
               "canView": true,
               "canModify": false,
               "canDelete": false
             }
           ],
           "users": [
-            "admin",
-            "shreyas"
+            "reader",
+            "planner"
           ],
           "groups": [
-            "Administrators",
-            "DHCP Administrators",
-            "DNS Administrators",
-            "Everyone"
+            "Operators"
           ]
         }
       },
@@ -3934,7 +2632,7 @@
         "section": "Dashboard",
         "userPermissions": [
           {
-            "username": "shreyas",
+            "username": "reader",
             "canView": true,
             "canModify": false,
             "canDelete": false
@@ -3942,29 +2640,35 @@
         ],
         "groupPermissions": [
           {
-            "name": "Administrators",
-            "canView": true,
-            "canModify": true,
-            "canDelete": true
-          },
-          {
-            "name": "Everyone",
+            "name": "Operators",
             "canView": true,
             "canModify": false,
             "canDelete": false
           }
         ],
         "users": [
-          "admin",
-          "shreyas"
+          "reader",
+          "planner"
         ],
         "groups": [
-          "Administrators",
-          "DHCP Administrators",
-          "DNS Administrators",
-          "Everyone"
+          "Operators"
         ]
-      }
+      },
+      "scenarios": [
+        {
+          "name": "missing permission boolean",
+          "patch": {
+            "userPermissions": [
+              {
+                "username": "reader",
+                "canView": true,
+                "canDelete": false
+              }
+            ]
+          },
+          "error": "UPSTREAM_INVALID"
+        }
+      ]
     },
     {
       "operation": "OP-114",
@@ -3994,9 +2698,7 @@
           "ssoAllowSignupOnlyForMappedUsers": true,
           "ssoGroupMap": [],
           "localGroups": [
-            "Administrators",
-            "DHCP Administrators",
-            "DNS Administrators"
+            "Operators"
           ]
         }
       },
@@ -4009,11 +2711,10 @@
         "ssoAllowSignupOnlyForMappedUsers": true,
         "ssoGroupMap": [],
         "localGroups": [
-          "Administrators",
-          "DHCP Administrators",
-          "DNS Administrators"
+          "Operators"
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-118",
@@ -4027,7 +2728,7 @@
           "type": "string",
           "required": false,
           "location": "form",
-          "requested": "alpha.example.test",
+          "requested": "S",
           "invalid": null
         },
         {
@@ -4054,39 +2755,24 @@
           "configLastSynced": "2025-09-26T12:30:16Z",
           "clusterNodes": [
             {
-              "id": 1342079372,
-              "name": "server1.example.com",
-              "url": "https://server1.example.com:53443/",
-              "ipAddress": "192.168.10.5",
-              "type": "Secondary",
-              "state": "Self",
-              "version": "15.6",
-              "lastSeen": "0001-01-01T00:00:00"
-            },
-            {
-              "id": 1653399468,
-              "name": "server2.example.com",
-              "url": "https://server2.example.com:53443/",
-              "ipAddress": "192.168.10.101",
-              "type": "Secondary",
-              "state": "Unreachable",
-              "lastSeen": "0001-01-01T00:00:00"
-            },
-            {
-              "id": 1843286864,
-              "name": "server3.example.com",
-              "url": "https://server3.example.com:53443/",
-              "ipAddress": "192.168.10.102",
+              "id": 100,
+              "name": "primary.example.test",
+              "url": "https://primary.example.test/",
+              "ipAddress": "192.0.2.100",
               "type": "Primary",
-              "state": "Connected",
-              "version": "15.6",
-              "lastSeen": "2025-09-26T12:30:16Z"
+              "state": "Connected"
+            },
+            {
+              "id": 200,
+              "name": "secondary.example.test",
+              "url": "https://secondary.example.test/",
+              "ipAddress": "192.0.2.200",
+              "type": "Secondary",
+              "state": "Self"
             }
           ],
           "serverIpAddresses": [
-            "192.168.10.5",
-            "192.168.120.1",
-            "192.168.180.1"
+            "192.0.2.200"
           ]
         }
       },
@@ -4102,41 +2788,34 @@
         "configLastSynced": "2025-09-26T12:30:16Z",
         "clusterNodes": [
           {
-            "id": 1342079372,
-            "name": "server1.example.com",
-            "url": "https://server1.example.com:53443/",
-            "ipAddress": "192.168.10.5",
-            "type": "Secondary",
-            "state": "Self",
-            "version": "15.6",
-            "lastSeen": "0001-01-01T00:00:00"
-          },
-          {
-            "id": 1653399468,
-            "name": "server2.example.com",
-            "url": "https://server2.example.com:53443/",
-            "ipAddress": "192.168.10.101",
-            "type": "Secondary",
-            "state": "Unreachable",
-            "lastSeen": "0001-01-01T00:00:00"
-          },
-          {
-            "id": 1843286864,
-            "name": "server3.example.com",
-            "url": "https://server3.example.com:53443/",
-            "ipAddress": "192.168.10.102",
+            "id": 100,
+            "name": "primary.example.test",
+            "url": "https://primary.example.test/",
+            "ipAddress": "192.0.2.100",
             "type": "Primary",
-            "state": "Connected",
-            "version": "15.6",
-            "lastSeen": "2025-09-26T12:30:16Z"
+            "state": "Connected"
+          },
+          {
+            "id": 200,
+            "name": "secondary.example.test",
+            "url": "https://secondary.example.test/",
+            "ipAddress": "192.0.2.200",
+            "type": "Secondary",
+            "state": "Self"
           }
         ],
         "serverIpAddresses": [
-          "192.168.10.5",
-          "192.168.120.1",
-          "192.168.180.1"
+          "192.0.2.200"
         ]
-      }
+      },
+      "scenarios": [
+        {
+          "name": "uninitialized cluster",
+          "response": {
+            "clusterInitialized": false
+          }
+        }
+      ]
     },
     {
       "operation": "OP-125",
@@ -4167,7 +2846,8 @@
         "status": "ok",
         "response": {}
       },
-      "ordinaryResponse": {}
+      "ordinaryResponse": {},
+      "scenarios": []
     },
     {
       "operation": "OP-134",
@@ -4211,7 +2891,8 @@
             "size": "5.6 KB"
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-135",
@@ -4251,7 +2932,9 @@
         "status": "ok",
         "response": {}
       },
-      "ordinaryResponse": {}
+      "ordinaryResponse": {},
+      "scenarios": [],
+      "text": "2024-01-01 α synthetic log\nSYNTHETIC-log-canary\n"
     },
     {
       "operation": "OP-138",
@@ -4476,7 +3159,8 @@
             "answer": ""
           }
         ]
-      }
+      },
+      "scenarios": []
     },
     {
       "operation": "OP-139",
@@ -4612,7 +3296,9 @@
         "status": "ok",
         "response": {}
       },
-      "ordinaryResponse": {}
+      "ordinaryResponse": {},
+      "scenarios": [],
+      "text": "qname,qtype,answer\r\nwww.example.test,TXT,\"quoted, answer\nsecond line\"\r\n"
     },
     {
       "operation": "OP-141",
@@ -4634,9 +3320,9 @@
         "status": "ok",
         "response": {
           "ldapEnabled": false,
-          "ldapServer": null,
-          "ldapPort": 389,
-          "ldapSslOption": "None",
+          "ldapServer": "ldap.example.test",
+          "ldapPort": 636,
+          "ldapSslOption": "Ssl",
           "ldapIgnoreSslErrors": false,
           "ldapBindUsername": null,
           "ldapSearchBase": null,
@@ -4646,15 +3332,16 @@
           "ldapAllowSignupOnlyForMappedUsers": true,
           "ldapGroupMap": [],
           "localGroups": [
-            "Administrators"
-          ]
+            "Operators"
+          ],
+          "ldapBindPassword": "SYNTHETIC-ldap-password-canary"
         }
       },
       "ordinaryResponse": {
         "ldapEnabled": false,
-        "ldapServer": null,
-        "ldapPort": 389,
-        "ldapSslOption": "None",
+        "ldapServer": "ldap.example.test",
+        "ldapPort": 636,
+        "ldapSslOption": "Ssl",
         "ldapIgnoreSslErrors": false,
         "ldapBindUsername": null,
         "ldapSearchBase": null,
@@ -4664,9 +3351,16 @@
         "ldapAllowSignupOnlyForMappedUsers": true,
         "ldapGroupMap": [],
         "localGroups": [
-          "Administrators"
+          "Operators"
         ]
-      }
+      },
+      "scenarios": [
+        {
+          "name": "15.4 unsupported LDAP",
+          "httpStatus": 404,
+          "error": "UNSUPPORTED_OPERATION"
+        }
+      ]
     }
   ]
 }

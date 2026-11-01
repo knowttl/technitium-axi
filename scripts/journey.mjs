@@ -28,7 +28,7 @@ for (let i = 0; i < args.length; i++) {
   else throw new Error(`Unknown or repeated journey argument: ${arg}`);
 }
 assert.ok(['B1.01', 'B1.02', ...Object.keys(credentialTasks), ...readTasks].includes(task), 'Select a supported --task');
-assert.equal(operation, /B[12]\.OP-/.test(task) ? task.slice(3) : undefined, 'Operation selection must match the operation task');
+assert.equal(operation, /^B[12]\.OP-/.test(task) ? task.slice(3) : undefined, 'Operation selection must match the operation task');
 assert.ok(paths?.length && new Set(paths).size === paths.length && paths.every(path => ['native', 'artium'].includes(path)), 'Select --paths native,artium');
 assert.ok(offline, '--offline is required');
 
