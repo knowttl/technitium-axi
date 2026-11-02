@@ -55,6 +55,23 @@ const words = (value: string) => value.split(' ');
 const recordFields = [...new Set(Object.values(recordFamilies).flatMap(row => [...row.selector, ...row.replacement, ...row.optional ?? []]))];
 export const writeContracts: WriteContract[] = [
   ...[
+    ['119', 'init', 'init', 'clusterDomain primaryNodeIpAddresses', 'clusterDomain primaryNodeIpAddresses'],
+    ['120', 'primary delete', 'primary/delete', 'node forceDelete', ''],
+    ['121', 'primary join', 'primary/join', 'secondaryNodeId secondaryNodeUrl secondaryNodeIpAddresses secondaryNodeCertificate', 'secondaryNodeId secondaryNodeUrl secondaryNodeIpAddresses secondaryNodeCertificate'],
+    ['122', 'primary remove-secondary', 'primary/removeSecondary', 'secondaryNodeId', 'secondaryNodeId'],
+    ['123', 'primary delete-secondary', 'primary/deleteSecondary', 'secondaryNodeId', 'secondaryNodeId'],
+    ['124', 'primary update-secondary', 'primary/updateSecondary', 'secondaryNodeId secondaryNodeUrl secondaryNodeIpAddresses secondaryNodeCertificate', 'secondaryNodeId secondaryNodeUrl secondaryNodeIpAddresses secondaryNodeCertificate'],
+    ['126', 'primary set-options', 'primary/setOptions', 'node heartbeatRefreshIntervalSeconds heartbeatRetryIntervalSeconds configRefreshIntervalSeconds configRetryIntervalSeconds', ''],
+    ['127', 'init-join', 'initJoin', 'secondaryNodeIpAddresses primaryNodeUrl primaryNodeIpAddress ignoreCertificateErrors primaryNodeUsername primaryNodePassword primaryNodeTotp', 'secondaryNodeIpAddresses primaryNodeUrl primaryNodeUsername primaryNodePassword'],
+    ['128', 'secondary leave', 'secondary/leave', 'node forceLeave', ''],
+    ['129', 'secondary notify', 'secondary/notify', 'primaryNodeId primaryNodeUrl primaryNodeIpAddresses', 'primaryNodeId primaryNodeUrl primaryNodeIpAddresses'],
+    ['130', 'secondary resync', 'secondary/resync', 'node', ''],
+    ['131', 'secondary update-primary', 'secondary/updatePrimary', 'node primaryNodeUrl primaryNodeIpAddresses', 'primaryNodeUrl'],
+    ['132', 'secondary promote', 'secondary/promote', 'node forceDeletePrimary', ''],
+    ['133', 'update-ip-address', 'updateIpAddress', 'node ipAddresses', 'ipAddresses'],
+  ].map(([id, command, path, fields, required]) => ({ id: `OP-${id}`, command: `admin cluster ${command}`, path: `/api/admin/cluster/${path}`,
+    fields: words(fields!), required: required ? words(required) : [], ...(id === '127' ? { secrets: ['primaryNodePassword', 'primaryNodeTotp'] } : {}) })),
+  ...[
     ['OP-087', 'remove', 'remove'], ['OP-088', 'convert-to-reserved', 'convertToReserved'], ['OP-089', 'convert-to-dynamic', 'convertToDynamic'],
   ].map(([id, command, path]) => ({ id: id!, command: `dhcp lease ${command}`, path: `/api/dhcp/leases/${path}`,
     fields: words('name clientIdentifier hardwareAddress'), required: ['name'] })),

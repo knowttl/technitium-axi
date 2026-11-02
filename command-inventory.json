@@ -146,6 +146,10 @@
       "description": "Read user profile get",
       "effect": "read",
       "operation": "OP-012",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [],
       "flags": [
         "--json",
@@ -166,6 +170,10 @@
       "description": "Read user check-for-update",
       "effect": "read",
       "operation": "OP-014",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [],
       "flags": [
         "--json",
@@ -186,6 +194,10 @@
       "description": "Read dashboard metrics json",
       "effect": "read",
       "operation": "OP-015",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [],
       "flags": [
         "--json",
@@ -206,6 +218,10 @@
       "description": "Read dashboard metrics text",
       "effect": "read",
       "operation": "OP-016",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [],
       "flags": [
         "--json",
@@ -226,6 +242,10 @@
       "description": "Read dashboard stats get",
       "effect": "read",
       "operation": "OP-017",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "aggregate"
+      },
       "arguments": [
         {
           "name": "node",
@@ -303,6 +323,10 @@
       "description": "Read dashboard stats get-top",
       "effect": "read",
       "operation": "OP-018",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "aggregate"
+      },
       "arguments": [
         {
           "name": "node",
@@ -401,6 +425,10 @@
       "description": "Read zone list",
       "effect": "read",
       "operation": "OP-020",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -471,6 +499,10 @@
       "description": "Read zone catalog list",
       "effect": "read",
       "operation": "OP-021",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -500,6 +532,10 @@
       "description": "Read zone export",
       "effect": "read",
       "operation": "OP-024",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -537,6 +573,10 @@
       "description": "Read zone options get",
       "effect": "read",
       "operation": "OP-031",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -590,6 +630,10 @@
       "description": "Read zone permission get",
       "effect": "read",
       "operation": "OP-033",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -635,6 +679,10 @@
       "description": "Read zone dnssec view-ds",
       "effect": "read",
       "operation": "OP-037",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -672,6 +720,10 @@
       "description": "Read zone dnssec properties get",
       "effect": "read",
       "operation": "OP-038",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -709,6 +761,10 @@
       "description": "Read zone record get",
       "effect": "read",
       "operation": "OP-050",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -762,6 +818,10 @@
       "description": "Read cache list",
       "effect": "read",
       "operation": "OP-053",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "domain",
@@ -803,6 +863,10 @@
       "description": "Read allowed list",
       "effect": "read",
       "operation": "OP-056",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -852,6 +916,10 @@
       "description": "Read allowed export",
       "effect": "read",
       "operation": "OP-061",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -881,6 +949,10 @@
       "description": "Read blocked list",
       "effect": "read",
       "operation": "OP-062",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -930,6 +1002,10 @@
       "description": "Read blocked export",
       "effect": "read",
       "operation": "OP-067",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -959,6 +1035,10 @@
       "description": "Read app list",
       "effect": "read",
       "operation": "OP-068",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -988,6 +1068,10 @@
       "description": "Read app list-store-apps",
       "effect": "read",
       "operation": "OP-069",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -1017,6 +1101,10 @@
       "description": "Read app config get",
       "effect": "read",
       "operation": "OP-075",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -1054,6 +1142,10 @@
       "description": "Read dns-client health-check",
       "effect": "read",
       "operation": "OP-078",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -1099,6 +1191,10 @@
       "description": "Read settings get",
       "effect": "read",
       "operation": "OP-079",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [],
       "flags": [
         "--json",
@@ -1119,6 +1215,10 @@
       "description": "Read settings get-tsig-key-names",
       "effect": "read",
       "operation": "OP-081",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [],
       "flags": [
         "--json",
@@ -1139,6 +1239,10 @@
       "description": "Read settings backup",
       "effect": "read",
       "operation": "OP-084",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -1361,6 +1465,10 @@
       "description": "Read dhcp lease list",
       "effect": "read",
       "operation": "OP-086",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [],
       "flags": [
         "--json",
@@ -1381,6 +1489,10 @@
       "description": "Read dhcp scope list",
       "effect": "read",
       "operation": "OP-090",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [],
       "flags": [
         "--json",
@@ -1401,6 +1513,10 @@
       "description": "Read dhcp scope get",
       "effect": "read",
       "operation": "OP-091",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "name",
@@ -1430,6 +1546,10 @@
       "description": "Read admin session list",
       "effect": "read",
       "operation": "OP-098",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -1459,6 +1579,10 @@
       "description": "Read admin user list",
       "effect": "read",
       "operation": "OP-101",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -1488,6 +1612,10 @@
       "description": "Read admin user get",
       "effect": "read",
       "operation": "OP-103",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -1533,6 +1661,10 @@
       "description": "Read admin group list",
       "effect": "read",
       "operation": "OP-106",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -1562,6 +1694,10 @@
       "description": "Read admin group get",
       "effect": "read",
       "operation": "OP-108",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -1607,6 +1743,10 @@
       "description": "Read admin permission list",
       "effect": "read",
       "operation": "OP-111",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -1636,6 +1776,10 @@
       "description": "Read admin permission get",
       "effect": "read",
       "operation": "OP-112",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "section",
@@ -1673,6 +1817,10 @@
       "description": "Read admin sso get",
       "effect": "read",
       "operation": "OP-114",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "includeGroups",
@@ -1702,6 +1850,10 @@
       "description": "Read admin cluster state",
       "effect": "read",
       "operation": "OP-118",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -1739,6 +1891,10 @@
       "description": "Read admin cluster primary transfer-config",
       "effect": "read",
       "operation": "OP-125",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "includeZones",
@@ -1865,6 +2021,10 @@
       "description": "Read log list",
       "effect": "read",
       "operation": "OP-134",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -1894,6 +2054,10 @@
       "description": "Read log download",
       "effect": "read",
       "operation": "OP-135",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -1939,6 +2103,10 @@
       "description": "Read log query",
       "effect": "read",
       "operation": "OP-138",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -2095,6 +2263,10 @@
       "description": "Read log export",
       "effect": "read",
       "operation": "OP-139",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "node",
@@ -2227,6 +2399,10 @@
       "description": "Read admin ldap get",
       "effect": "read",
       "operation": "OP-141",
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "arguments": [
         {
           "name": "includeGroups",
@@ -2252,6 +2428,556 @@
       ]
     },
     {
+      "command": "admin cluster init",
+      "description": "Preview or execute admin cluster init",
+      "effect": "write",
+      "operation": "OP-119",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile",
+        "--reconcile-profile"
+      ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "clusterDomain",
+          "primaryNodeIpAddresses"
+        ],
+        "required": [
+          "clusterDomain",
+          "primaryNodeIpAddresses"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin cluster primary delete",
+      "description": "Preview or execute admin cluster primary delete",
+      "effect": "write",
+      "operation": "OP-120",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "forceDelete"
+        ],
+        "required": [],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin cluster primary join",
+      "description": "Preview or execute admin cluster primary join",
+      "effect": "write",
+      "operation": "OP-121",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "secondaryNodeId",
+          "secondaryNodeUrl",
+          "secondaryNodeIpAddresses",
+          "secondaryNodeCertificate"
+        ],
+        "required": [
+          "secondaryNodeId",
+          "secondaryNodeUrl",
+          "secondaryNodeIpAddresses",
+          "secondaryNodeCertificate"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin cluster primary remove-secondary",
+      "description": "Preview or execute admin cluster primary remove-secondary",
+      "effect": "write",
+      "operation": "OP-122",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "secondaryNodeId"
+        ],
+        "required": [
+          "secondaryNodeId"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin cluster primary delete-secondary",
+      "description": "Preview or execute admin cluster primary delete-secondary",
+      "effect": "write",
+      "operation": "OP-123",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "secondaryNodeId"
+        ],
+        "required": [
+          "secondaryNodeId"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin cluster primary update-secondary",
+      "description": "Preview or execute admin cluster primary update-secondary",
+      "effect": "write",
+      "operation": "OP-124",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "secondaryNodeId",
+          "secondaryNodeUrl",
+          "secondaryNodeIpAddresses",
+          "secondaryNodeCertificate"
+        ],
+        "required": [
+          "secondaryNodeId",
+          "secondaryNodeUrl",
+          "secondaryNodeIpAddresses",
+          "secondaryNodeCertificate"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin cluster primary set-options",
+      "description": "Preview or execute admin cluster primary set-options",
+      "effect": "write",
+      "operation": "OP-126",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "heartbeatRefreshIntervalSeconds",
+          "heartbeatRetryIntervalSeconds",
+          "configRefreshIntervalSeconds",
+          "configRetryIntervalSeconds"
+        ],
+        "required": [],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin cluster init-join",
+      "description": "Preview or execute admin cluster init-join",
+      "effect": "write",
+      "operation": "OP-127",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile",
+        "--reconcile-profile"
+      ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "secondaryNodeIpAddresses",
+          "primaryNodeUrl",
+          "primaryNodeIpAddress",
+          "ignoreCertificateErrors",
+          "primaryNodeUsername",
+          "primaryNodePassword",
+          "primaryNodeTotp"
+        ],
+        "required": [
+          "secondaryNodeIpAddresses",
+          "primaryNodeUrl",
+          "primaryNodeUsername",
+          "primaryNodePassword"
+        ],
+        "secrets": [
+          "primaryNodePassword",
+          "primaryNodeTotp"
+        ],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin cluster secondary leave",
+      "description": "Preview or execute admin cluster secondary leave",
+      "effect": "write",
+      "operation": "OP-128",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "forceLeave"
+        ],
+        "required": [],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin cluster secondary notify",
+      "description": "Preview or execute admin cluster secondary notify",
+      "effect": "write",
+      "operation": "OP-129",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "primaryNodeId",
+          "primaryNodeUrl",
+          "primaryNodeIpAddresses"
+        ],
+        "required": [
+          "primaryNodeId",
+          "primaryNodeUrl",
+          "primaryNodeIpAddresses"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin cluster secondary resync",
+      "description": "Preview or execute admin cluster secondary resync",
+      "effect": "write",
+      "operation": "OP-130",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node"
+        ],
+        "required": [],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin cluster secondary update-primary",
+      "description": "Preview or execute admin cluster secondary update-primary",
+      "effect": "write",
+      "operation": "OP-131",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "primaryNodeUrl",
+          "primaryNodeIpAddresses"
+        ],
+        "required": [
+          "primaryNodeUrl"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin cluster secondary promote",
+      "description": "Preview or execute admin cluster secondary promote",
+      "effect": "write",
+      "operation": "OP-132",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "forceDeletePrimary"
+        ],
+        "required": [],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin cluster update-ip-address",
+      "description": "Preview or execute admin cluster update-ip-address",
+      "effect": "write",
+      "operation": "OP-133",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "ipAddresses"
+        ],
+        "required": [
+          "ipAddresses"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
       "command": "dhcp lease remove",
       "description": "Preview or execute dhcp lease remove",
       "effect": "write",
@@ -2268,6 +2994,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -2304,6 +3034,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -2340,6 +3074,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -2376,6 +3114,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -2578,6 +3320,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -2617,6 +3363,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -2652,6 +3402,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -2685,6 +3439,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -2718,6 +3476,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -2751,6 +3513,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "current node",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -2796,6 +3562,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -2841,6 +3611,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -2876,6 +3650,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "current node",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -2905,6 +3683,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "current node",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -2938,6 +3720,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -2979,6 +3765,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3014,6 +3804,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3049,6 +3843,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3078,6 +3876,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3110,6 +3912,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3151,6 +3957,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3185,6 +3995,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3223,6 +4037,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3266,6 +4084,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3299,6 +4121,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3333,6 +4159,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3366,6 +4196,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3417,6 +4251,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3454,6 +4292,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3490,6 +4332,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3521,6 +4367,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3554,6 +4404,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3583,6 +4437,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3616,6 +4474,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3649,6 +4511,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3678,6 +4544,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3711,6 +4581,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3744,6 +4618,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3777,6 +4655,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3806,6 +4688,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3839,6 +4725,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3898,6 +4788,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3943,6 +4837,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -3979,6 +4877,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4015,6 +4917,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4049,6 +4955,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4083,6 +4993,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4117,6 +5031,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4151,6 +5069,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4205,6 +5127,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4256,6 +5182,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4306,6 +5236,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4340,6 +5274,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4374,6 +5312,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4410,6 +5352,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4446,6 +5392,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4482,6 +5432,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4520,6 +5474,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4556,6 +5514,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4590,6 +5552,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4626,6 +5592,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4662,6 +5632,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4697,6 +5671,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -4742,6 +5720,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -5182,6 +6164,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -5622,6 +6608,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -6062,6 +7052,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -6108,6 +7102,11 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported",
+        "replication": "Listeners and local settings stay local; cluster parameters propagate through the primary"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -6710,6 +7709,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "asynchronous relay"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -6739,6 +7742,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "asynchronous relay"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -6772,6 +7779,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -6807,6 +7818,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -6842,6 +7857,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -6875,6 +7894,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -6913,6 +7936,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -6951,6 +7978,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -6989,6 +8020,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -7038,6 +8073,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -7072,6 +8111,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -7103,6 +8146,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",
@@ -7139,6 +8186,10 @@
         "--result-file",
         "--reconcile"
       ],
+      "routing": {
+        "target": "selected or named node via vendor proxy",
+        "cluster": "unsupported"
+      },
       "input": {
         "envelope": [
           "parameters",

@@ -27,7 +27,7 @@ export async function main(args: string[]): Promise<void> {
     const options: { config?: string; profile?: string; resultFile?: string; inputFile?: string } = {};
     const readOptions: Record<string, string> = {};
     const valueFlags = new Set(['--config', '--profile', '--result-file', '--input-file', '--fields', '--max-bytes', '--max-requests', '--max-pages', '--max-elapsed-ms',
-      '--confirm', '--reconcile',
+      '--confirm', '--reconcile', '--reconcile-profile',
       ...readContracts.flatMap(item => item.parameters.map(parameter => parameter.flag))]);
     const positional: string[] = [];
     const flags = new Set<string>();
@@ -85,6 +85,14 @@ export async function main(args: string[]): Promise<void> {
     if (writeContract && ['OP-003', 'OP-004', 'OP-009', 'OP-099'].includes(writeContract.id) && flags.has('--execute') && !options.resultFile) throw new ToolError('USAGE', 'A protected result destination is required', 'Use --result-file <absolute-path>');
     if (writeContract && options.resultFile && flags.has('--execute')) await new PrivateFiles().destination(options.resultFile);
     const credential = await selectProfile(options);
+    let reconciliation;
+    if (readOptions['--reconcile-profile']) {
+      if (!readOptions['--reconcile'] || flags.has('--execute') || !['OP-119', 'OP-127'].includes(writeContract?.id ?? '')) throw new ToolError('USAGE', 'A replacement profile is supported only when reconciling cluster init or init-join', 'Supply --reconcile <audit-id> and --reconcile-profile <trusted-profile>');
+      const replacement = await selectProfile({ ...options, profile: readOptions['--reconcile-profile'] });
+      const replacementToken = await replacement.token();
+      redactor.add(replacementToken);
+      reconciliation = { profile: replacement.profile, token: replacementToken, name: replacement.name };
+    }
     let token: string | undefined;
     const acquisition = writeContract?.id === 'OP-002' || writeContract?.id === 'OP-003' && input?.parameters.pass !== undefined;
     if (acquisition) token = await acquisitionKey();
@@ -96,7 +104,7 @@ export async function main(args: string[]): Promise<void> {
     }
     const result = writeContract && input ? await writeOperation(writeContract, input, credential.profile, credential.name, token!,
       { execute: flags.has('--execute'), ...(readOptions['--confirm'] ? { confirm: readOptions['--confirm'] } : {}),
-        ...(readOptions['--reconcile'] ? { reconcile: readOptions['--reconcile'] } : {}) }, redactor)
+        ...(readOptions['--reconcile'] ? { reconcile: readOptions['--reconcile'] } : {}), ...(reconciliation ? { reconciliation } : {}) }, redactor)
       : readContract && !['OP-001', 'OP-006'].includes(readContract.id)
       ? await readOperation(credential.profile, command, token, readOptions, flags.has('--full'))
       : await vendorRead(credential.profile, command === '' || command === 'status' ? 'status' : 'user session get', token);

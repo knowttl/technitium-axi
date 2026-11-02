@@ -4,6 +4,7 @@ import { ToolError } from './errors.js';
 import { readContracts } from './read-contracts.js';
 import type { ReadContract, Shape } from './read-contracts.js';
 import { checkStatus, vendorRequest } from './vendor.js';
+import { validateNode } from './routing.js';
 
 const invalid = (): never => { throw new ToolError('UPSTREAM_INVALID', 'Unexpected server response fields or types', 'Check the selected server API version and operation', 1); };
 const usage = (message: string): never => { throw new ToolError('USAGE', message, 'Run the selected command with --help'); };
@@ -11,6 +12,7 @@ const record = (value: unknown): value is Record<string, unknown> => value !== n
 const sensitive = /password|secret|^token$|^privateKey$|^stackTrace$|^innerError/i;
 
 export function readInputs(contract: ReadContract, options: Record<string, string>) {
+  validateNode(contract.id, options['--node']);
   const form = new URLSearchParams();
   const headers: Record<string, string> = {};
   for (const parameter of contract.parameters) {
