@@ -9,12 +9,13 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
   const id = task.slice(3);
   await configure([id]);
   const record = (name, type, rData, ttl = 300) => ({ name, type, ttl, rData });
+  const mandatory = ['Administrators', 'DNS Administrators'].map(name => ({ name, canView: true, canModify: true, canDelete: true }));
   const seed = (name, type = 'Primary', serial = 42) => ({ name, type, disabled: false, records: [
     record(name, 'SOA', { serial }), record(`api.${name}`, 'A', { ipAddress: '192.0.2.10' }),
     record(`keep.${name}`, 'TXT', { text: 'stay' }),
   ], notifyNameServers: ['192.0.2.1'], updateNetworkACL: ['192.0.2.0/24'], queryAccessNetworkACL: ['192.0.2.0/24'],
   zoneTransferTsigKeyNames: ['key'], primaryZoneTransferProtocol: 'Tls', userPermissions: [{ username: 'reader', canView: true, canModify: false, canDelete: false }],
-  groupPermissions: [{ name: 'Operators', canView: true, canModify: true, canDelete: true }] });
+  groupPermissions: [...structuredClone(mandatory), { name: 'Operators', canView: true, canModify: true, canDelete: true }] });
   const zones = new Map([['example.test', seed('example.test')], ['source.test', seed('source.test')], ['keep.test', seed('keep.test', 'Primary', 9)]]);
   const keep = structuredClone(zones.get('keep.test'));
   let reads = 0;
@@ -222,6 +223,7 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
       : { notifyNameServers: ['192.0.2.1'], disabled: false, updateNetworkACL: ['192.0.2.0/24'], primaryZoneTransferProtocol: 'Tls' };
     const values = permission ? { userPermissions: [{ username: 'reader', canView: true, canModify: true, canDelete: false }], groupPermissions: [{ name: 'Operators', canView: false, canModify: false, canDelete: false }] }
       : { notifyNameServers: ['192.0.2.2'], disabled: false, updateNetworkACL: [], primaryZoneTransferProtocol: 'Tcp' };
+    const expectedValues = permission ? { ...values, groupPermissions: [...mandatory, ...values.groupPermissions] } : values;
     if (permission) vendors.responders.set('/api/zones/permissions/get', () => ok({ section: 'Zones', subItem: zone.name, userPermissions: zone.userPermissions, groupPermissions: zone.groupPermissions }));
     let writes = 0;
     vendors.responders.set(`/api/zones/${path}/set`, (_incoming, bytes) => {
@@ -232,6 +234,7 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
         assert.equal(p[key], expected);
         zone[key] = structuredClone(value);
       }
+      if (permission) zone.groupPermissions = structuredClone(expectedValues.groupPermissions);
       writes++;
       return ok();
     });
@@ -244,7 +247,7 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
     zone[field] = structuredClone(baseline[field]);
     await success(command, input, ['--execute', '--confirm', preview.preview.digest]);
     const actual = permission ? await read('zone permission get', ['--zone', 'example.test']) : await options('example.test');
-    for (const [key, value] of Object.entries(values)) assert.deepEqual(actual[key], value);
+    for (const [key, value] of Object.entries(expectedValues)) assert.deepEqual(actual[key], value);
     assert.deepEqual(zone.queryAccessNetworkACL, ['192.0.2.0/24']);
     assert.deepEqual(zone.zoneTransferTsigKeyNames, ['key']);
     if (permission) {
@@ -256,7 +259,33 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
       await execute(command, { parameters: { zone: 'example.test', userPermissions: [] }, baseline: { userPermissions: values.userPermissions } });
       const cleared = await read('zone permission get', ['--zone', 'example.test']);
       assert.deepEqual(cleared.userPermissions, []);
-      assert.deepEqual(cleared.groupPermissions, values.groupPermissions);
+      assert.deepEqual(cleared.groupPermissions, expectedValues.groupPermissions);
+      for (const replacement of [[], [{ name: 'ADMINISTRATORS', canView: false, canModify: false, canDelete: false }]]) {
+        let drop = false;
+        vendors.responders.set('/api/zones/permissions/set', (incoming, bytes) => {
+          assert.deepEqual(parameters(bytes), { zone: 'example.test', groupPermissions: replacement.flatMap(row => [row.name, row.canView, row.canModify, row.canDelete]).join('|') });
+          zone.groupPermissions = structuredClone(mandatory);
+          writes++;
+          if (drop) { incoming.socket.destroy(); return {}; }
+          return ok();
+        });
+        const input = { parameters: { zone: 'example.test', groupPermissions: replacement }, baseline: { groupPermissions: structuredClone(zone.groupPermissions) } };
+        await execute(command, input);
+        assert.deepEqual((await read('zone permission get', ['--zone', 'example.test'])).groupPermissions, mandatory);
+        assert.deepEqual(zone.userPermissions, []);
+        input.baseline.groupPermissions = structuredClone(mandatory);
+        const preview = await success(command, input);
+        drop = true;
+        const unknown = await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', preview.preview.digest]);
+        const auditId = unknown.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
+        const count = writes;
+        const reconciled = await success(command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+        assert.equal(reconciled.status, 'reconciled');
+        assert.equal(writes, count);
+        zone.groupPermissions[0].canDelete = false;
+        await failure('OUTCOME_UNKNOWN', command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+        zone.groupPermissions = structuredClone(mandatory);
+      }
     }
   }
   assert.deepEqual(zones.get('keep.test'), keep, 'Other zones remain unchanged');
