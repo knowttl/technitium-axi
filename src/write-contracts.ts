@@ -1,4 +1,4 @@
-import { settingsFields, dhcpFields } from './configuration.js';
+import { settingsFields, dhcpFields, identityFields } from './configuration.js';
 
 export interface WriteContract {
   id: string; command: string; path: string;
@@ -99,8 +99,10 @@ export const writeContracts: WriteContract[] = [
   { id: 'OP-107', command: 'admin group create', path: '/api/admin/groups/create', fields: words('group description'), required: ['group'] },
   { id: 'OP-110', command: 'admin group delete', path: '/api/admin/groups/delete', fields: ['group'], required: ['group'] },
   { id: 'OP-113', command: 'admin permission set', path: '/api/admin/permissions/set', fields: words('node section userPermissions groupPermissions'), required: ['section'], baselinePath: '/api/admin/permissions/get', baselineTarget: words('node section') },
+  { id: 'OP-115', command: 'admin sso set', path: '/api/admin/sso/set', fields: Object.keys(identityFields).filter(key => key.startsWith('sso')), required: [], secrets: ['ssoClientSecret'] },
   { id: 'OP-116', command: 'admin sso user create', path: '/api/admin/sso/users/create', fields: words('user displayName ssoIdentifier memberOfGroups'), required: words('user ssoIdentifier') },
   { id: 'OP-117', command: 'admin sso user set', path: '/api/admin/sso/users/set', fields: words('user newUser displayName memberOfGroups'), required: ['user'] },
+  { id: 'OP-142', command: 'admin ldap set', path: '/api/admin/ldap/set', fields: Object.keys(identityFields).filter(key => key.startsWith('ldap')), required: [], secrets: ['ldapBindPassword'] },
   { id: 'OP-019', command: 'dashboard stats delete-all', path: '/api/dashboard/stats/deleteAll', fields: ['node'], required: [] },
   ...[
     ['OP-054', 'cache', 'delete', 'domain'], ['OP-055', 'cache', 'flush', ''],

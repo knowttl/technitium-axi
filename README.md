@@ -106,10 +106,20 @@ Section permission writes require the primary when clustering is enabled; the ve
 
 `admin sso user create` and `admin sso user set` require an initialized secondary profile.
 Preview and execution read the same selected caller's session with `includeInfo=true` and require exactly `info.permissions.Administration.canModify: true` before dispatch.
-The cluster-state preflight also requires Administration View on the selected secondary.
+Topology comes from that session response, so a Modify-only caller needs no separate Administration View grant.
 The preview names the requested secondary, effective primary and caller.
 The vendor proxy supplies its cluster identity; the tool never acquires that identity.
 Direct primary calls, missing or malformed permissions, and single-use credentials fail before SSO mutation.
+
+`admin sso set` and `admin ldap set` update only supplied fields and use the vendor primary proxy when clustered.
+Booleans and LDAP ports use JSON boolean and integer values; `ldapSslOption` is `None`, `StartTLS` or `LDAPS`.
+`ssoScopes` is a string array encoded with pipes on the wire, while `ssoGroupMap` and `ldapGroupMap` are arrays of `{ "remoteGroup": "provider-group", "localGroup": "Operators" }` rows.
+Scopes and group maps replace the selected collection; omitted fields persist.
+`ssoClientSecret` and `ldapBindPassword` require SecretRefs, and masked `************` values are rejected as secret inputs.
+An SSO restart can lose the response after saving: `OUTCOME_UNKNOWN` requires trusted readback and must never trigger a replay.
+`admin ldap test` uses stored connection fields with optional explicit overrides and does not save configuration.
+It performs an outbound bind, so it requires the exact `OP-143` write grant and is denied in read-only mode even though the vendor requires only Administration View.
+A successful configuration read does not prove a successful LDAP bind.
 
 Cluster lifecycle commands are available under `admin cluster`, with `primary` and `secondary` subgroups.
 Run `inventory --json` for their exact typed inputs and routing scopes.

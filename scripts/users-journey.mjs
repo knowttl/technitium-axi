@@ -16,7 +16,7 @@ const operations = [
   ['011', '2fa disable', '2fa/disable', {}],
   ['013', 'profile set', 'profile/set', { displayName: 'Planner Updated', sessionTimeoutSeconds: 600 }],
 ];
-export const usersTasks = ['B5.01', 'B5.02', ...['006', '007', '009', '010'].map(id => `B5.CR-${id}`), ...operations.map(([id]) => `B5.OP-${id}`)];
+export const usersTasks = ['B5.01', 'B5.02', 'B5.OP-116', 'B5.OP-117', ...['006', '007', '009', '010'].map(id => `B5.CR-${id}`), ...operations.map(([id]) => `B5.OP-${id}`)];
 
 export async function usersJourney({ task, temporary, env, run, executable, vendors }) {
   const directory = join(temporary, 'users');
@@ -94,23 +94,25 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
     if (id === '013') Object.assign(account, { displayName: p.displayName, sessionTimeoutSeconds: Number(p.sessionTimeoutSeconds) });
     return { body: { status: 'ok', response: {} } };
   });
-  if (task === 'B5.02') {
+  if (['B5.02', 'B5.OP-116', 'B5.OP-117'].includes(task)) {
     let permission = true;
     let primary = false;
     const users = new Map();
     const keep = { username: 'keep-user', displayName: 'Keep', memberOfGroups: ['Users'], ssoIdentifier: 'keep-sub' };
+    const seeds = JSON.parse(await readFile(new URL('../tests/fixtures/read-seeds.json', import.meta.url), 'utf8')).responses;
     users.set('keep-user', keep);
     const clusterToken = 'SYNTHETIC-private-cluster-identity';
     vendors.clusterTokens.set('beta', clusterToken);
     const ca = await readFile(vendors.caFile);
     vendors.responders.set('/api/user/session/get', (_incoming, bytes) => {
       assert.equal(bytes.toString(), 'includeInfo=true');
-      return { body: { status: 'ok', username: 'planner', token, info: { permissions: permission === undefined ? {} : { Administration: { canModify: permission } } } } };
+      return { body: { status: 'ok', username: 'planner', token, info: { version: '15.4', permissions: permission === undefined ? {} : { Administration: { canView: false, canModify: permission, canDelete: false } }, clusterInitialized: true, clusterNodes: [
+        { name: 'primary.test', url: `${vendors.origins[1]}/`, type: 'Primary', state: primary ? 'Self' : 'Connected' },
+        ...primary ? [] : [{ name: 'secondary.test', url: `${vendors.origins[0]}/`, type: 'Secondary', state: 'Self' }],
+      ] } } };
     });
-    vendors.responders.set('/api/admin/cluster/state', () => ({ body: { status: 'ok', response: { clusterInitialized: true, clusterNodes: [
-      { name: 'primary.test', url: `${vendors.origins[1]}/`, type: 'Primary', state: primary ? 'Self' : 'Connected' },
-      ...primary ? [] : [{ name: 'secondary.test', url: `${vendors.origins[0]}/`, type: 'Secondary', state: 'Self' }],
-    ] } } }));
+    // Regression #52: Modify does not imply View on the cluster state endpoint.
+    vendors.responders.set('/api/admin/cluster/state', () => ({ body: { status: 'error', errorMessage: 'Access was denied.' } }));
     for (const action of ['create', 'set']) vendors.responders.set(`/api/admin/sso/users/${action}`, async (incoming, bytes) => {
       if (incoming.socket.localPort !== Number(new URL(vendors.origins[1]).port)) {
         // Model the vendor secondary proxy, keeping its credential entirely outside the CLI.
@@ -127,18 +129,27 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
       assert.equal(incoming.headers.authorization, `Bearer ${clusterToken}`);
       const p = Object.fromEntries(new URLSearchParams(bytes.toString()));
       const previous = users.get(p.user);
+      if (action === 'set') users.delete(p.user);
       users.set(p.newUser ?? p.user, { username: p.newUser ?? p.user, displayName: p.displayName, memberOfGroups: p.memberOfGroups.split(','), ssoIdentifier: previous?.ssoIdentifier ?? p.ssoIdentifier });
       return { body: { status: 'ok' } };
     });
     vendors.responders.set('/api/admin/users/get', (incoming, bytes) => {
       assert.equal(incoming.socket.localPort, Number(new URL(vendors.origins[1]).port));
-      return { body: { status: 'ok', response: users.get(new URLSearchParams(bytes.toString()).get('user')) } };
+      const stored = users.get(new URLSearchParams(bytes.toString()).get('user'));
+      if (!stored) return { body: { status: 'error', errorMessage: 'No such user.' } };
+      // Regression #53: user details never expose the provider subject.
+      const { ssoIdentifier, ...details } = stored;
+      const { totpEnabled, groups, ...seed } = seeds['OP-103'];
+      return { body: { status: 'ok', response: { ...seed, ...details, isSsoUser: true, disabled: false, sessions: [] } } };
     });
     const readback = async expected => {
       await configure({ origin: vendors.origins[1] });
       const file = join(directory, 'sso-readback.json');
-      await success('admin user get', undefined, ['--user', 'sso-user', '--result-file', file]);
-      assert.deepEqual(JSON.parse(await readFile(file, 'utf8')).response, expected);
+      await success('admin user get', undefined, ['--user', expected.username, '--result-file', file]);
+      const response = JSON.parse(await readFile(file, 'utf8')).response;
+      assert.deepEqual({ username: response.username, displayName: response.displayName, memberOfGroups: response.memberOfGroups, isSsoUser: response.isSsoUser }, { ...expected, isSsoUser: true });
+      assert.equal(Object.hasOwn(response, 'ssoIdentifier'), false);
+      assert.equal(users.get(expected.username).ssoIdentifier, 'sub-123');
       assert.deepEqual(users.get('keep-user'), keep);
       await configure();
     };
@@ -146,12 +157,15 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
     const preview = await success('admin sso user create', create);
     assert.deepEqual(preview.preview.route, { requested: vendors.origins[0], effective: `${vendors.origins[1]}/`, caller: 'planner' });
     await execute('admin sso user create', create);
-    await readback({ username: 'sso-user', displayName: 'SSO User', memberOfGroups: ['Users'], ssoIdentifier: 'sub-123' });
-    await execute('admin sso user set', { user: 'sso-user', displayName: 'Updated', memberOfGroups: ['Operators'] });
-    await readback({ username: 'sso-user', displayName: 'Updated', memberOfGroups: ['Operators'], ssoIdentifier: 'sub-123' });
+    await readback({ username: 'sso-user', displayName: 'SSO User', memberOfGroups: ['Users'] });
+    await execute('admin sso user set', { user: 'sso-user', newUser: 'sso-renamed', displayName: 'New', memberOfGroups: ['Keepers'] });
+    await readback({ username: 'sso-renamed', displayName: 'New', memberOfGroups: ['Keepers'] });
+    assert.equal(users.has('sso-user'), false);
     const mutations = () => vendors.traces.filter(trace => trace.path.startsWith('/api/admin/sso/')).length;
     const before = mutations();
-    for (permission of [false, undefined, 'true']) await failure('PERMISSION_DENIED', 'admin sso user create', create);
+    for (permission of [false, undefined, 'true']) for (const [command, parameters] of [
+      ['create', create], ['set', { user: 'sso-renamed', displayName: 'Denied' }],
+    ]) await failure('PERMISSION_DENIED', `admin sso user ${command}`, parameters);
     permission = true;
     primary = true;
     await configure({ origin: vendors.origins[1] });

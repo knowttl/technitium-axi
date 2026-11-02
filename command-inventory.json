@@ -4235,6 +4235,87 @@
       }
     },
     {
+      "command": "admin sso set",
+      "description": "Preview or execute admin sso set",
+      "effect": "write",
+      "operation": "OP-115",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "ssoAuthority",
+          "ssoClientId",
+          "ssoMetadataAddress",
+          "ssoEnabled",
+          "ssoAllowSignup",
+          "ssoAllowSignupOnlyForMappedUsers",
+          "ssoScopes",
+          "ssoGroupMap",
+          "ssoClientSecret"
+        ],
+        "required": [],
+        "secrets": [
+          "ssoClientSecret"
+        ],
+        "baseline": null,
+        "configuration": {
+          "ssoAuthority": {
+            "type": "string"
+          },
+          "ssoClientId": {
+            "type": "string"
+          },
+          "ssoMetadataAddress": {
+            "type": "string"
+          },
+          "ssoEnabled": {
+            "type": "boolean"
+          },
+          "ssoAllowSignup": {
+            "type": "boolean"
+          },
+          "ssoAllowSignupOnlyForMappedUsers": {
+            "type": "boolean"
+          },
+          "ssoScopes": {
+            "type": "list"
+          },
+          "ssoGroupMap": {
+            "type": "rows",
+            "columns": [
+              "remoteGroup",
+              "localGroup"
+            ]
+          },
+          "ssoClientSecret": {
+            "type": "string",
+            "secret": true
+          }
+        },
+        "target": "Only supplied fields change; scopes and group maps replace their selected collection",
+        "scopesEncoding": "pipe-delimited string array"
+      }
+    },
+    {
       "command": "admin sso user create",
       "description": "Preview or execute admin sso user create",
       "effect": "write",
@@ -4313,6 +4394,102 @@
         ],
         "secrets": [],
         "baseline": null
+      }
+    },
+    {
+      "command": "admin ldap set",
+      "description": "Preview or execute admin ldap set",
+      "effect": "write",
+      "operation": "OP-142",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "routing": {
+        "target": "primary via vendor proxy",
+        "cluster": "unsupported"
+      },
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "ldapServer",
+          "ldapSslOption",
+          "ldapBindUsername",
+          "ldapSearchBase",
+          "ldapUserSearchFilter",
+          "ldapGroupAttribute",
+          "ldapEnabled",
+          "ldapIgnoreSslErrors",
+          "ldapAllowSignup",
+          "ldapAllowSignupOnlyForMappedUsers",
+          "ldapPort",
+          "ldapGroupMap",
+          "ldapBindPassword"
+        ],
+        "required": [],
+        "secrets": [
+          "ldapBindPassword"
+        ],
+        "baseline": null,
+        "configuration": {
+          "ldapServer": {
+            "type": "string"
+          },
+          "ldapSslOption": {
+            "type": "string"
+          },
+          "ldapBindUsername": {
+            "type": "string"
+          },
+          "ldapSearchBase": {
+            "type": "string"
+          },
+          "ldapUserSearchFilter": {
+            "type": "string"
+          },
+          "ldapGroupAttribute": {
+            "type": "string"
+          },
+          "ldapEnabled": {
+            "type": "boolean"
+          },
+          "ldapIgnoreSslErrors": {
+            "type": "boolean"
+          },
+          "ldapAllowSignup": {
+            "type": "boolean"
+          },
+          "ldapAllowSignupOnlyForMappedUsers": {
+            "type": "boolean"
+          },
+          "ldapPort": {
+            "type": "integer"
+          },
+          "ldapGroupMap": {
+            "type": "rows",
+            "columns": [
+              "remoteGroup",
+              "localGroup"
+            ]
+          },
+          "ldapBindPassword": {
+            "type": "string",
+            "secret": true
+          }
+        },
+        "target": "Only supplied fields change; scopes and group maps replace their selected collection"
       }
     },
     {
@@ -8211,7 +8388,38 @@
         "secrets": [
           "ldapBindPassword"
         ],
-        "baseline": null
+        "baseline": null,
+        "configuration": {
+          "ldapServer": {
+            "type": "string"
+          },
+          "ldapPort": {
+            "type": "integer"
+          },
+          "ldapSslOption": {
+            "type": "string"
+          },
+          "ldapIgnoreSslErrors": {
+            "type": "boolean"
+          },
+          "ldapBindUsername": {
+            "type": "string"
+          },
+          "ldapBindPassword": {
+            "type": "string",
+            "secret": true
+          },
+          "ldapSearchBase": {
+            "type": "string"
+          },
+          "ldapUserSearchFilter": {
+            "type": "string"
+          },
+          "ldapGroupAttribute": {
+            "type": "string"
+          }
+        },
+        "target": "Outbound LDAP bind using stored fields and explicit overrides; requires exact OP-143 write grant"
       }
     }
   ],

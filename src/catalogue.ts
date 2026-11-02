@@ -1,7 +1,7 @@
 import { readContracts } from './read-contracts.js';
 import { archiveContract } from './archive-contract.js';
 import { writeContracts, writeFlags, recordFamilies } from './write-contracts.js';
-import { settingsFields, dhcpFields } from './configuration.js';
+import { settingsFields, dhcpFields, identityFields } from './configuration.js';
 import { routing } from './routing.js';
 
 export const readFlags = ['--json', '--help', '--config', '--profile', '--result-file', '--fields', '--full', '--max-bytes', '--max-requests', '--max-pages', '--max-elapsed-ms'];
@@ -34,6 +34,7 @@ export const commands = [
       ...(item.id === 'OP-113' ? { permissions: { userPermissions: ['username', 'canView', 'canModify', 'canDelete'], groupPermissions: ['name', 'canView', 'canModify', 'canDelete'], shape: 'Array of rows with boolean flags; empty arrays clear permissions; vendor retains Administrators, plus DNS Administrators for Zones or DHCP Administrators for DhcpServer; section writes require the primary' } } : {}),
       ...(item.id === 'OP-080' ? { configuration: settingsFields, encoding: ['form', 'json'], secretRows: 'tsigKeys rows require a SecretRef for sharedSecret' } : {}),
       ...(item.id === 'OP-092' ? { configuration: dhcpFields, target: 'Existing scope; baseline.newName is the current name when renaming; collections replace the selected collection' } : {}),
+      ...(['OP-115', 'OP-142', 'OP-143'].includes(item.id) ? { configuration: Object.fromEntries(item.fields.map(key => [key, identityFields[key]])), target: item.id === 'OP-143' ? 'Outbound LDAP bind using stored fields and explicit overrides; requires exact OP-143 write grant' : 'Only supplied fields change; scopes and group maps replace their selected collection', ...(item.id === 'OP-115' ? { scopesEncoding: 'pipe-delimited string array' } : {}) } : {}),
       ...(item.command.startsWith('dhcp lease ') ? { target: 'Exactly one of clientIdentifier or hardwareAddress' } : {}),
       ...(item.id === 'OP-077' ? { capabilities: ['OP-077.resolve', 'OP-077.import'] } : {}),
       ...(['OP-049', 'OP-051', 'OP-052'].includes(item.id) ? { recordFamilies, dnameDeletion: 'pending shipped-library mapping and independent review' } : {}) } })),

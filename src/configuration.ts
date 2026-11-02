@@ -35,6 +35,25 @@ export const dhcpFields: Record<string, Field> = {
   reservedLeases: { type: 'rows', columns: ['hostName', 'hardwareAddress', 'address', 'comments'] },
 };
 
+export const identityFields: Record<string, Field> = {
+  ...group('string', 'ssoAuthority ssoClientId ssoMetadataAddress ldapServer ldapSslOption ldapBindUsername ldapSearchBase ldapUserSearchFilter ldapGroupAttribute'),
+  ...group('boolean', 'ssoEnabled ssoAllowSignup ssoAllowSignupOnlyForMappedUsers ldapEnabled ldapIgnoreSslErrors ldapAllowSignup ldapAllowSignupOnlyForMappedUsers'),
+  ldapPort: { type: 'integer' },
+  ssoScopes: { type: 'list' },
+  ssoGroupMap: { type: 'rows', columns: ['remoteGroup', 'localGroup'] },
+  ldapGroupMap: { type: 'rows', columns: ['remoteGroup', 'localGroup'] },
+  ssoClientSecret: { type: 'string', secret: true },
+  ldapBindPassword: { type: 'string', secret: true },
+};
+
+export function validateIdentity(key: string, value: unknown, resolved = false): void {
+  validateConfiguration(identityFields[key]!, value, resolved);
+  if (key === 'ssoScopes' && (value as string[]).some(scope => /[|]/.test(scope))) invalid();
+  if (key === 'ldapPort' && Number(value) > 65535) invalid();
+  if (key === 'ldapSslOption' && !['None', 'LDAPS', 'StartTLS'].includes(String(value))) invalid();
+  if (identityFields[key]!.secret && resolved && value === '************') invalid();
+}
+
 export function dhcpValue(key: string, value: unknown): unknown {
   const field = dhcpFields[key]!;
   if (value == null && ['list', 'rows'].includes(field.type)) return [];
