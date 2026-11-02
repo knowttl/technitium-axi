@@ -4,8 +4,9 @@ import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import matrix from '../tests/fixtures/record-inputs.json' with { type: 'json' };
 import { dnssecJourney, dnssecTasks } from './dnssec-journey.mjs';
+import { listsCacheJourney, listsCacheTasks } from './lists-cache-journey.mjs';
 
-export const writeTasks = ['B3.01', 'B3.02', 'B3.03', 'B3.04', 'B3.05', 'B3.CR-013', 'B3.CR-014', 'B3.dnssec', ...dnssecTasks];
+export const writeTasks = ['B3.01', 'B3.02', 'B3.03', 'B3.04', 'B3.05', 'B3.CR-013', 'B3.CR-014', 'B3.dnssec', ...dnssecTasks, 'B3.lists-cache', ...listsCacheTasks];
 const hash = value => createHash('sha256').update(value).digest('hex');
 
 export async function writeJourney({ task, temporary, env, run, executable, vendors }) {
@@ -44,6 +45,12 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     const preview = await success(command, input, [], extraEnv);
     return await success(command, input, ['--execute', '--confirm', preview.preview.digest], extraEnv);
   };
+  if (task === 'B3.lists-cache' || listsCacheTasks.includes(task)) {
+    for (const selected of task === 'B3.lists-cache' ? listsCacheTasks : [task]) {
+      await listsCacheJourney({ task: selected, directory, env, run, executable, vendors, config, token, configure, success, failure, execute });
+    }
+    return [`native:${task}:write-behavior`];
+  }
   if (task === 'B3.dnssec' || dnssecTasks.includes(task)) {
     for (const selected of task === 'B3.dnssec' ? dnssecTasks : [task]) {
       await dnssecJourney({ task: selected, directory, env, run, executable, vendors, config, token, secret, configure, success, failure });
@@ -135,7 +142,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     await execute('zone record add', add);
     assert.equal(recordExists, true);
     await failure('USAGE', 'zone create', { parameters: { zone: 'example.test', type: 'Primary', domain: 'other.test' } });
-    vendors.responders.set('/api/dnsClient/resolve', () => ({ body: { status: 'ok', response: { answer: [] } } }));
+    vendors.responders.set('/api/dnsClient/resolve', () => ({ body: { status: 'ok', response: { result: { Answer: [] }, rawResponses: [] } } }));
     await configure();
     const resolve = { parameters: { server: '192.0.2.53', domain: 'example.test', type: 'A' } };
     await execute('dns-client resolve', resolve);
