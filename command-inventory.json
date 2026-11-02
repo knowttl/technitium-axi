@@ -2444,6 +2444,397 @@
       }
     },
     {
+      "command": "zone dnssec unsign",
+      "description": "Preview or execute zone dnssec unsign",
+      "effect": "write",
+      "operation": "OP-036",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone"
+        ],
+        "required": [
+          "zone"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone dnssec properties convert-to-nsec",
+      "description": "Preview or execute zone dnssec properties convert-to-nsec",
+      "effect": "write",
+      "operation": "OP-039",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone"
+        ],
+        "required": [
+          "zone"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone dnssec properties convert-to-nsec3",
+      "description": "Preview or execute zone dnssec properties convert-to-nsec3",
+      "effect": "write",
+      "operation": "OP-040",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "iterations",
+          "saltLength"
+        ],
+        "required": [
+          "zone"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone dnssec properties update-nsec3-params",
+      "description": "Preview or execute zone dnssec properties update-nsec3-params",
+      "effect": "write",
+      "operation": "OP-041",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "iterations",
+          "saltLength"
+        ],
+        "required": [
+          "zone"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone dnssec properties update-dns-key-ttl",
+      "description": "Preview or execute zone dnssec properties update-dns-key-ttl",
+      "effect": "write",
+      "operation": "OP-042",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "ttl"
+        ],
+        "required": [
+          "zone",
+          "ttl"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone dnssec properties update-private-key",
+      "description": "Preview or execute zone dnssec properties update-private-key",
+      "effect": "write",
+      "operation": "OP-044",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "keyTag",
+          "rolloverDays"
+        ],
+        "required": [
+          "zone",
+          "keyTag",
+          "rolloverDays"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone dnssec properties delete-private-key",
+      "description": "Preview or execute zone dnssec properties delete-private-key",
+      "effect": "write",
+      "operation": "OP-045",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "keyTag"
+        ],
+        "required": [
+          "zone",
+          "keyTag"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone dnssec properties publish-all-private-keys",
+      "description": "Preview or execute zone dnssec properties publish-all-private-keys",
+      "effect": "write",
+      "operation": "OP-046",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone"
+        ],
+        "required": [
+          "zone"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone dnssec properties rollover-dns-key",
+      "description": "Preview or execute zone dnssec properties rollover-dns-key",
+      "effect": "write",
+      "operation": "OP-047",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "keyTag"
+        ],
+        "required": [
+          "zone",
+          "keyTag"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone dnssec properties retire-dns-key",
+      "description": "Preview or execute zone dnssec properties retire-dns-key",
+      "effect": "write",
+      "operation": "OP-048",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "keyTag"
+        ],
+        "required": [
+          "zone",
+          "keyTag"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone dnssec properties activate-ksk-dns-key",
+      "description": "Preview or execute zone dnssec properties activate-ksk-dns-key",
+      "effect": "write",
+      "operation": "OP-140",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "zone",
+          "keyTag"
+        ],
+        "required": [
+          "zone",
+          "keyTag"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
       "command": "zone dnssec properties add-private-key",
       "description": "Preview or execute zone dnssec properties add-private-key",
       "effect": "write",

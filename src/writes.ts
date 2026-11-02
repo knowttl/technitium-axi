@@ -120,6 +120,12 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
     }
   }
   if (['OP-049', 'OP-051', 'OP-052'].includes(contract.id)) validateRecord(contract, parameters);
+  if (contract.command.startsWith('zone dnssec ')) {
+    const bounds: Record<string, number> = { keyTag: 65535, rolloverDays: 365, zskRolloverDays: 365, iterations: 50, saltLength: 32 };
+    for (const [key, maximum] of Object.entries(bounds)) {
+      if (parameters[key] !== undefined && Number(parameters[key]) > maximum) usage(`${key} must be between 0 and ${maximum}`);
+    }
+  }
   if (input.baseline !== undefined && !object(input.baseline)) usage('Baseline must be an object');
   if (contract.baselinePath) {
     const fields = Object.keys(parameters).filter(key => !contract.baselineTarget?.includes(key));
