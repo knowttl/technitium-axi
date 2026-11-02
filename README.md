@@ -102,7 +102,7 @@ Password changes use `pass` and `newPass` SecretRefs; `totp` is also a SecretRef
 `admin user delete`, `admin group create` and `admin group delete` select one named account or group.
 `admin group set` supports `newGroup`, `description` and replacement `members`, with an exact selected baseline.
 `admin permission set` selects a `section` and optional `node`, with typed `userPermissions` and `groupPermissions` rows and an exact selected baseline.
-Section permission writes require the primary when clustering is enabled; the vendor enforces caller permissions and retains mandatory administrator groups.
+Section permission writes require the primary when clustering is enabled; the vendor enforces caller permissions.
 
 `admin sso user create` and `admin sso user set` require an initialized secondary profile.
 Preview and execution read the same selected caller's session with `includeInfo=true` and require exactly `info.permissions.Administration.canModify: true` before dispatch.
@@ -225,7 +225,8 @@ Other operations, except resync as described below, require manual inspection of
 Baseline checks, verification and reconciliation account for vendor member ordering and case, TSIG name sets, catalog names, enum case, IPv6 formatting, ACL network prefixes and merged update-policy rows.
 TSIG names, catalog names and update-policy keys and domains compare case-insensitively after trimming leading and trailing dots; other ASCII characters and numeric labels remain literal, so `key/a` differs from `key/b` and `127.1` differs from `127.0.0.1`.
 Permission replacements use arrays of getter-shaped rows: `userPermissions` rows contain `username`, `canView`, `canModify` and `canDelete`; `groupPermissions` rows use `name` instead of `username`.
-An empty user permission array clears that collection; group permission replacements always retain Administrators and DNS Administrators with all permissions.
+An empty user permission array clears that collection; group permission replacements retain the mandatory administrator groups for the selected zone or section with all permissions.
+See the inventory's `permissions` contract for the exact groups.
 An omitted collection remains unchanged.
 Administrators membership replacements retain the authenticated caller.
 
