@@ -85,6 +85,16 @@ Mutations require the selected file profile's `writes.allowWrites` to be `true` 
 The accepted grant values live in `technitium-axi schema --json`; there are no wildcard grants.
 `TECHNITIUM_AXI_READ_ONLY=true` or `1` overrides all mutation grants; `false` or `0` leaves grants effective.
 `dns-client resolve` without `parameters.import: true` needs no write grant; importing requires `OP-077.import`.
+The resolve response includes the DNS reply and any DNSSEC `warningMessage`.
+When import is requested, a nonempty DNSSEC warning suppresses import and reports `mutation: suppressed`.
+
+Cache deletion (`OP-054`) accepts a `domain`; cache flush (`OP-055`) takes an empty `parameters` object.
+Allowed and blocked lists each support `add`, `delete`, `flush` and `import`, with their exact operation grants shown in the inventory.
+Add and delete accept `domain`; flush takes empty parameters.
+Imports accept `{"parameters":{"allowedZones":["a.test","b.test"]}}` or `blockedZones` for the blocked list.
+These arrays are sent as comma-separated form fields, including duplicates or an empty array; imports merge membership and do not use uploads.
+Each import entry must be nonempty and contain no ASCII whitespace, ASCII control characters or commas.
+Dashboard history deletion (`OP-019`) accepts an optional `node` and preserves current query counters.
 
 For example, authorize only record additions with this field in the selected profile:
 

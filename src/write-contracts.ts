@@ -53,6 +53,14 @@ const words = (value: string) => value.split(' ');
 const recordFields = [...new Set(Object.values(recordFamilies).flatMap(row => [...row.selector, ...row.replacement, ...row.optional ?? []]))];
 export const writeContracts: WriteContract[] = [
   { id: 'OP-019', command: 'dashboard stats delete-all', path: '/api/dashboard/stats/deleteAll', fields: ['node'], required: [] },
+  ...[
+    ['OP-054', 'cache', 'delete', 'domain'], ['OP-055', 'cache', 'flush', ''],
+    ['OP-057', 'allowed', 'add', 'domain'], ['OP-058', 'allowed', 'delete', 'domain'],
+    ['OP-059', 'allowed', 'flush', ''], ['OP-060', 'allowed', 'import', 'allowedZones'],
+    ['OP-063', 'blocked', 'add', 'domain'], ['OP-064', 'blocked', 'delete', 'domain'],
+    ['OP-065', 'blocked', 'flush', ''], ['OP-066', 'blocked', 'import', 'blockedZones'],
+  ].map(([id, family, action, field]) => ({ id: id!, command: `${family} ${action}`, path: `/api/${family}/${action}`,
+    fields: field ? [field] : [], required: field ? [field] : [] })),
   { id: 'OP-022', command: 'zone create', path: '/api/zones/create', fields: words('node zone type catalog useSoaSerialDateScheme primaryNameServerAddresses zoneTransferProtocol tsigKeyName validateZone initializeForwarder protocol forwarder dnssecValidation proxyType proxyAddress proxyPort proxyUsername proxyPassword'), required: ['zone', 'type'], secrets: ['proxyPassword'] },
   { id: 'OP-023', command: 'zone import', path: '/api/zones/import', fields: words('node zone overwrite overwriteZone overwriteSoaSerial records'), required: ['zone'] },
   { id: 'OP-032', command: 'zone options set', path: '/api/zones/options/set', fields: words('node zone disabled catalog overrideCatalogQueryAccess overrideCatalogZoneTransfer overrideCatalogNotify primaryNameServerAddresses primaryZoneTransferProtocol primaryZoneTransferTsigKeyName validateZone queryAccess queryAccessNetworkACL zoneTransfer zoneTransferNetworkACL zoneTransferTsigKeyNames notify notifyNameServers notifySecondaryCatalogsNameServers update updateNetworkACL updateSecurityPolicies'), required: ['zone'], baselinePath: '/api/zones/options/get', baselineTarget: ['zone', 'node'] },

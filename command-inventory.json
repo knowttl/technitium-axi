@@ -2249,6 +2249,324 @@
       }
     },
     {
+      "command": "cache delete",
+      "description": "Preview or execute cache delete",
+      "effect": "write",
+      "operation": "OP-054",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "domain"
+        ],
+        "required": [
+          "domain"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "cache flush",
+      "description": "Preview or execute cache flush",
+      "effect": "write",
+      "operation": "OP-055",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [],
+        "required": [],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "allowed add",
+      "description": "Preview or execute allowed add",
+      "effect": "write",
+      "operation": "OP-057",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "domain"
+        ],
+        "required": [
+          "domain"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "allowed delete",
+      "description": "Preview or execute allowed delete",
+      "effect": "write",
+      "operation": "OP-058",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "domain"
+        ],
+        "required": [
+          "domain"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "allowed flush",
+      "description": "Preview or execute allowed flush",
+      "effect": "write",
+      "operation": "OP-059",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [],
+        "required": [],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "allowed import",
+      "description": "Preview or execute allowed import",
+      "effect": "write",
+      "operation": "OP-060",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "allowedZones"
+        ],
+        "required": [
+          "allowedZones"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "blocked add",
+      "description": "Preview or execute blocked add",
+      "effect": "write",
+      "operation": "OP-063",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "domain"
+        ],
+        "required": [
+          "domain"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "blocked delete",
+      "description": "Preview or execute blocked delete",
+      "effect": "write",
+      "operation": "OP-064",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "domain"
+        ],
+        "required": [
+          "domain"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "blocked flush",
+      "description": "Preview or execute blocked flush",
+      "effect": "write",
+      "operation": "OP-065",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [],
+        "required": [],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "blocked import",
+      "description": "Preview or execute blocked import",
+      "effect": "write",
+      "operation": "OP-066",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "blockedZones"
+        ],
+        "required": [
+          "blockedZones"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
       "command": "zone create",
       "description": "Preview or execute zone create",
       "effect": "write",

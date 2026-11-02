@@ -49,6 +49,10 @@ function selectedValues(values: Record<string, unknown>): Record<string, unknown
 }
 
 function validateValue(key: string, value: unknown): void {
+  if (['allowedZones', 'blockedZones'].includes(key)) {
+    if (!Array.isArray(value) || value.some(item => typeof item !== 'string' || !item.length || /[\x00-\x20\x7f,]/.test(item))) usage('Zone import requires an array of domain names without separators');
+    return;
+  }
   if (booleans.has(key)) { if (typeof value !== 'boolean') usage('Boolean input requires true or false'); }
   else if (integers.has(key)) { if (!Number.isSafeInteger(value) || Number(value) < 0 || Number(value) > 4294967295) usage('Integer input is outside its supported range'); }
   else if (lists.has(key)) { if (!Array.isArray(value) || value.some(item => typeof item !== 'string' || /[\x00-\x1f\x7f,]/.test(item))) usage('List input requires an array of strings without separators'); }
@@ -265,9 +269,17 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     if (response.status !== 200 || response.contentType !== 'application/json') throw new Error('Response unavailable');
     const value: unknown = JSON.parse(response.bytes.toString());
     checkStatus(value);
+    let resolution: Record<string, unknown> | undefined;
+    if (contract.id === 'OP-077') {
+      if (!object(value.response) || !object(value.response.result) || (value.response.warningMessage !== undefined && typeof value.response.warningMessage !== 'string')) throw new ToolError('UPSTREAM_INVALID', 'Invalid DNS client response', 'Check the selected server API version', 1);
+      resolution = { response: value.response.result,
+        ...(mutating && value.response.warningMessage ? { mutation: 'suppressed' } : {}),
+        ...(typeof value.response.warningMessage === 'string' ? { warningMessage: value.response.warningMessage } : {}) };
+    }
     if (contract.baselinePath && !await postcondition(expected)) throw new Error('Postcondition is not proven');
     if (mutating) await files.write(path, JSON.stringify({ auditId, digest, operation: capability, state: 'completed', postconditionHash: expected }));
     return { bytes: response.bytes, projection: { status: 'ok', operation: capability, ...(mutating ? { auditId } : {}),
+      ...resolution,
       ...(profile.tokenKind === 'single-use' ? { credential: 'consumed' } : {}) } };
   } catch (error) {
     if (!mutating) throw error;
