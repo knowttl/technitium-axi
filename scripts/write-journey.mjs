@@ -30,7 +30,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
   };
   const success = async (...args) => {
     const result = await invoke(...args);
-    assert.equal(result.code, 0, result.stdout);
+    assert.equal(result.code, 0, `${args[0]} ${args[1].parameters.type ?? ''}: ${result.stdout}`);
     return result.value;
   };
   const failure = async (code, ...args) => {
