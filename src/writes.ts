@@ -287,7 +287,7 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
         if (typeof value !== 'boolean') usage('A boolean is required');
       } else if (key === 'memberOfGroups') {
         if (!Array.isArray(value) || value.some(group => typeof group !== 'string' || !group || /[,|\x00-\x1f]/.test(group))) usage('memberOfGroups requires an array of group names');
-      } else if (['iterations', 'sessionTimeoutSeconds'].includes(key)) {
+      } else if (key === 'sessionTimeoutSeconds') {
         if (!Number.isSafeInteger(value)) usage('An integer is required');
       } else validateValue(key, value);
       if (key === 'updateSecurityPolicies') baselineValue(key, value);
