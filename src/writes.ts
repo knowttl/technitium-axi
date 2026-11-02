@@ -336,6 +336,7 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     if (contract.id === 'OP-109' && Array.isArray(selected.members) && String(parameters.newGroup ?? parameters.group).toLowerCase() === 'administrators') {
       const session = await vendorRead(profile, 'user session get', token);
       redactor.add(session.secret!);
+      if (!('username' in session.projection)) throw new ToolError('UPSTREAM_INVALID', 'Authenticated caller identity is missing', 'Check the selected server API version and operation', 1);
       selected.members = baselineValue('members', [...selected.members, session.projection.username]);
     }
     const preserved = { ...baseline.preserved };
