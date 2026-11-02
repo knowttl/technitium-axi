@@ -74,6 +74,8 @@ export function settingValue(response: Record<string, unknown>, key: string): un
   const path = (settingsFields[key]?.read ?? key).split('.');
   let value: unknown = response;
   for (const part of path) value = object(value) ? value[part] : undefined;
+  if (['proxyUsername', 'proxyPassword'].includes(key) && value == null) return '';
+  if (key === 'proxyBypass' && value == null) return [];
   if (value === null && ['list', 'ports', 'rows'].includes(settingsFields[key]?.type ?? '')) return [];
   return value;
 }

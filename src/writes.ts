@@ -25,8 +25,16 @@ const integers = new Set('ttl expiryTtl preference newPreference priority newPri
 const lists = new Set('primaryNameServerAddresses queryAccessNetworkACL zoneTransferNetworkACL zoneTransferTsigKeyNames notifyNameServers notifySecondaryCatalogsNameServers updateNetworkACL blockListUrls forwarders proxyBypass members glue'.split(' '));
 
 function baselineValue(key: string, value: unknown): unknown {
+  if (key === 'dnsServerDomain' && typeof value === 'string') return value.replace(/\.+$/, '');
+  if (Array.isArray(value) && value.length === 0) {
+    if (key === 'dnsServerLocalEndPoints') return ['0.0.0.0:53', '[::]:53'];
+    if (key === 'webServiceLocalAddresses') return ['0.0.0.0', '[::]'];
+  }
+  if (key === 'webServiceRealIpHeader' && value === '') return 'X-Real-IP';
+  if (key === 'webServiceCspFrameAncestorsHeader' && value === '') return "'none'";
+  if (key === 'forwarderProtocol' && value === 'HttpsJson') return 'Https';
   if (settingsFields[key]?.type === 'string' && value === null) return '';
-  if (['webServiceTlsCertificatePassword', 'dnsTlsCertificatePassword'].includes(key) && typeof value === 'string') return '************';
+  if (['webServiceTlsCertificatePassword', 'dnsTlsCertificatePassword'].includes(key) && typeof value === 'string') return value === '' ? '' : '************';
   if (settingsFields[key] && ['list', 'ports', 'rows'].includes(settingsFields[key]!.type) && value === null) return [];
   if (key === 'members' && Array.isArray(value)) return [...new Set(value.map(item => String(item).toLowerCase()))].sort();
   if (key === 'tsigKeys' && Array.isArray(value)) return value.map(row => ({ ...row, keyName: row.keyName.toLowerCase().replace(/\.$/, ''), algorithmName: row.algorithmName.toLowerCase().replace(/\.$/, '') })).sort((a, b) => a.keyName.localeCompare(b.keyName));
@@ -199,15 +207,12 @@ async function baselineRead(contract: WriteContract, profile: Profile, token: st
     validateConfiguration(settingsFields.forwarders!, preserved.forwarders, true);
   }
   if (contract.id === 'OP-080' && fields.some(key => key.startsWith('proxy')) && parameters.proxyType !== 'None') {
-    const proxy = object(response.proxy) ? response.proxy : {};
-    for (const [source, target] of Object.entries({ type: 'proxyType', address: 'proxyAddress', port: 'proxyPort', username: 'proxyUsername', password: 'proxyPassword' })) {
+    for (const target of ['proxyType', 'proxyAddress', 'proxyPort', 'proxyUsername', 'proxyPassword', 'proxyBypass']) {
       if (fields.includes(target)) continue;
-      const item = proxy[source];
-      if (['username', 'password'].includes(source) && (item === undefined || item === null)) continue;
+      const item = settingValue(response, target);
       validateValue(target, item);
       preserved[target] = item;
     }
-    if (!fields.includes('proxyBypass') && Array.isArray(proxy.bypass)) preserved.proxyBypass = proxy.bypass;
   }
   const selected = Object.fromEntries(fields.map(key => {
     if (contract.id === 'OP-080') {
@@ -310,6 +315,9 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     if (canonical(baseline.selected) !== canonical(selectedValues(baselineInput!))) throw new ToolError('CONFLICT', 'Selected baseline changed after preview', 'Read the selected values and preview a new explicit replacement', 1);
     const selected = selectedValues(Object.fromEntries(Object.keys(input.baseline!).map(key => [key, parameters[key]])));
     const preserved = { ...baseline.preserved };
+    if (contract.id === 'OP-080') for (const prefix of ['webServiceTlsCertificate', 'dnsTlsCertificate']) {
+      if (Object.hasOwn(selected, `${prefix}Password`)) selected[`${prefix}Password`] = (parameters[`${prefix}Path`] ?? preserved[`${prefix}Path`]) ? '************' : '';
+    }
     if (contract.id === 'OP-080' && Array.isArray(selected.forwarders) && selected.forwarders.length === 0) {
       if (Object.hasOwn(selected, 'forwarderProtocol')) selected.forwarderProtocol = 'Udp';
       else preserved.forwarderProtocol = 'Udp';
