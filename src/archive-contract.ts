@@ -1,3 +1,5 @@
+import { ToolError } from './errors.js';
+
 // Entry names and selection rules reviewed against the pinned vendor handlers.
 export const archiveContract = {
   sourceRevision: '0dd592aad21eced4221a9a46204cb1a299972ca0',
@@ -25,3 +27,25 @@ export const archiveContract = {
     response: { status: 200, contentType: 'application/zip', lastModified: 'RFC 1123 GMT response time', emptyZip: 'valid protected result' },
   },
 };
+
+export function validateUploadArchive(bytes: Buffer): void {
+  const invalid = (): never => { throw new ToolError('UPLOAD_INVALID', 'Upload must be a bounded ZIP with safe relative entry names and no links', 'Select a valid app package or settings backup'); };
+  let end = bytes.length - 22;
+  const minimum = Math.max(0, end - 65535);
+  while (end >= minimum && bytes.readUInt32LE(end) !== 0x06054b50) end--;
+  if (end < minimum || end + 22 + bytes.readUInt16LE(end + 20) !== bytes.length || bytes.readUInt16LE(end + 4) !== 0 || bytes.readUInt16LE(end + 6) !== 0) invalid();
+  const count = bytes.readUInt16LE(end + 10);
+  let offset = bytes.readUInt32LE(end + 16);
+  const centralEnd = offset + bytes.readUInt32LE(end + 12);
+  if (count !== bytes.readUInt16LE(end + 8) || centralEnd !== end) invalid();
+  for (let i = 0; i < count; i++) {
+    if (offset + 46 > centralEnd || bytes.readUInt32LE(offset) !== 0x02014b50) invalid();
+    const length = bytes.readUInt16LE(offset + 28);
+    const next = offset + 46 + length + bytes.readUInt16LE(offset + 30) + bytes.readUInt16LE(offset + 32);
+    if (next > centralEnd) invalid();
+    const name = bytes.subarray(offset + 46, offset + 46 + length).toString('utf8');
+    if (!name || /[\\\x00-\x1f]/.test(name) || name.startsWith('/') || /^[A-Za-z]:/.test(name) || name.split('/').includes('..') || (bytes.readUInt32LE(offset + 38) >>> 16 & 0xf000) === 0xa000) invalid();
+    offset = next;
+  }
+  if (offset !== centralEnd) invalid();
+}

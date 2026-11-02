@@ -78,8 +78,36 @@ See [Read contracts and protected results](docs/reads.md) for output bounds, pag
 `technitium-axi inventory --json` is the generated reference for write commands, operation IDs, input fields, required fields, SecretRef fields and record selectors.
 Write inputs use vendor parameter names inside a JSON `parameters` object, supplied through a protected absolute `--input-file` owned by the current user with no group or other access (for example, mode 0600).
 Input and upload files are limited to 16 MiB each.
+Existing protected result files can be overwritten independently of that input limit.
+Saving a result preserves access permissions on existing destination directories; new directories are private.
 Booleans and integers use JSON types; list fields use arrays of strings.
 Write commands use the flags listed in their `--help`, rather than the read projection and paging flags.
+
+`settings set` accepts all fields listed in the inventory's configuration map, including modern fields and the `preferIPv6` and `reverseProxyNetworkACL` compatibility inputs.
+Supply a `baseline` with exactly the selected fields from a fresh protected settings read.
+Omitted fields are preserved; arrays replace collections and `[]` clears them.
+To append, include the existing collection plus the new entries and retain the original collection in the baseline.
+The optional input `encoding` selects `form` (default) or `json`; `--json` controls output only.
+Structured QPM rows contain `prefix`, `udpLimit` and `tcpLimit`.
+TSIG rows contain `keyName`, a `sharedSecret` SecretRef and `algorithmName`; proxy and certificate passwords also require SecretRefs in both changed values and baselines.
+Never submit a redacted GET response as a patch.
+Settings are not transactional: a handler error can leave earlier assignments saved and requires inspection before another write.
+
+```json
+{
+  "parameters": {"defaultRecordTtl": 300, "forwarders": ["192.0.2.2"], "enableBlocking": false},
+  "baseline": {"defaultRecordTtl": 3600, "forwarders": ["192.0.2.1"], "enableBlocking": true},
+  "encoding": "json"
+}
+```
+
+`app install`, `app update` and `settings restore` use `upload: {"file": "/absolute/path/package.zip"}` in the input envelope.
+The preview binds the exact upload hash, and execution sends one binary file with operation parameters in the query string for vendor proxy compatibility.
+Restore selection flags are independent booleans and default to false at the vendor.
+Use `--result-file` to retain exact settings or restore responses, including returned proxy and TSIG secrets, in a protected file.
+An unsafe explicit result destination is rejected before write dispatch.
+`settings temporary-disable-blocking` takes a positive integer `minutes` and returns the vendor's expiry time; `settings force-update-block-lists` triggers an asynchronous update.
+`log delete` takes a `log` name and optional `node`; `log delete-all` accepts optional `node`.
 
 Mutations require the selected file profile's `writes.allowWrites` to be `true` and its `writes.operations` to contain the exact capability from the inventory.
 The accepted grant values live in `technitium-axi schema --json`; there are no wildcard grants.
