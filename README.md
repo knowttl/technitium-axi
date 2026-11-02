@@ -191,7 +191,8 @@ technitium-axi zone record add --profile automation --input-file /absolute/path/
 A preview resolves credentials, operation SecretRefs and uploads locally.
 Only the [SSO preflight](#writes) sends vendor reads during preview; previews never dispatch mutations.
 It reports permission, target and upload metadata without secret values.
-Each preview issues a fresh invocation ID within its digest, bound to the selected credential, target and input contents.
+Each preview issues a fresh invocation ID within its digest, bound to the selected profile, target and input contents.
+Bearer-authenticated writes also bind the selected credential; explicit identity acquisition uses a private local acquisition key.
 An executed mutation creates an exclusive durable intent before dispatch and retains its receipt; if that confirmation reaches journal creation again, it is refused with `REPLAY_DENIED`.
 A new preview permits a later legitimate operation with identical content.
 
