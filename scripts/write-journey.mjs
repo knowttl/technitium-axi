@@ -6,8 +6,9 @@ import matrix from '../tests/fixtures/record-inputs.json' with { type: 'json' };
 import { dnssecJourney, dnssecTasks } from './dnssec-journey.mjs';
 import { listsCacheJourney, listsCacheTasks } from './lists-cache-journey.mjs';
 import { zoneJourney, zoneTasks } from './zone-journey.mjs';
+import { settingsJourney, settingsTasks } from './settings-journey.mjs';
 
-export const writeTasks = ['B3.01', 'B3.02', 'B3.03', 'B3.04', 'B3.05', 'B3.CR-013', 'B3.CR-014', 'B3.dnssec', ...dnssecTasks, 'B3.lists-cache', ...listsCacheTasks, ...zoneTasks, 'B3.OP-049', 'B3.OP-051', 'B3.OP-052'];
+export const writeTasks = ['B3.01', 'B3.02', 'B3.03', 'B3.04', 'B3.05', 'B3.CR-013', 'B3.CR-014', 'B3.dnssec', ...dnssecTasks, 'B3.lists-cache', ...listsCacheTasks, ...zoneTasks, ...settingsTasks, 'B3.OP-049', 'B3.OP-051', 'B3.OP-052'];
 const hash = value => createHash('sha256').update(value).digest('hex');
 
 export async function writeJourney({ task, temporary, env, run, executable, vendors }) {
@@ -33,7 +34,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
   };
   const success = async (...args) => {
     const result = await invoke(...args);
-    assert.equal(result.code, 0, `${args[0]} ${args[1].parameters.type ?? ''}: ${result.stdout}`);
+    assert.equal(result.code, 0, `${args[0]} [${Object.keys(args[1].parameters).join(',')}]: ${result.stdout}`);
     return result.value;
   };
   const failure = async (code, ...args) => {
@@ -46,6 +47,10 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     const preview = await success(command, input, [], extraEnv);
     return await success(command, input, ['--execute', '--confirm', preview.preview.digest], extraEnv);
   };
+  if (settingsTasks.includes(task)) {
+    await settingsJourney({ task, directory, env, run, executable, vendors, config, token, secret, configure, success, failure, execute });
+    return [`native:${task}:write-behavior`];
+  }
   if (task === 'B3.lists-cache' || listsCacheTasks.includes(task)) {
     for (const selected of task === 'B3.lists-cache' ? listsCacheTasks : [task]) {
       await listsCacheJourney({ task: selected, directory, env, run, executable, vendors, config, token, configure, success, failure, execute });
@@ -271,6 +276,9 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         before: { updateSecurityPolicies: [{ tsigKeyName: 'key', domain: 'example.test', allowedTypes: ['A', 'TXT'] }] },
         baseline: { updateSecurityPolicies: [{ tsigKeyName: 'key', domain: 'example.test', allowedTypes: ['A', 'TXT'] }] }, parameters: { updateSecurityPolicies: '' },
         after: { updateSecurityPolicies: [] }, form: { updateSecurityPolicies: '' } },
+      { command: 'admin group set', grant: 'OP-109', get: '/api/admin/groups/get', set: '/api/admin/groups/set', target: { group: 'Operators' },
+        before: { name: 'Operators', members: ['old'] }, baseline: { members: ['old'] }, parameters: { members: ['Bob', 'alice'] },
+        after: { name: 'Operators', members: ['alice', 'bob'] }, form: { members: 'Bob,alice' } },
       { command: 'admin group set', grant: 'OP-109', get: '/api/admin/groups/get', set: '/api/admin/groups/set', target: { group: 'Operators' },
         before: { name: 'Operators', members: ['old'] }, baseline: { newGroup: 'Operators', members: ['old'] }, parameters: { newGroup: 'Renamed', members: ['new'] },
         after: { name: 'Renamed', members: ['new'] }, form: { newGroup: 'Renamed', members: 'new' } },

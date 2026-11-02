@@ -1,6 +1,7 @@
 import { readContracts } from './read-contracts.js';
 import { archiveContract } from './archive-contract.js';
 import { writeContracts, writeFlags, recordFamilies } from './write-contracts.js';
+import { settingsFields, dhcpFields } from './configuration.js';
 
 export const readFlags = ['--json', '--help', '--config', '--profile', '--result-file', '--fields', '--full', '--max-bytes', '--max-requests', '--max-pages', '--max-elapsed-ms'];
 
@@ -25,8 +26,9 @@ export const commands = [
       ...(['OP-022', 'OP-023'].includes(item.id) ? { upload: { file: 'protected absolute path', format: item.id === 'OP-023' ? ['multipart (default)', 'text'] : ['multipart'] } } : {}),
       ...(item.id === 'OP-029' ? { target: 'Exactly one of zone or nonempty zones array' } : {}),
       ...(item.id === 'OP-034' ? { permissions: { userPermissions: ['username', 'canView', 'canModify', 'canDelete'], groupPermissions: ['name', 'canView', 'canModify', 'canDelete'], shape: 'Array of rows; permission flags are booleans; an empty user array clears user permissions; group replacements retain Administrators and DNS Administrators with all permissions' } } : {}),
+      ...(item.id === 'OP-080' ? { configuration: settingsFields, encoding: ['form', 'json'], secretRows: 'tsigKeys rows require a SecretRef for sharedSecret' } : {}),
       ...(item.id === 'OP-077' ? { capabilities: ['OP-077.resolve', 'OP-077.import'] } : {}),
       ...(['OP-049', 'OP-051', 'OP-052'].includes(item.id) ? { recordFamilies, dnameDeletion: 'pending shipped-library mapping and independent review' } : {}) } })),
 ];
 
-export const inventory = { version: 1, tool: 'technitium-axi', commands };
+export const inventory = { version: 1, tool: 'technitium-axi', commands, dhcpFields };

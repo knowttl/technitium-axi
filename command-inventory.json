@@ -4859,13 +4859,822 @@
           "upload"
         ],
         "fields": [
+          "dnsServerDomain",
+          "defaultResponsiblePerson",
+          "ipv6Mode",
+          "eDnsClientSubnetIpv4Override",
+          "eDnsClientSubnetIpv6Override",
+          "webServiceHttpUnixSocket",
+          "webServiceTlsUnixSocket",
+          "webServiceTlsCertificatePath",
+          "webServiceRealIpHeader",
+          "webServiceCspFrameAncestorsHeader",
+          "dnsOverHttpUnixSocket",
+          "dnsOverHttpsUnixSocket",
+          "dnsTlsCertificatePath",
+          "dnsOverHttpRealIpHeader",
+          "recursion",
+          "blockingType",
+          "proxyType",
+          "proxyAddress",
+          "proxyUsername",
+          "forwarderProtocol",
+          "loggingType",
+          "logFolder",
+          "useSoaSerialDateScheme",
+          "dnsServerEnableCheckForUpdate",
+          "dnsAppsEnableAutomaticUpdate",
+          "enableUdpSocketPool",
+          "dnssecValidation",
+          "eDnsClientSubnet",
+          "webServiceEnableHttpUnixSocket",
+          "webServiceEnableTlsUnixSocket",
+          "webServiceEnableTls",
+          "webServiceEnableHttp3",
+          "webServiceHttpToTlsRedirect",
+          "webServiceUseSelfSignedTlsCertificate",
+          "enableEDnsClientSubnetSourceAddress",
+          "enableDnsOverUdpProxy",
+          "enableDnsOverTcpProxy",
+          "enableDnsOverHttp",
+          "enableDnsOverHttpUnixSocket",
+          "enableDnsOverHttpsUnixSocket",
+          "enableDnsOverTls",
+          "enableDnsOverHttps",
+          "enableDnsOverHttp3",
+          "enableDnsOverQuic",
+          "enableDnsOverHttpHelpRedirect",
+          "randomizeName",
+          "qnameMinimization",
+          "locallyServedDnsZones",
+          "saveCache",
+          "serveStale",
+          "enableCachePrefetch",
+          "enableBlocking",
+          "allowTxtBlockingReport",
+          "concurrentForwarding",
+          "enableLogging",
+          "ignoreResolverLogs",
+          "logQueries",
+          "noStackTrace",
+          "useLocalTime",
+          "enableInMemoryStats",
+          "preferIPv6",
+          "defaultRecordTtl",
+          "defaultNsRecordTtl",
+          "defaultSoaRecordTtl",
+          "minSoaRefresh",
+          "minSoaRetry",
+          "udpPayloadSize",
+          "eDnsClientSubnetIPv4PrefixLength",
+          "eDnsClientSubnetIPv6PrefixLength",
+          "qpmLimitSampleMinutes",
+          "qpmLimitUdpTruncationPercentage",
+          "clientTimeout",
+          "tcpSendTimeout",
+          "tcpReceiveTimeout",
+          "quicIdleTimeout",
+          "quicMaxInboundStreams",
+          "listenBacklog",
+          "udpSendBufferSizeKB",
+          "udpReceiveBufferSizeKB",
+          "maxConcurrentResolutionsPerCore",
+          "webServiceHttpPort",
+          "webServiceTlsPort",
+          "dnsOverUdpProxyPort",
+          "dnsOverTcpProxyPort",
+          "dnsOverHttpPort",
+          "dnsOverTlsPort",
+          "dnsOverHttpsPort",
+          "dnsOverQuicPort",
+          "resolverRetries",
+          "resolverTimeout",
+          "resolverConcurrency",
+          "resolverMaxStackCount",
+          "serveStaleTtl",
+          "serveStaleAnswerTtl",
+          "serveStaleResetTtl",
+          "serveStaleMaxWaitTime",
+          "cacheMaximumEntries",
+          "cacheMinimumRecordTtl",
+          "cacheMaximumRecordTtl",
+          "cacheNegativeRecordTtl",
+          "cacheFailureRecordTtl",
+          "cachePrefetchEligibility",
+          "cachePrefetchTrigger",
+          "blockingAnswerTtl",
+          "blockListUpdateIntervalHours",
+          "proxyPort",
+          "forwarderRetries",
+          "forwarderTimeout",
+          "forwarderConcurrency",
+          "maxLogFileDays",
+          "maxStatFileDays",
+          "dnsServerLocalEndPoints",
+          "dnsServerIPv4SourceAddresses",
+          "dnsServerIPv6SourceAddresses",
+          "zoneTransferAllowedNetworks",
+          "notifyAllowedNetworks",
+          "qpmLimitBypassList",
+          "webServiceLocalAddresses",
+          "webServiceReverseProxyAddresses",
+          "dnsReverseProxyNetworkACL",
+          "reverseProxyNetworkACL",
+          "recursionNetworkACL",
+          "blockingBypassList",
+          "customBlockingAddresses",
           "blockListUrls",
+          "proxyBypass",
           "forwarders",
-          "proxyBypass"
+          "socketPoolExcludedPorts",
+          "qpmPrefixLimitsIPv4",
+          "qpmPrefixLimitsIPv6",
+          "tsigKeys",
+          "webServiceTlsCertificatePassword",
+          "dnsTlsCertificatePassword",
+          "proxyPassword"
+        ],
+        "required": [],
+        "secrets": [
+          "webServiceTlsCertificatePassword",
+          "dnsTlsCertificatePassword",
+          "proxyPassword"
+        ],
+        "baseline": "/api/settings/get",
+        "configuration": {
+          "dnsServerDomain": {
+            "type": "string"
+          },
+          "defaultResponsiblePerson": {
+            "type": "string"
+          },
+          "ipv6Mode": {
+            "type": "string"
+          },
+          "eDnsClientSubnetIpv4Override": {
+            "type": "string"
+          },
+          "eDnsClientSubnetIpv6Override": {
+            "type": "string"
+          },
+          "webServiceHttpUnixSocket": {
+            "type": "string"
+          },
+          "webServiceTlsUnixSocket": {
+            "type": "string"
+          },
+          "webServiceTlsCertificatePath": {
+            "type": "string"
+          },
+          "webServiceRealIpHeader": {
+            "type": "string"
+          },
+          "webServiceCspFrameAncestorsHeader": {
+            "type": "string"
+          },
+          "dnsOverHttpUnixSocket": {
+            "type": "string"
+          },
+          "dnsOverHttpsUnixSocket": {
+            "type": "string"
+          },
+          "dnsTlsCertificatePath": {
+            "type": "string"
+          },
+          "dnsOverHttpRealIpHeader": {
+            "type": "string"
+          },
+          "recursion": {
+            "type": "string"
+          },
+          "blockingType": {
+            "type": "string"
+          },
+          "proxyType": {
+            "type": "string",
+            "read": "proxy.type"
+          },
+          "proxyAddress": {
+            "type": "string",
+            "read": "proxy.address"
+          },
+          "proxyUsername": {
+            "type": "string",
+            "read": "proxy.username"
+          },
+          "forwarderProtocol": {
+            "type": "string"
+          },
+          "loggingType": {
+            "type": "string"
+          },
+          "logFolder": {
+            "type": "string"
+          },
+          "useSoaSerialDateScheme": {
+            "type": "boolean"
+          },
+          "dnsServerEnableCheckForUpdate": {
+            "type": "boolean"
+          },
+          "dnsAppsEnableAutomaticUpdate": {
+            "type": "boolean"
+          },
+          "enableUdpSocketPool": {
+            "type": "boolean"
+          },
+          "dnssecValidation": {
+            "type": "boolean"
+          },
+          "eDnsClientSubnet": {
+            "type": "boolean"
+          },
+          "webServiceEnableHttpUnixSocket": {
+            "type": "boolean"
+          },
+          "webServiceEnableTlsUnixSocket": {
+            "type": "boolean"
+          },
+          "webServiceEnableTls": {
+            "type": "boolean"
+          },
+          "webServiceEnableHttp3": {
+            "type": "boolean"
+          },
+          "webServiceHttpToTlsRedirect": {
+            "type": "boolean"
+          },
+          "webServiceUseSelfSignedTlsCertificate": {
+            "type": "boolean"
+          },
+          "enableEDnsClientSubnetSourceAddress": {
+            "type": "boolean"
+          },
+          "enableDnsOverUdpProxy": {
+            "type": "boolean"
+          },
+          "enableDnsOverTcpProxy": {
+            "type": "boolean"
+          },
+          "enableDnsOverHttp": {
+            "type": "boolean"
+          },
+          "enableDnsOverHttpUnixSocket": {
+            "type": "boolean"
+          },
+          "enableDnsOverHttpsUnixSocket": {
+            "type": "boolean"
+          },
+          "enableDnsOverTls": {
+            "type": "boolean"
+          },
+          "enableDnsOverHttps": {
+            "type": "boolean"
+          },
+          "enableDnsOverHttp3": {
+            "type": "boolean"
+          },
+          "enableDnsOverQuic": {
+            "type": "boolean"
+          },
+          "enableDnsOverHttpHelpRedirect": {
+            "type": "boolean"
+          },
+          "randomizeName": {
+            "type": "boolean"
+          },
+          "qnameMinimization": {
+            "type": "boolean"
+          },
+          "locallyServedDnsZones": {
+            "type": "boolean"
+          },
+          "saveCache": {
+            "type": "boolean"
+          },
+          "serveStale": {
+            "type": "boolean"
+          },
+          "enableCachePrefetch": {
+            "type": "boolean"
+          },
+          "enableBlocking": {
+            "type": "boolean"
+          },
+          "allowTxtBlockingReport": {
+            "type": "boolean"
+          },
+          "concurrentForwarding": {
+            "type": "boolean"
+          },
+          "enableLogging": {
+            "type": "boolean"
+          },
+          "ignoreResolverLogs": {
+            "type": "boolean"
+          },
+          "logQueries": {
+            "type": "boolean"
+          },
+          "noStackTrace": {
+            "type": "boolean"
+          },
+          "useLocalTime": {
+            "type": "boolean"
+          },
+          "enableInMemoryStats": {
+            "type": "boolean"
+          },
+          "preferIPv6": {
+            "type": "boolean"
+          },
+          "defaultRecordTtl": {
+            "type": "integer"
+          },
+          "defaultNsRecordTtl": {
+            "type": "integer"
+          },
+          "defaultSoaRecordTtl": {
+            "type": "integer"
+          },
+          "minSoaRefresh": {
+            "type": "integer"
+          },
+          "minSoaRetry": {
+            "type": "integer"
+          },
+          "udpPayloadSize": {
+            "type": "integer"
+          },
+          "eDnsClientSubnetIPv4PrefixLength": {
+            "type": "integer"
+          },
+          "eDnsClientSubnetIPv6PrefixLength": {
+            "type": "integer"
+          },
+          "qpmLimitSampleMinutes": {
+            "type": "integer"
+          },
+          "qpmLimitUdpTruncationPercentage": {
+            "type": "integer"
+          },
+          "clientTimeout": {
+            "type": "integer"
+          },
+          "tcpSendTimeout": {
+            "type": "integer"
+          },
+          "tcpReceiveTimeout": {
+            "type": "integer"
+          },
+          "quicIdleTimeout": {
+            "type": "integer"
+          },
+          "quicMaxInboundStreams": {
+            "type": "integer"
+          },
+          "listenBacklog": {
+            "type": "integer"
+          },
+          "udpSendBufferSizeKB": {
+            "type": "integer"
+          },
+          "udpReceiveBufferSizeKB": {
+            "type": "integer"
+          },
+          "maxConcurrentResolutionsPerCore": {
+            "type": "integer"
+          },
+          "webServiceHttpPort": {
+            "type": "integer"
+          },
+          "webServiceTlsPort": {
+            "type": "integer"
+          },
+          "dnsOverUdpProxyPort": {
+            "type": "integer"
+          },
+          "dnsOverTcpProxyPort": {
+            "type": "integer"
+          },
+          "dnsOverHttpPort": {
+            "type": "integer"
+          },
+          "dnsOverTlsPort": {
+            "type": "integer"
+          },
+          "dnsOverHttpsPort": {
+            "type": "integer"
+          },
+          "dnsOverQuicPort": {
+            "type": "integer"
+          },
+          "resolverRetries": {
+            "type": "integer"
+          },
+          "resolverTimeout": {
+            "type": "integer"
+          },
+          "resolverConcurrency": {
+            "type": "integer"
+          },
+          "resolverMaxStackCount": {
+            "type": "integer"
+          },
+          "serveStaleTtl": {
+            "type": "integer"
+          },
+          "serveStaleAnswerTtl": {
+            "type": "integer"
+          },
+          "serveStaleResetTtl": {
+            "type": "integer"
+          },
+          "serveStaleMaxWaitTime": {
+            "type": "integer"
+          },
+          "cacheMaximumEntries": {
+            "type": "integer"
+          },
+          "cacheMinimumRecordTtl": {
+            "type": "integer"
+          },
+          "cacheMaximumRecordTtl": {
+            "type": "integer"
+          },
+          "cacheNegativeRecordTtl": {
+            "type": "integer"
+          },
+          "cacheFailureRecordTtl": {
+            "type": "integer"
+          },
+          "cachePrefetchEligibility": {
+            "type": "integer"
+          },
+          "cachePrefetchTrigger": {
+            "type": "integer"
+          },
+          "blockingAnswerTtl": {
+            "type": "integer"
+          },
+          "blockListUpdateIntervalHours": {
+            "type": "integer"
+          },
+          "proxyPort": {
+            "type": "integer",
+            "read": "proxy.port"
+          },
+          "forwarderRetries": {
+            "type": "integer"
+          },
+          "forwarderTimeout": {
+            "type": "integer"
+          },
+          "forwarderConcurrency": {
+            "type": "integer"
+          },
+          "maxLogFileDays": {
+            "type": "integer"
+          },
+          "maxStatFileDays": {
+            "type": "integer"
+          },
+          "dnsServerLocalEndPoints": {
+            "type": "list"
+          },
+          "dnsServerIPv4SourceAddresses": {
+            "type": "list"
+          },
+          "dnsServerIPv6SourceAddresses": {
+            "type": "list"
+          },
+          "zoneTransferAllowedNetworks": {
+            "type": "list"
+          },
+          "notifyAllowedNetworks": {
+            "type": "list"
+          },
+          "qpmLimitBypassList": {
+            "type": "list"
+          },
+          "webServiceLocalAddresses": {
+            "type": "list"
+          },
+          "webServiceReverseProxyAddresses": {
+            "type": "list"
+          },
+          "dnsReverseProxyNetworkACL": {
+            "type": "list"
+          },
+          "reverseProxyNetworkACL": {
+            "type": "list",
+            "read": "dnsReverseProxyNetworkACL"
+          },
+          "recursionNetworkACL": {
+            "type": "list"
+          },
+          "blockingBypassList": {
+            "type": "list"
+          },
+          "customBlockingAddresses": {
+            "type": "list"
+          },
+          "blockListUrls": {
+            "type": "list"
+          },
+          "proxyBypass": {
+            "type": "list",
+            "read": "proxy.bypass"
+          },
+          "forwarders": {
+            "type": "list"
+          },
+          "socketPoolExcludedPorts": {
+            "type": "ports"
+          },
+          "qpmPrefixLimitsIPv4": {
+            "type": "rows",
+            "columns": [
+              "prefix",
+              "udpLimit",
+              "tcpLimit"
+            ]
+          },
+          "qpmPrefixLimitsIPv6": {
+            "type": "rows",
+            "columns": [
+              "prefix",
+              "udpLimit",
+              "tcpLimit"
+            ]
+          },
+          "tsigKeys": {
+            "type": "rows",
+            "columns": [
+              "keyName",
+              "sharedSecret",
+              "algorithmName"
+            ]
+          },
+          "webServiceTlsCertificatePassword": {
+            "type": "string",
+            "secret": true
+          },
+          "dnsTlsCertificatePassword": {
+            "type": "string",
+            "secret": true
+          },
+          "proxyPassword": {
+            "type": "string",
+            "secret": true,
+            "read": "proxy.password"
+          }
+        },
+        "encoding": [
+          "form",
+          "json"
+        ],
+        "secretRows": "tsigKeys rows require a SecretRef for sharedSecret"
+      }
+    },
+    {
+      "command": "settings force-update-block-lists",
+      "description": "Preview or execute settings force-update-block-lists",
+      "effect": "write",
+      "operation": "OP-082",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [],
+        "required": [],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "settings temporary-disable-blocking",
+      "description": "Preview or execute settings temporary-disable-blocking",
+      "effect": "write",
+      "operation": "OP-083",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "minutes"
+        ],
+        "required": [
+          "minutes"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "app install",
+      "description": "Preview or execute app install",
+      "effect": "write",
+      "operation": "OP-072",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "name"
+        ],
+        "required": [
+          "name"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "app update",
+      "description": "Preview or execute app update",
+      "effect": "write",
+      "operation": "OP-073",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "name"
+        ],
+        "required": [
+          "name"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "settings restore",
+      "description": "Preview or execute settings restore",
+      "effect": "write",
+      "operation": "OP-085",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "authConfig",
+          "clusterConfig",
+          "webServiceSettings",
+          "dnsSettings",
+          "logSettings",
+          "zones",
+          "allowedZones",
+          "blockedZones",
+          "blockLists",
+          "apps",
+          "scopes",
+          "stats",
+          "logs",
+          "deleteExistingFiles"
         ],
         "required": [],
         "secrets": [],
-        "baseline": "/api/settings/get"
+        "baseline": null
+      }
+    },
+    {
+      "command": "log delete",
+      "description": "Preview or execute log delete",
+      "effect": "write",
+      "operation": "OP-136",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "log"
+        ],
+        "required": [
+          "log"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "log delete-all",
+      "description": "Preview or execute log delete-all",
+      "effect": "write",
+      "operation": "OP-137",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node"
+        ],
+        "required": [],
+        "secrets": [],
+        "baseline": null
       }
     },
     {
@@ -4945,5 +5754,138 @@
         "baseline": null
       }
     }
-  ]
+  ],
+  "dhcpFields": {
+    "name": {
+      "type": "string"
+    },
+    "newName": {
+      "type": "string"
+    },
+    "startingAddress": {
+      "type": "string"
+    },
+    "endingAddress": {
+      "type": "string"
+    },
+    "subnetMask": {
+      "type": "string"
+    },
+    "domainName": {
+      "type": "string"
+    },
+    "serverAddress": {
+      "type": "string"
+    },
+    "serverHostName": {
+      "type": "string"
+    },
+    "bootFileName": {
+      "type": "string"
+    },
+    "routerAddress": {
+      "type": "string"
+    },
+    "leaseTimeDays": {
+      "type": "integer"
+    },
+    "leaseTimeHours": {
+      "type": "integer"
+    },
+    "leaseTimeMinutes": {
+      "type": "integer"
+    },
+    "offerDelayTime": {
+      "type": "integer"
+    },
+    "pingCheckTimeout": {
+      "type": "integer"
+    },
+    "pingCheckRetries": {
+      "type": "integer"
+    },
+    "dnsTtl": {
+      "type": "integer"
+    },
+    "pingCheckEnabled": {
+      "type": "boolean"
+    },
+    "dnsUpdates": {
+      "type": "boolean"
+    },
+    "dnsOverwriteForDynamicLease": {
+      "type": "boolean"
+    },
+    "useThisDnsServer": {
+      "type": "boolean"
+    },
+    "allowOnlyReservedLeases": {
+      "type": "boolean"
+    },
+    "blockLocallyAdministeredMacAddresses": {
+      "type": "boolean"
+    },
+    "ignoreClientIdentifierOption": {
+      "type": "boolean"
+    },
+    "domainSearchList": {
+      "type": "list"
+    },
+    "dnsServers": {
+      "type": "list"
+    },
+    "winsServers": {
+      "type": "list"
+    },
+    "ntpServers": {
+      "type": "list"
+    },
+    "ntpServerDomainNames": {
+      "type": "list"
+    },
+    "capwapAcIpAddresses": {
+      "type": "list"
+    },
+    "tftpServerAddresses": {
+      "type": "list"
+    },
+    "staticRoutes": {
+      "type": "rows",
+      "columns": [
+        "destination",
+        "subnetMask",
+        "router"
+      ]
+    },
+    "vendorInfo": {
+      "type": "rows",
+      "columns": [
+        "identifier",
+        "information"
+      ]
+    },
+    "genericOptions": {
+      "type": "rows",
+      "columns": [
+        "code",
+        "value"
+      ]
+    },
+    "exclusions": {
+      "type": "rows",
+      "columns": [
+        "startingAddress",
+        "endingAddress"
+      ]
+    },
+    "reservedLeases": {
+      "type": "rows",
+      "columns": [
+        "hostName",
+        "hardwareAddress",
+        "address",
+        "comments"
+      ]
+    }
+  }
 }

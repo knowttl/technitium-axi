@@ -81,6 +81,7 @@ export async function main(args: string[]): Promise<void> {
     if (readContract) readInputs(readContract, readOptions);
     const writeContract = writeContracts.find(item => item.command === command);
     const input = writeContract ? await writeInput(writeContract, options.inputFile) : undefined;
+    if (writeContract && options.resultFile && flags.has('--execute')) await new PrivateFiles().destination(options.resultFile);
     const credential = await selectProfile(options);
     let token: string | undefined;
     if (command && command !== 'status') { token = await credential.token(); redactor.add(token); }
