@@ -91,11 +91,12 @@ Use the inventory's configuration map for field types and structured row columns
 `defaultResponsiblePerson` accepts only a plain `local@domain` address in parameters and baselines, preserving its case; an empty string clears the value.
 Display names, comments and angle brackets are rejected locally before any vendor request; full MailAddress syntax is deferred.
 TSIG shared secrets and proxy and certificate passwords require SecretRefs in both changed values and baselines.
+In parameters, a TSIG shared-secret reference resolving to an empty string requests a vendor-generated secret.
 For an absent certificate or proxy password, use a baseline SecretRef resolving to an empty string; an absent proxy username uses an empty string directly.
 Updating a certificate password requires an existing or selected certificate path.
 Proxy updates preserve unselected proxy fields; disabling the proxy clears its configuration.
 Forwarder replacement preserves the current transport unless selected explicitly; clearing the list resets it to UDP.
-Settings comparisons account for trailing dots in `dnsServerDomain`, blank web-service headers restoring defaults, and `HttpsJson` normalizing to `Https`.
+Settings comparisons account for case and trailing dots in `dnsServerDomain`, blank web-service headers restoring defaults, and `HttpsJson` normalizing to `Https`.
 Never submit a redacted GET response as a patch.
 Settings are not transactional: a handler error can leave earlier assignments saved and requires inspection before another write.
 
@@ -108,12 +109,13 @@ Settings are not transactional: a handler error can leave earlier assignments sa
 ```
 
 `app install`, `app update` and `settings restore` use `upload: {"file": "/absolute/path/package.zip"}` in the input envelope.
+These uploads must be ZIP archives with safe relative entry names and no symbolic links; invalid archives are rejected locally with `UPLOAD_INVALID`.
 The preview binds the exact upload hash, and execution sends one binary file with operation parameters in the query string for vendor proxy compatibility.
 Restore selection flags are independent booleans and default to false at the vendor.
 Use `--result-file` to retain exact settings or restore responses, including returned proxy and TSIG secrets, in a protected file.
 An unsafe explicit result destination is rejected before write dispatch.
 `settings temporary-disable-blocking` takes a positive integer `minutes` and returns the vendor's expiry time; `settings force-update-block-lists` triggers an asynchronous update.
-`log delete` takes a `log` name and optional `node`; `log delete-all` accepts optional `node`.
+`log delete` takes the `fileName` returned by `log list` as its `log` value, without a path, and optional `node`; `log delete-all` accepts optional `node`.
 
 Mutations require the selected file profile's `writes.allowWrites` to be `true` and its `writes.operations` to contain the exact capability from the inventory.
 The accepted grant values live in `technitium-axi schema --json`; there are no wildcard grants.
