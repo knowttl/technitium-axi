@@ -13,8 +13,9 @@ import { usersJourney, usersTasks } from './users-journey.mjs';
 import { adminAccountsJourney, adminAccountsTasks } from './admin-accounts-journey.mjs';
 import { clusterJourney, clusterTasks } from './cluster-journey.mjs';
 import { readJourney } from './read-journey.mjs';
+import { ssoLdapJourney, ssoLdapTasks } from './sso-ldap-journey.mjs';
 
-export const writeTasks = ['B3.01', 'B3.02', 'B3.03', 'B3.04', 'B3.05', 'B3.CR-013', 'B3.CR-014', 'B3.dnssec', ...dnssecTasks, 'B3.lists-cache', ...listsCacheTasks, ...zoneTasks, ...settingsTasks, ...appsRestoreTasks, ...dhcpTasks, ...usersTasks, ...adminAccountsTasks, ...clusterTasks, 'B3.OP-049', 'B3.OP-051', 'B3.OP-052'];
+export const writeTasks = ['B3.01', 'B3.02', 'B3.03', 'B3.04', 'B3.05', 'B3.CR-013', 'B3.CR-014', 'B3.dnssec', ...dnssecTasks, 'B3.lists-cache', ...listsCacheTasks, ...zoneTasks, ...settingsTasks, ...appsRestoreTasks, ...dhcpTasks, ...usersTasks, ...adminAccountsTasks, ...clusterTasks, ...ssoLdapTasks, 'B3.OP-049', 'B3.OP-051', 'B3.OP-052'];
 const hash = value => createHash('sha256').update(value).digest('hex');
 
 export async function writeJourney({ task, temporary, env, run, executable, vendors }) {
@@ -62,6 +63,10 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     const preview = await success(command, input, [], extraEnv);
     return await success(command, input, ['--execute', '--confirm', preview.preview.digest], extraEnv);
   };
+  if (ssoLdapTasks.includes(task)) {
+    await ssoLdapJourney({ task, env, run, executable, vendors, config, token, secret, configure, success, failure, execute });
+    return [`native:${task}:write-behavior`];
+  }
   if (clusterTasks.includes(task)) {
     await clusterJourney({ task, directory, env, run, executable, vendors, config, token, secret, configure, success, failure, execute });
     if (task === 'B5.03') {

@@ -10,7 +10,7 @@ import { PrivateFiles } from './private-file.js';
 import { checkStatus, Redactor, vendorRead, vendorRequest } from './vendor.js';
 import { recordFamilies, recordTypeNames } from './write-contracts.js';
 import type { WriteContract } from './write-contracts.js';
-import { settingsFields, dhcpFields, validateConfiguration, configurationForm, settingValue, dhcpValue, validateDhcp } from './configuration.js';
+import { settingsFields, dhcpFields, identityFields, validateIdentity, validateConfiguration, configurationForm, settingValue, dhcpValue, validateDhcp } from './configuration.js';
 import { validateUploadArchive } from './archive-contract.js';
 import { clusterState, clusterMatches, clusterPreview, validateCluster, clusterTimers } from './cluster.js';
 import type { ClusterState } from './cluster.js';
@@ -286,6 +286,7 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
     } else {
       if (contract.id === 'OP-080') validateConfiguration(settingsFields[key]!, value);
       else if (contract.id === 'OP-092') validateDhcp(key, value);
+      else if (['OP-115', 'OP-142', 'OP-143'].includes(contract.id)) validateIdentity(key, value);
       else if (contract.id === 'OP-083' && key === 'minutes') {
         if (!Number.isSafeInteger(value) || Number(value) <= 0 || Number(value) > 2147483647) usage('Minutes must be a positive 32-bit integer');
       } else if (contract.id === 'OP-085' && key !== 'node') {
@@ -443,8 +444,7 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     const session = await identityResponse(profile, '/api/user/session/get', 'includeInfo=true', token);
     if (typeof session.token === 'string') redactor.add(session.token);
     if (!object(session.info) || !object(session.info.permissions) || !object(session.info.permissions.Administration) || session.info.permissions.Administration.canModify !== true || typeof session.username !== 'string') throw new ToolError('PERMISSION_DENIED', 'The actual caller requires Administration Modify', 'Use a caller with Administration Modify on the selected secondary', 1);
-    const state = await identityResponse(profile, '/api/admin/cluster/state', '', token);
-    const cluster = state.response;
+    const cluster = session.info;
     const nodes = object(cluster) && Array.isArray(cluster.clusterNodes) ? cluster.clusterNodes.filter(object) : [];
     const secondary = nodes.find(node => node.state === 'Self' && node.type === 'Secondary');
     const primary = nodes.find(node => node.type === 'Primary');
@@ -472,6 +472,7 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     if (value === undefined || value.length > 1024 * 1024) usage('SecretRef is missing or too large');
     redactor.add(value);
     if (contract.id === 'OP-080') validateConfiguration(settingsFields[key]!, value, true);
+    if (['OP-115', 'OP-142', 'OP-143'].includes(contract.id)) validateIdentity(key, value, true);
     values![key] = value;
   }
   let upload: Buffer | undefined;
@@ -578,7 +579,8 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
   }
   const form = new URLSearchParams(Object.entries(parameters).map(([key, value]) => [key,
     ['userPermissions', 'groupPermissions'].includes(key) ? permissionRows(key, value).flatMap(row => [row[key === 'userPermissions' ? 'username' : 'name'], row.canView, row.canModify, row.canDelete]).join('|')
-      : configurationForm(contract.id === 'OP-080' ? settingsFields[key] : contract.id === 'OP-092' ? dhcpFields[key] : undefined, value)]));
+      : key === 'ssoScopes' ? (value as string[]).join('|')
+      : configurationForm(contract.id === 'OP-080' ? settingsFields[key] : contract.id === 'OP-092' ? dhcpFields[key] : ['OP-115', 'OP-142', 'OP-143'].includes(contract.id) ? identityFields[key] : undefined, value)]));
   let body: string | Buffer = form.toString();
   let requestPath = contract.path;
   const headers: Record<string, string> = {};
