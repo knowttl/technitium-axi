@@ -131,7 +131,9 @@ For these operations, use `--reconcile <audit-id> --confirm '<original-preview.d
 Other operations require manual inspection of the exact selected target when their outcome is uncertain.
 Baseline checks, verification and reconciliation account for vendor member ordering and case, TSIG name sets, catalog names, enum case, IPv6 formatting, ACL network prefixes and merged update-policy rows.
 Permission replacements use arrays of getter-shaped rows: `userPermissions` rows contain `username`, `canView`, `canModify` and `canDelete`; `groupPermissions` rows use `name` instead of `username`.
-An empty permission array clears that collection, while an omitted collection remains unchanged.
+An empty user permission array clears that collection; group permission replacements always retain Administrators and DNS Administrators with all permissions.
+An omitted collection remains unchanged.
+Administrators membership replacements retain the authenticated caller.
 
 Zone import and Primary or Forwarder zone creation accept `upload: {"file":"/absolute/path/zone.txt"}` alongside `parameters`, without inline `records`.
 The upload is read before preview or dispatch, bound into the confirmation by its bytes and hash, and sent as multipart data.

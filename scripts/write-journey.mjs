@@ -210,6 +210,13 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     }
     const proxy = { type: 'Http', address: 'proxy.example.test', port: 8080, username: 'operator', password: secret, bypass: ['old.test'] };
     const mappings = [
+      ...[
+        { group: 'Administrators', members: [], after: ['planner'] },
+        { group: 'ADMINISTRATORS', members: ['BOB'], after: ['bob', 'planner'] },
+        { group: 'Administrators', members: ['PLANNER', 'bob'], after: ['bob', 'planner'] },
+      ].map(row => ({ command: 'admin group set', grant: 'OP-109', get: '/api/admin/groups/get', set: '/api/admin/groups/set', target: { group: row.group },
+        before: { name: row.group, members: ['old', 'planner'] }, baseline: { members: ['old', 'planner'] }, parameters: { members: row.members },
+        after: { name: row.group, members: row.after }, form: { members: row.members.join(',') } })),
       { command: 'admin group set', grant: 'OP-109', get: '/api/admin/groups/get', set: '/api/admin/groups/set', target: { group: 'Operators' },
         before: { name: 'Operators', members: ['old'] }, baseline: { members: ['OLD'] }, parameters: { members: ['BOB', 'alice', 'BOB'] },
         after: { name: 'Operators', members: ['alice', 'bob'] }, form: { members: 'BOB,alice,BOB' } },
@@ -262,7 +269,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         after: { name: 'Renamed', members: ['new'] }, form: { newGroup: 'Renamed', members: 'new' } },
     ];
     for (const row of mappings) {
-      await configure([row.grant]);
+      await configure([row.grant], row.target.group?.toLowerCase() === 'administrators' ? { username: 'not-the-authenticated-caller' } : {});
       let state = row.before;
       let setters = 0;
       let drop = false;
@@ -288,6 +295,10 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       const auditId = unknown.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
       await success(row.command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
       assert.equal(setters, 2);
+      if (row.target.group?.toLowerCase() === 'administrators') {
+        state = { ...state, members: state.members.filter(member => member !== 'planner') };
+        await failure('OUTCOME_UNKNOWN', row.command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+      }
       if (row.after.forwarderProtocol === 'Tls') {
         state = { ...state, forwarderProtocol: 'Udp' };
         await failure('OUTCOME_UNKNOWN', row.command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);

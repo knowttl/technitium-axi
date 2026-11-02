@@ -7,7 +7,7 @@ import { readOnly } from './credentials.js';
 import type { Profile } from './credentials.js';
 import { ToolError } from './errors.js';
 import { PrivateFiles } from './private-file.js';
-import { checkStatus, Redactor, vendorRequest } from './vendor.js';
+import { checkStatus, Redactor, vendorRead, vendorRequest } from './vendor.js';
 import { recordFamilies, recordTypeNames } from './write-contracts.js';
 import type { WriteContract } from './write-contracts.js';
 
@@ -326,6 +326,18 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     const baseline = await baselineRead(contract, profile, token, parameters, Object.keys(input.baseline!));
     if (canonical(baseline.selected) !== canonical(selectedValues(input.baseline!))) throw new ToolError('CONFLICT', 'Selected baseline changed after preview', 'Read the selected values and preview a new explicit replacement', 1);
     const selected = selectedValues(Object.fromEntries(Object.keys(input.baseline!).map(key => [key, parameters[key]])));
+    if (contract.id === 'OP-034' && Array.isArray(selected.groupPermissions)) {
+      const mandatory = ['administrators', 'dns administrators'];
+      selected.groupPermissions = baselineValue('groupPermissions', [
+        ...permissionRows('groupPermissions', selected.groupPermissions).filter(row => !mandatory.includes(String(row.name))),
+        ...mandatory.map(name => ({ name, canView: true, canModify: true, canDelete: true })),
+      ]);
+    }
+    if (contract.id === 'OP-109' && Array.isArray(selected.members) && String(parameters.newGroup ?? parameters.group).toLowerCase() === 'administrators') {
+      const session = await vendorRead(profile, 'user session get', token);
+      redactor.add(session.secret!);
+      selected.members = baselineValue('members', [...selected.members, session.projection.username]);
+    }
     const preserved = { ...baseline.preserved };
     if (contract.id === 'OP-080' && Array.isArray(selected.forwarders) && selected.forwarders.length === 0) preserved.forwarderProtocol = 'Udp';
     expected = postconditionHash({ selected, preserved });
