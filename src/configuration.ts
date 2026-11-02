@@ -1,5 +1,6 @@
 import { ToolError } from './errors.js';
 import { isAbsolute } from 'node:path';
+import { isIP } from 'node:net';
 
 type Field = { type: 'string' | 'boolean' | 'integer' | 'list' | 'ports' | 'rows'; columns?: string[]; secret?: boolean; read?: string };
 const words = (text: string) => text.split(' ');
@@ -33,6 +34,35 @@ export const dhcpFields: Record<string, Field> = {
   exclusions: { type: 'rows', columns: ['startingAddress', 'endingAddress'] },
   reservedLeases: { type: 'rows', columns: ['hostName', 'hardwareAddress', 'address', 'comments'] },
 };
+
+export function dhcpValue(key: string, value: unknown): unknown {
+  const field = dhcpFields[key]!;
+  if (value == null && ['list', 'rows'].includes(field.type)) return [];
+  if (value == null && field.type === 'string') return '';
+  if (['genericOptions', 'vendorInfo'].includes(key) && Array.isArray(value)) {
+    const column = key === 'genericOptions' ? 'value' : 'information';
+    return value.map(row => ({ ...row, [column]: typeof row?.[column] === 'string' && /^(?:[\da-fA-F]{2})+$/.test(row[column].replace(/:/g, ''))
+      ? row[column].replace(/:/g, '').toUpperCase().match(/../g)!.join(':') : row?.[column] }));
+  }
+  if (key === 'reservedLeases' && Array.isArray(value)) return value.map(row => !object(row) ? row : ({ ...row,
+    hardwareAddress: typeof row.hardwareAddress === 'string' ? row.hardwareAddress.replace(/[:-]/g, '').toUpperCase().match(/../g)?.join('-') ?? '' : row.hardwareAddress,
+    hostName: row.hostName ?? '', comments: row.comments ?? '' })).sort((a, b) => String(a?.address).localeCompare(String(b?.address), 'en', { numeric: true }));
+  return value;
+}
+
+export function validateDhcp(key: string, value: unknown): void {
+  validateConfiguration(dhcpFields[key]!, value);
+  const maximum: Record<string, number> = { leaseTimeDays: 65535, leaseTimeHours: 23, leaseTimeMinutes: 59,
+    offerDelayTime: 65535, pingCheckTimeout: 65535, pingCheckRetries: 255, dnsTtl: 4294967295 };
+  if (maximum[key] !== undefined && Number(value) > maximum[key]!) invalid();
+  if (['name', 'newName'].includes(key) && value === '') invalid();
+  if (['startingAddress', 'endingAddress', 'subnetMask', 'serverAddress', 'routerAddress'].includes(key) && value !== '' && isIP(String(value)) !== 4) invalid();
+  if (['dnsServers', 'winsServers', 'ntpServers', 'capwapAcIpAddresses', 'tftpServerAddresses'].includes(key) && (value as string[]).some(address => isIP(address) !== 4)) invalid();
+  if (['genericOptions', 'vendorInfo'].includes(key)) for (const row of value as Record<string, unknown>[]) {
+    const hex = row[key === 'genericOptions' ? 'value' : 'information'];
+    if (typeof hex !== 'string' || !/^(?:[\da-fA-F]{2})+$/.test(hex.replace(/:/g, '')) || key === 'genericOptions' && Number(row.code) > 255) invalid();
+  }
+}
 
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 function invalid(): never { throw new ToolError('USAGE', 'Invalid configuration field value', 'Use the configuration field types and row columns shown in inventory'); }

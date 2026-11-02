@@ -87,7 +87,7 @@ Omitted fields are preserved; arrays replace collections.
 An empty array clears collections except `dnsServerLocalEndPoints` and `webServiceLocalAddresses`, which reset to wildcard listeners.
 To append, include the existing collection plus the new entries and retain the original collection in the baseline.
 The optional input `encoding` selects `form` (default) or `json`; `--json` controls output only.
-Use the inventory's configuration map for field types and structured row columns; its `dhcpFields` map describes DHCP fields without enabling DHCP writes.
+Use the inventory's configuration map for field types and structured row columns.
 `defaultResponsiblePerson` accepts only a plain `local@domain` address in parameters and baselines, preserving its case; an empty string clears the value.
 Display names, comments and angle brackets are rejected locally before any vendor request; full MailAddress syntax is deferred.
 TSIG shared secrets and proxy and certificate passwords require SecretRefs in both changed values and baselines.
@@ -122,6 +122,16 @@ Restore responses can include current DNS settings secrets even when `dnsSetting
 An unsafe explicit result destination is rejected before write dispatch.
 `settings temporary-disable-blocking` takes a positive integer `minutes` and returns the vendor's expiry time; `settings force-update-block-lists` triggers an asynchronous update.
 `log delete` takes the `fileName` returned by `log list` as its `log` value, without a path, and optional `node`; `log delete-all` accepts optional `node`.
+
+DHCP lease removal and conversion require a scope `name` and exactly one of `clientIdentifier` or `hardwareAddress`.
+Scope enable, disable and delete take `name`; reservation removal also requires `hardwareAddress`.
+Reservation addition requires `hardwareAddress` and `ipAddress`, with optional `hostName` and `comments`, and checks for an existing hardware or address reservation before dispatch.
+Use a single-writer window for this check because the vendor does not atomically reject a concurrent duplicate address.
+`dhcp scope set` updates an existing scope using typed fields from the inventory's `dhcpFields` map.
+Supply the baseline for every changed field; when renaming, `baseline.newName` is the current scope name.
+Omitted fields are preserved, arrays replace collections, and empty arrays clear them.
+Structured rows retain the listed column order when encoded for the vendor, including option bytes, static routes, exclusions and reservations.
+Scope setters and reservation addition need a reusable API or session credential for their preflight reads.
 
 Mutations require the selected file profile's `writes.allowWrites` to be `true` and its `writes.operations` to contain the exact capability from the inventory.
 The accepted grant values live in `technitium-axi schema --json`; there are no wildcard grants.

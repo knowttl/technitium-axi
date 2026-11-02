@@ -10,7 +10,7 @@ import { PrivateFiles } from './private-file.js';
 import { checkStatus, Redactor, vendorRead, vendorRequest } from './vendor.js';
 import { recordFamilies, recordTypeNames } from './write-contracts.js';
 import type { WriteContract } from './write-contracts.js';
-import { settingsFields, validateConfiguration, configurationForm, settingValue } from './configuration.js';
+import { settingsFields, dhcpFields, validateConfiguration, configurationForm, settingValue, dhcpValue, validateDhcp } from './configuration.js';
 import { validateUploadArchive } from './archive-contract.js';
 
 const files = new PrivateFiles();
@@ -174,8 +174,8 @@ function baselineValue(key: string, value: unknown): unknown {
   return value;
 }
 
-function selectedValues(values: Record<string, unknown>): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(values).map(([key, value]) => [key, baselineValue(key, value)]));
+function selectedValues(values: Record<string, unknown>, dhcp = false): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(values).map(([key, value]) => [key, dhcp ? dhcpValue(key, value) : baselineValue(key, value)]));
 }
 
 function validateValue(key: string, value: unknown): void {
@@ -245,6 +245,10 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
   if (input.encoding !== undefined && (contract.id !== 'OP-080' || !['form', 'json'].includes(String(input.encoding)))) usage('Only settings set supports form or json encoding');
   const parameters = input.parameters;
   if (contract.id === 'OP-076' && (!object(parameters.config) || typeof parameters.config.file !== 'string')) usage('App config requires a protected absolute file SecretRef');
+  if (contract.id === 'OP-092' && parameters.useThisDnsServer === true && Object.hasOwn(parameters, 'dnsServers')) usage('dnsServers is ignored when useThisDnsServer is true; select one DNS server mode');
+  if (contract.command.startsWith('dhcp lease ') && (
+    (parameters.clientIdentifier === undefined) === (parameters.hardwareAddress === undefined) ||
+    parameters.clientIdentifier === '' || parameters.hardwareAddress === '')) usage('Choose exactly one nonempty clientIdentifier or hardwareAddress');
   if (contract.id === 'OP-080') for (const values of [parameters, input.baseline]) {
     if (!object(values) || !Object.hasOwn(values, 'defaultResponsiblePerson')) continue;
     const value = values.defaultResponsiblePerson;
@@ -260,6 +264,9 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
     try { url = new URL(String(parameters.url)); } catch { usage('App download URL must be an absolute HTTPS URL'); }
     if (url.protocol !== 'https:') usage('App download URL must use HTTPS');
   }
+  if (contract.command.startsWith('dhcp ') && parameters.hardwareAddress !== undefined &&
+    (typeof parameters.hardwareAddress !== 'string' || !/^(?:[\da-fA-F]{2}[:-]){5}[\da-fA-F]{2}$/.test(parameters.hardwareAddress))) usage('hardwareAddress requires six hexadecimal octets separated by colons or hyphens');
+  if (contract.id === 'OP-093' && isIP(String(parameters.ipAddress)) !== 4) usage('ipAddress requires an IPv4 address');
   if (contract.id === 'OP-136' && (typeof parameters.log !== 'string' || /[\\/:]/.test(parameters.log) || ['.', '..'].includes(parameters.log))) usage('Log deletion requires the fileName returned by log list, without a path');
   for (const [key, value] of Object.entries(parameters)) {
     if (contract.secrets?.includes(key)) {
@@ -268,6 +275,7 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
         (typeof value.file === 'string' && isAbsolute(value.file)))) usage('Secret fields require an environment or protected absolute file SecretRef');
     } else {
       if (contract.id === 'OP-080') validateConfiguration(settingsFields[key]!, value);
+      else if (contract.id === 'OP-092') validateDhcp(key, value);
       else if (contract.id === 'OP-083' && key === 'minutes') {
         if (!Number.isSafeInteger(value) || Number(value) <= 0 || Number(value) > 2147483647) usage('Minutes must be a positive 32-bit integer');
       } else if (contract.id === 'OP-085' && key !== 'node') {
@@ -292,6 +300,7 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
     if (!fields.length || !object(input.baseline) || canonical(Object.keys(input.baseline).sort()) !== canonical(fields.sort())) usage('Provide the exact selected baseline for every changed field');
     for (const [key, value] of Object.entries(input.baseline)) {
       if (contract.id === 'OP-080') validateConfiguration(settingsFields[key]!, baselineValue(key, value));
+      else if (contract.id === 'OP-092') validateDhcp(key, dhcpValue(key, value));
       else validateValue(key, baselineValue(key, value));
     }
   } else if (input.baseline !== undefined) usage('Baseline is not supported by this operation');
@@ -348,6 +357,12 @@ async function baselineRead(contract: WriteContract, profile: Profile, token: st
     }
   }
   const selected = Object.fromEntries(fields.map(key => {
+    if (contract.command.startsWith('dhcp ')) {
+      if (key === 'reservedLeases' && !Array.isArray(response[key])) throw new ToolError('UPSTREAM_INVALID', 'Scope reservations are missing', 'Read the selected scope and check the server API version', 1);
+      const item = dhcpValue(key, response[key === 'newName' ? 'name' : key]);
+      validateDhcp(key, item);
+      return [key, item];
+    }
     if (contract.id === 'OP-080') {
       const item = baselineValue(key, settingValue(response, key));
       validateConfiguration(settingsFields[key]!, item, true);
@@ -436,7 +451,7 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     ...(contract.baselinePath ? { concurrency: 'A single-writer window is required between the final read and write; the vendor has no atomic conditional setter' } : {}) } } };
   if (!permitted) throw new ToolError('WRITE_DENIED', 'Exact write grant is required and read-only mode overrides grants', 'Enable only the selected operation in the selected profile', 1);
   if (!intentId || !/^[a-f0-9-]{36}$/.test(intentId) || options.confirm !== digest) throw new ToolError('CONFIRMATION_MISMATCH', 'Preview confirmation no longer matches the selected input', 'Preview again and supply its exact digest', 1);
-  if ((contract.baselinePath || contract.id === 'OP-030') && profile.tokenKind === 'single-use') throw new ToolError('TOKEN_KIND', 'This action needs multiple authenticated requests', 'Select an API or session profile for this operation', 1);
+  if ((contract.baselinePath || ['OP-030', 'OP-093'].includes(contract.id)) && profile.tokenKind === 'single-use') throw new ToolError('TOKEN_KIND', 'This action needs multiple authenticated requests', 'Select an API or session profile for this operation', 1);
   const auditId = randomUUID();
   const path = journalPath(digest);
   const postconditionHash = (value: unknown) => createHmac('sha256', token).update(canonical(value)).digest('hex');
@@ -448,7 +463,8 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
       return distance > 0 && distance < 2147483648;
     }
     if (!contract.baselinePath || !expected) return false;
-    const target = contract.id === 'OP-109' && parameters.newGroup !== undefined ? { ...parameters, group: parameters.newGroup } : parameters;
+    const target = contract.id === 'OP-109' && parameters.newGroup !== undefined ? { ...parameters, group: parameters.newGroup }
+      : contract.id === 'OP-092' && parameters.newName !== undefined ? { ...parameters, name: parameters.newName } : parameters;
     return postconditionHash(await baselineRead(contract, profile, token, target, Object.keys(input.baseline!))) === expected;
   };
   if (options.reconcile) {
@@ -462,12 +478,19 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     return { bytes: Buffer.alloc(0), projection: { status: 'reconciled', auditId: prior.auditId, operation: capability } };
   }
   let expected: string | undefined;
+  if (contract.id === 'OP-093') {
+    const scope = await baselineRead({ ...contract, baselinePath: '/api/dhcp/scopes/get', baselineTarget: ['name'] }, profile, token, parameters, ['reservedLeases']);
+    const mac = String(parameters.hardwareAddress).replace(/:/g, '-').toUpperCase();
+    if ((scope.selected.reservedLeases as Record<string, unknown>[]).some(row => row.hardwareAddress === mac || row.address === parameters.ipAddress)) {
+      throw new ToolError('CONFLICT', 'A reservation already uses the selected hardware or IP address', 'Read the selected scope reservations and choose an unused address and hardware identifier', 1);
+    }
+  }
   if (contract.id === 'OP-030') resyncSerial = await soaSerial(profile, token, parameters);
   let expectedState: Awaited<ReturnType<typeof baselineRead>> | undefined;
   if (contract.baselinePath) {
     const baseline = await baselineRead(contract, profile, token, parameters, Object.keys(input.baseline!));
-    if (canonical(baseline.selected) !== canonical(selectedValues(baselineInput!))) throw new ToolError('CONFLICT', 'Selected baseline changed after preview', 'Read the selected values and preview a new explicit replacement', 1);
-    const selected = selectedValues(Object.fromEntries(Object.keys(input.baseline!).map(key => [key, parameters[key]])));
+    if (canonical(baseline.selected) !== canonical(selectedValues(baselineInput!, contract.id === 'OP-092'))) throw new ToolError('CONFLICT', 'Selected baseline changed after preview', 'Read the selected values and preview a new explicit replacement', 1);
+    const selected = selectedValues(Object.fromEntries(Object.keys(input.baseline!).map(key => [key, parameters[key]])), contract.id === 'OP-092');
     if (contract.id === 'OP-034' && Array.isArray(selected.groupPermissions)) {
       const mandatory = ['administrators', 'dns administrators'];
       selected.groupPermissions = baselineValue('groupPermissions', [
@@ -504,7 +527,7 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
   }
   const form = new URLSearchParams(Object.entries(parameters).map(([key, value]) => [key,
     ['userPermissions', 'groupPermissions'].includes(key) ? permissionRows(key, value).flatMap(row => [row[key === 'userPermissions' ? 'username' : 'name'], row.canView, row.canModify, row.canDelete]).join('|')
-      : configurationForm(contract.id === 'OP-080' ? settingsFields[key] : undefined, value)]));
+      : configurationForm(contract.id === 'OP-080' ? settingsFields[key] : contract.id === 'OP-092' ? dhcpFields[key] : undefined, value)]));
   let body: string | Buffer = form.toString();
   let requestPath = contract.path;
   const headers: Record<string, string> = {};
