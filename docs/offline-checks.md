@@ -8,8 +8,9 @@ The runner removes inherited credentials and packs and installs the executable i
 Discovery commands make zero vendor requests.
 B1.02 and the credential journeys start two disposable HTTPS boundaries with synthetic identities.
 Status and session fixtures follow the vendor top-level JSON response shapes.
-`npm run test:users` covers explicit login, bound session storage and removal, user mutations, protected issuance, and actual SSO caller authorization through a secondary-to-primary HTTPS proxy fixture.
-Every B5 identity and user task also accepts its individual plan ID through `check:journey -- --task <id> --paths native --offline`.
+`npm run test:users` covers explicit login, bound session storage and removal, user mutations, protected issuance, admin sessions, accounts, groups and section permissions, and actual SSO caller authorization through a secondary-to-primary HTTPS proxy fixture.
+Run the admin matrix alone with `npm run check:journey -- --task B5.admin-accounts --paths native --offline`; its individual plan IDs are defined in [admin-accounts-journey.mjs](../scripts/admin-accounts-journey.mjs).
+Every B5 identity, user and admin account task also accepts its individual plan ID through `check:journey -- --task <id> --paths native --offline`.
 The B5 protected-result journey repeats the restore secrets and custody-denial checks.
 
 ```sh
