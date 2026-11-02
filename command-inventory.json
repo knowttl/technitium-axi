@@ -62,6 +62,40 @@
       ]
     },
     {
+      "command": "auth login",
+      "description": "Alias for user login",
+      "effect": "write",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ]
+    },
+    {
+      "command": "auth logout",
+      "description": "Alias for user logout",
+      "effect": "write",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ]
+    },
+    {
       "command": "profile list",
       "description": "List profile names from the selected config",
       "effect": "local",
@@ -2695,6 +2729,481 @@
         ],
         "required": [
           "name"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "user login",
+      "description": "Preview or execute user login",
+      "effect": "write",
+      "operation": "OP-002",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "user",
+          "pass",
+          "totp"
+        ],
+        "required": [
+          "user",
+          "pass"
+        ],
+        "secrets": [
+          "pass",
+          "totp"
+        ],
+        "baseline": null,
+        "resultPolicy": {
+          "classification": "confidential-fields",
+          "ordinaryOutput": "metadata and approved projection only",
+          "localResult": "issued Standard session stored privately; optional exact protected result",
+          "hostedResult": "caller and credential revision bound protected custody"
+        }
+      }
+    },
+    {
+      "command": "user create-token",
+      "description": "Preview or execute user create-token",
+      "effect": "write",
+      "operation": "OP-003",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "user",
+          "pass",
+          "totp",
+          "tokenName"
+        ],
+        "required": [
+          "tokenName"
+        ],
+        "secrets": [
+          "pass",
+          "totp"
+        ],
+        "baseline": null,
+        "resultPolicy": {
+          "classification": "confidential-fields",
+          "ordinaryOutput": "metadata and approved projection only",
+          "localResult": "required protected result file",
+          "hostedResult": "caller and credential revision bound protected custody"
+        }
+      }
+    },
+    {
+      "command": "user create-single-use-token",
+      "description": "Preview or execute user create-single-use-token",
+      "effect": "write",
+      "operation": "OP-004",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [],
+        "required": [],
+        "secrets": [],
+        "baseline": null,
+        "resultPolicy": {
+          "classification": "confidential-fields",
+          "ordinaryOutput": "metadata and approved projection only",
+          "localResult": "required protected result file",
+          "hostedResult": "caller and credential revision bound protected custody"
+        }
+      }
+    },
+    {
+      "command": "user logout",
+      "description": "Preview or execute user logout",
+      "effect": "write",
+      "operation": "OP-005",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [],
+        "required": [],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "user session delete",
+      "description": "Preview or execute user session delete",
+      "effect": "write",
+      "operation": "OP-007",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "partialToken"
+        ],
+        "required": [
+          "partialToken"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "user change-password",
+      "description": "Preview or execute user change-password",
+      "effect": "write",
+      "operation": "OP-008",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "pass",
+          "newPass",
+          "totp",
+          "iterations"
+        ],
+        "required": [
+          "pass",
+          "newPass"
+        ],
+        "secrets": [
+          "pass",
+          "newPass",
+          "totp"
+        ],
+        "baseline": null
+      }
+    },
+    {
+      "command": "user 2fa init",
+      "description": "Preview or execute user 2fa init",
+      "effect": "write",
+      "operation": "OP-009",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [],
+        "required": [],
+        "secrets": [],
+        "baseline": null,
+        "resultPolicy": {
+          "classification": "confidential-fields",
+          "ordinaryOutput": "metadata and approved projection only",
+          "localResult": "required protected result file",
+          "hostedResult": "caller and credential revision bound protected custody"
+        }
+      }
+    },
+    {
+      "command": "user 2fa enable",
+      "description": "Preview or execute user 2fa enable",
+      "effect": "write",
+      "operation": "OP-010",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "totp"
+        ],
+        "required": [
+          "totp"
+        ],
+        "secrets": [
+          "totp"
+        ],
+        "baseline": null
+      }
+    },
+    {
+      "command": "user 2fa disable",
+      "description": "Preview or execute user 2fa disable",
+      "effect": "write",
+      "operation": "OP-011",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [],
+        "required": [],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "user profile set",
+      "description": "Preview or execute user profile set",
+      "effect": "write",
+      "operation": "OP-013",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "displayName",
+          "sessionTimeoutSeconds"
+        ],
+        "required": [],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin user set",
+      "description": "Preview or execute admin user set",
+      "effect": "write",
+      "operation": "OP-104",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "user",
+          "displayName",
+          "newUser",
+          "totpEnabled",
+          "disabled",
+          "sessionTimeoutSeconds",
+          "newPass",
+          "iterations",
+          "memberOfGroups"
+        ],
+        "required": [
+          "user"
+        ],
+        "secrets": [
+          "newPass"
+        ],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin sso user create",
+      "description": "Preview or execute admin sso user create",
+      "effect": "write",
+      "operation": "OP-116",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "user",
+          "displayName",
+          "ssoIdentifier",
+          "memberOfGroups"
+        ],
+        "required": [
+          "user",
+          "ssoIdentifier"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin sso user set",
+      "description": "Preview or execute admin sso user set",
+      "effect": "write",
+      "operation": "OP-117",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "user",
+          "newUser",
+          "displayName",
+          "memberOfGroups"
+        ],
+        "required": [
+          "user"
         ],
         "secrets": [],
         "baseline": null

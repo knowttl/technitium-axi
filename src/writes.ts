@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 import { isIP } from 'node:net';
 import { toASCII } from 'tr46';
-import { readOnly } from './credentials.js';
+import { readOnly, storeSession, removeSession } from './credentials.js';
 import type { Profile } from './credentials.js';
 import { ToolError } from './errors.js';
 import { PrivateFiles } from './private-file.js';
@@ -244,6 +244,9 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
   if (!object(input) || !object(input.parameters) || Object.keys(input).some(key => !['parameters', 'baseline', 'upload', 'encoding'].includes(key))) usage('Input requires parameters and optional baseline or upload');
   if (input.encoding !== undefined && (contract.id !== 'OP-080' || !['form', 'json'].includes(String(input.encoding)))) usage('Only settings set supports form or json encoding');
   const parameters = input.parameters;
+  if (contract.id === 'OP-003' && ((parameters.user === undefined) !== (parameters.pass === undefined) || parameters.totp !== undefined && parameters.pass === undefined)) usage('Password acquisition requires user and pass together; omit all password fields for the selected bearer');
+  if (['OP-008', 'OP-104'].includes(contract.id) && parameters.iterations !== undefined && (!Number.isInteger(parameters.iterations) || Number(parameters.iterations) < 100000 || Number(parameters.iterations) > 1000000)) usage('Iterations must be between 100000 and 1000000');
+  if (['OP-013', 'OP-104'].includes(contract.id) && parameters.sessionTimeoutSeconds !== undefined && (!Number.isInteger(parameters.sessionTimeoutSeconds) || Number(parameters.sessionTimeoutSeconds) < 0 || Number(parameters.sessionTimeoutSeconds) > 604800)) usage('Session timeout must be between 0 and 604800 seconds');
   if (contract.id === 'OP-076' && (!object(parameters.config) || typeof parameters.config.file !== 'string')) usage('App config requires a protected absolute file SecretRef');
   if (contract.id === 'OP-092' && parameters.useThisDnsServer === true && Object.hasOwn(parameters, 'dnsServers')) usage('dnsServers is ignored when useThisDnsServer is true; select one DNS server mode');
   if (contract.command.startsWith('dhcp lease ') && (
@@ -280,6 +283,12 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
         if (!Number.isSafeInteger(value) || Number(value) <= 0 || Number(value) > 2147483647) usage('Minutes must be a positive 32-bit integer');
       } else if (contract.id === 'OP-085' && key !== 'node') {
         if (typeof value !== 'boolean') usage('Restore selections require true or false');
+      } else if (key === 'totpEnabled') {
+        if (typeof value !== 'boolean') usage('A boolean is required');
+      } else if (key === 'memberOfGroups') {
+        if (!Array.isArray(value) || value.some(group => typeof group !== 'string' || !group || /[,|\x00-\x1f]/.test(group))) usage('memberOfGroups requires an array of group names');
+      } else if (key === 'sessionTimeoutSeconds') {
+        if (!Number.isSafeInteger(value)) usage('An integer is required');
       } else validateValue(key, value);
       if (key === 'updateSecurityPolicies') baselineValue(key, value);
     }
@@ -410,6 +419,24 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
   const capability = contract.id === 'OP-077' ? input.parameters.import === true ? 'OP-077.import' : 'OP-077.resolve' : contract.id;
   const mutating = capability !== 'OP-077.resolve';
   const parameters = { ...input.parameters };
+  const acquisition = contract.id === 'OP-002' || contract.id === 'OP-003' && parameters.pass !== undefined;
+  if (['OP-003', 'OP-004', 'OP-008', 'OP-009', 'OP-010', 'OP-011', 'OP-013'].includes(contract.id) && !acquisition && profile.tokenKind !== 'session') throw new ToolError('TOKEN_KIND', 'A Standard session is required', 'Explicitly sign in with a session profile', 1);
+  if (contract.id === 'OP-002' && (profile.tokenKind !== 'session' || !profile.username || profile.username !== parameters.user)) usage('Login requires a session profile whose username matches user');
+  if (contract.id === 'OP-002') parameters.includeInfo = true;
+  let route: { requested: string; effective: string; caller: string } | undefined;
+  if (['OP-116', 'OP-117'].includes(contract.id)) {
+    if (profile.tokenKind === 'single-use') throw new ToolError('TOKEN_KIND', 'SSO preflight needs multiple requests', 'Use an API or session profile', 1);
+    const session = await identityResponse(profile, '/api/user/session/get', 'includeInfo=true', token);
+    if (typeof session.token === 'string') redactor.add(session.token);
+    if (!object(session.info) || !object(session.info.permissions) || !object(session.info.permissions.Administration) || session.info.permissions.Administration.canModify !== true || typeof session.username !== 'string') throw new ToolError('PERMISSION_DENIED', 'The actual caller requires Administration Modify', 'Use a caller with Administration Modify on the selected secondary', 1);
+    const state = await identityResponse(profile, '/api/admin/cluster/state', '', token);
+    const cluster = state.response;
+    const nodes = object(cluster) && Array.isArray(cluster.clusterNodes) ? cluster.clusterNodes.filter(object) : [];
+    const secondary = nodes.find(node => node.state === 'Self' && node.type === 'Secondary');
+    const primary = nodes.find(node => node.type === 'Primary');
+    if (!object(cluster) || cluster.clusterInitialized !== true || !secondary || !primary || typeof primary.url !== 'string') throw new ToolError('PREREQUISITE_REQUIRED', 'SSO writes require an initialized secondary-to-primary route', 'Select an initialized secondary profile; the vendor proxy supplies the cluster identity', 1);
+    route = { requested: profile.origin, effective: primary.url, caller: session.username };
+  }
   const baselineInput = input.baseline ? { ...input.baseline } : undefined;
   if (contract.id === 'OP-080') for (const values of [parameters, baselineInput]) {
     if (!Array.isArray(values?.tsigKeys)) continue;
@@ -442,11 +469,12 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
   const intentId = !options.execute && !options.reconcile ? randomUUID() : options.confirm?.split('.')[0];
   const digest = `${intentId}.${createHmac('sha256', token).update(canonical({ intentId, origin: profile.origin, identity, username: profile.username ?? null,
     tokenKind: profile.tokenKind, caFile: profile.caFile ?? null, tlsServerName: profile.tlsServerName ?? null,
-    capability, parameters, baseline: baselineInput ?? null, encoding: input.encoding ?? 'form', upload: upload ? { sha256: hash(upload), format: input.upload?.format ?? 'multipart' } : null })).digest('hex')}`;
+    capability, parameters, route: route ?? null, baseline: baselineInput ?? null, encoding: input.encoding ?? 'form', upload: upload ? { sha256: hash(upload), format: input.upload?.format ?? 'multipart' } : null })).digest('hex')}`;
   const permitted = !mutating || (!readOnly() && profile.writes?.allowWrites === true && profile.writes.operations.includes(capability));
   if (!options.execute && !options.reconcile) return { bytes: Buffer.alloc(0), projection: { preview: { digest, operation: capability,
     origin: profile.origin, identity, node: parameters.node ?? null, target: parameters.zone ?? parameters.zones ?? parameters.domain ?? parameters.group ?? parameters.log ?? parameters.name ?? null,
     permitted, upload: upload ? { bytes: upload.length, sha256: hash(upload) } : null,
+    ...(route ? { route } : {}),
     replaces: contract.baselinePath ? Object.keys(input.baseline!) : [],
     ...(contract.baselinePath ? { concurrency: 'A single-writer window is required between the final read and write; the vendor has no atomic conditional setter' } : {}) } } };
   if (!permitted) throw new ToolError('WRITE_DENIED', 'Exact write grant is required and read-only mode overrides grants', 'Enable only the selected operation in the selected profile', 1);
@@ -548,10 +576,21 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     }
   }
   try {
-    const response = await vendorRequest(profile, requestPath, body, token, headers, { bytes: 16 * 1024 * 1024, elapsedMs: 10000 });
+    const response = await vendorRequest(profile, requestPath, body, acquisition ? undefined : token, headers, { bytes: 16 * 1024 * 1024, elapsedMs: 10000 });
     if (response.status !== 200 || response.contentType !== 'application/json') throw new Error('Response unavailable');
     const value: unknown = JSON.parse(response.bytes.toString());
     checkStatus(value);
+    if (['OP-002', 'OP-003', 'OP-004'].includes(contract.id)) {
+      const credential = contract.id === 'OP-004' ? value.response : value;
+      if (!object(credential) || typeof credential.token !== 'string' || !credential.token || /[\s\x00-\x1f\x7f]/.test(credential.token)) throw new Error('Issued credential is invalid');
+      redactor.add(credential.token);
+    }
+    if (contract.id === 'OP-002') {
+      if (value.username !== profile.username || typeof value.token !== 'string' || !object(value.info) || !object(value.info.permissions)) throw new Error('Issued identity does not match the selected profile');
+      if (Object.values(value.info.permissions).some(permission => !object(permission) || Object.values(permission).some(flag => typeof flag !== 'boolean'))) throw new Error('Invalid permission response');
+      await storeSession(identity, profile, value.token);
+    }
+    const localRemoved = contract.id === 'OP-005' ? await removeSession(identity, profile, token) : undefined;
     if (contract.id === 'OP-080' && expectedState && Array.isArray(parameters.tsigKeys) && parameters.tsigKeys.some(row => row.sharedSecret === '')) {
       if (!object(value.response)) throw new Error('Generated TSIG keys are unavailable');
       const returned = baselineValue('tsigKeys', value.response.tsigKeys);
@@ -586,11 +625,28 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     return { bytes: response.bytes, projection: { status: partial ? 'partial' : 'ok', operation: capability,
       ...(partial && object(value.response) ? { deleted: value.response.deleted, failed: value.response.failed } : {}), ...(mutating ? { auditId } : {}),
       ...resolution,
+      ...(contract.id === 'OP-002' ? { username: value.username, stored: true, info: { permissions: object(value.info) ? value.info.permissions : {} } } : {}),
+      ...(contract.id === 'OP-005' ? { revoked: true, localRemoved } : {}),
       ...(profile.tokenKind === 'single-use' ? { credential: 'consumed' } : {}) } };
   } catch (error) {
+    if (contract.id === 'OP-005') {
+      const localRemoved = await removeSession(identity, profile, token);
+      await files.write(path, JSON.stringify({ auditId, digest, operation: capability, state: 'revoke-failed', localRemoved }));
+      return { bytes: Buffer.alloc(0), projection: { status: 'revoke-failed', operation: capability, auditId, revoked: false, localRemoved } };
+    }
+    if (error instanceof ToolError && ['AUTH_REQUIRED', 'TWO_FACTOR_REQUIRED'].includes(error.code)) throw error;
     if (!mutating) throw error;
     // The durable intent deliberately survives transport, handler and final-read failures.
     throw new ToolError('OUTCOME_UNKNOWN', `Mutation may have applied; audit ID ${auditId}${profile.tokenKind === 'single-use' ? '; credential consumed-or-uncertain' : ''}`,
       'Do not replay; read the exact selected target, or use --reconcile <audit-id> with the original input and confirmation', 1);
   }
+}
+
+async function identityResponse(profile: Profile, path: string, body: string, token: string): Promise<Record<string, unknown>> {
+  const response = await vendorRequest(profile, path, body, token, {}, { bytes: 1024 * 1024, elapsedMs: 10000 });
+  if (response.status !== 200 || response.contentType !== 'application/json') throw new ToolError('UPSTREAM_INVALID', 'Identity preflight failed', 'Check the selected server and identity', 1);
+  let value: unknown;
+  try { value = JSON.parse(response.bytes.toString()); } catch { throw new ToolError('UPSTREAM_INVALID', 'Invalid identity response', 'Check the selected API version', 1); }
+  checkStatus(value);
+  return value;
 }

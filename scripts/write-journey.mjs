@@ -9,11 +9,17 @@ import { zoneJourney, zoneTasks } from './zone-journey.mjs';
 import { settingsJourney, settingsTasks } from './settings-journey.mjs';
 import { appsRestoreJourney, appsRestoreTasks } from './apps-restore-journey.mjs';
 import { dhcpJourney, dhcpTasks } from './dhcp-journey.mjs';
+import { usersJourney, usersTasks } from './users-journey.mjs';
 
-export const writeTasks = ['B3.01', 'B3.02', 'B3.03', 'B3.04', 'B3.05', 'B3.CR-013', 'B3.CR-014', 'B3.dnssec', ...dnssecTasks, 'B3.lists-cache', ...listsCacheTasks, ...zoneTasks, ...settingsTasks, ...appsRestoreTasks, ...dhcpTasks, 'B3.OP-049', 'B3.OP-051', 'B3.OP-052'];
+export const writeTasks = ['B3.01', 'B3.02', 'B3.03', 'B3.04', 'B3.05', 'B3.CR-013', 'B3.CR-014', 'B3.dnssec', ...dnssecTasks, 'B3.lists-cache', ...listsCacheTasks, ...zoneTasks, ...settingsTasks, ...appsRestoreTasks, ...dhcpTasks, ...usersTasks, 'B3.OP-049', 'B3.OP-051', 'B3.OP-052'];
 const hash = value => createHash('sha256').update(value).digest('hex');
 
 export async function writeJourney({ task, temporary, env, run, executable, vendors }) {
+  if (usersTasks.includes(task)) {
+    await usersJourney({ task, temporary, env, run, executable, vendors });
+    if (task === 'B5.CR-010') await writeJourney({ task: 'B4.OP-085', temporary, env, run, executable, vendors });
+    return [`native:${task}:write-behavior`];
+  }
   const directory = join(temporary, 'writes');
   await mkdir(directory, { mode: 0o700 });
   const config = join(directory, 'config.json');

@@ -82,6 +82,27 @@ See [protected results](docs/reads.md) for result replacement and destination pe
 Booleans and integers use JSON types; list fields use arrays of strings.
 Write commands use the flags listed in their `--help`, rather than the read projection and paging flags.
 
+Account actions use the same grants, protected input and preview confirmation as other writes.
+`user login` (also `auth login`) explicitly acquires a Standard session with `user`, a `pass` SecretRef and an optional `totp` SecretRef.
+Select a `tokenKind: "session"` profile with a matching `username` and `token: {"stored": true}` to use the issued session on subsequent calls.
+Only the issued session is stored, bound to the profile name, origin, username, token kind and TLS settings; passwords and one-time codes are discarded.
+Ordinary reads never acquire or refresh credentials.
+`user logout` (also `auth logout`) reports remote revocation and bound local removal separately, including when revocation fails.
+
+`user create-token` accepts either the selected Standard bearer or an explicit `user` and `pass` SecretRef, with optional `totp`, and never falls back between them.
+`user create-single-use-token`, `user change-password`, `user 2fa init`, `user 2fa enable`, `user 2fa disable` and `user profile set` require a Standard session.
+Token creation and 2FA initialization require `--result-file` on execution; their confidential response never appears in ordinary output.
+Password changes use `pass` and `newPass` SecretRefs; `totp` is also a SecretRef.
+`user session delete` accepts the exact `partialToken` returned by a profile read.
+`admin user set` supports a protected `newPass` and an ordinary boolean `totpEnabled`.
+
+`admin sso user create` and `admin sso user set` require an initialized secondary profile.
+Preview and execution read the same selected caller's session with `includeInfo=true` and require exactly `info.permissions.Administration.canModify: true` before dispatch.
+The cluster-state preflight also requires Administration View on the selected secondary.
+The preview names the requested secondary, effective primary and caller.
+The vendor proxy supplies its cluster identity; the tool never acquires that identity.
+Direct primary calls, missing or malformed permissions, and single-use credentials fail before SSO mutation.
+
 `settings set` accepts all fields listed in the inventory's configuration map, including modern fields and the `preferIPv6` and `reverseProxyNetworkACL` compatibility inputs.
 Omitted fields are preserved; arrays replace collections.
 An empty array clears collections except `dnsServerLocalEndPoints` and `webServiceLocalAddresses`, which reset to wildcard listeners.
@@ -167,9 +188,11 @@ technitium-axi zone record add --profile automation --input-file /absolute/path/
 technitium-axi zone record add --profile automation --input-file /absolute/path/add.json --execute --confirm '<preview.digest>'
 ```
 
-A preview resolves credentials, operation SecretRefs and uploads locally but sends no vendor request.
+A preview resolves credentials, operation SecretRefs and uploads locally.
+Only the [SSO preflight](#writes) sends vendor reads during preview; previews never dispatch mutations.
 It reports permission, target and upload metadata without secret values.
-Each preview issues a fresh invocation ID within its digest, bound to the selected credential, target and input contents.
+Each preview issues a fresh invocation ID within its digest, bound to the selected profile, target and input contents.
+Bearer-authenticated writes also bind the selected credential; explicit identity acquisition uses a private local acquisition key.
 An executed mutation creates an exclusive durable intent before dispatch and retains its receipt; if that confirmation reaches journal creation again, it is refused with `REPLAY_DENIED`.
 A new preview permits a later legitimate operation with identical content.
 

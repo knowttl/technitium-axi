@@ -4,7 +4,7 @@ import { isAbsolute, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { encode } from '@toon-format/toon';
 import { commands, inventory } from './catalogue.js';
-import { configPath, loadConfig, selectProfile } from './credentials.js';
+import { acquisitionKey, configPath, loadConfig, selectProfile } from './credentials.js';
 import { ToolError } from './errors.js';
 import { PrivateFiles } from './private-file.js';
 import { Redactor, saveResult, vendorRead } from './vendor.js';
@@ -46,8 +46,9 @@ export async function main(args: string[]): Promise<void> {
         else readOptions[arg] = value;
       }
     }
-    const command = positional.join(' ');
-    const selected = commands.find(item => item.command === command);
+    const requestedCommand = positional.join(' ');
+    const command = requestedCommand === 'auth login' ? 'user login' : requestedCommand === 'auth logout' ? 'user logout' : requestedCommand;
+    const selected = commands.find(item => item.command === requestedCommand);
     const allowed: readonly string[] = selected ? [...selected.flags, '--version', '-v', '-V'] : help.flags;
     if ([...flags].some(flag => !allowed.includes(flag))) throw new ToolError('USAGE', 'Unknown or prohibited flag', `Valid flags: ${allowed.join(', ')}`);
     if (command && !selected) throw new ToolError('USAGE', 'Unknown command or unexpected argument', 'Run technitium-axi --help');
@@ -81,10 +82,13 @@ export async function main(args: string[]): Promise<void> {
     if (readContract) readInputs(readContract, readOptions);
     const writeContract = writeContracts.find(item => item.command === command);
     const input = writeContract ? await writeInput(writeContract, options.inputFile) : undefined;
+    if (writeContract && ['OP-003', 'OP-004', 'OP-009'].includes(writeContract.id) && flags.has('--execute') && !options.resultFile) throw new ToolError('USAGE', 'A protected result destination is required', 'Use --result-file <absolute-path>');
     if (writeContract && options.resultFile && flags.has('--execute')) await new PrivateFiles().destination(options.resultFile);
     const credential = await selectProfile(options);
     let token: string | undefined;
-    if (command && command !== 'status') { token = await credential.token(); redactor.add(token); }
+    const acquisition = writeContract?.id === 'OP-002' || writeContract?.id === 'OP-003' && input?.parameters.pass !== undefined;
+    if (acquisition) token = await acquisitionKey();
+    else if (command && command !== 'status') { token = await credential.token(); redactor.add(token); }
     if (command === 'auth status') {
       print({ profile: credential.name, source: credential.source, origin: credential.profile.origin,
         tokenKind: credential.profile.tokenKind, tokenSource: credential.tokenSource });

@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { Ajv } from 'ajv';
@@ -31,6 +32,40 @@ function statePath(): string {
   const base = process.platform === 'win32' ? process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local')
     : process.env.XDG_STATE_HOME && isAbsolute(process.env.XDG_STATE_HOME) ? process.env.XDG_STATE_HOME : join(homedir(), '.local', 'state');
   return join(base, 'technitium-axi', 'credentials.json');
+}
+
+function binding(profile: Profile) {
+  return { origin: profile.origin, username: profile.username ?? null, tokenKind: profile.tokenKind,
+    tlsServerName: profile.tlsServerName ?? null, caFile: profile.caFile ?? null };
+}
+
+async function storedCredentials(): Promise<Record<string, { binding: unknown; token: string }>> {
+  try { return JSON.parse(await files.read(statePath())); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    return {};
+  }
+}
+
+export async function storeSession(name: string, profile: Profile, token: string): Promise<void> {
+  const stored = await storedCredentials();
+  stored[name] = { binding: binding(profile), token };
+  await files.write(statePath(), JSON.stringify(stored));
+}
+
+export async function removeSession(name: string, profile: Profile, token: string): Promise<boolean> {
+  const stored = await storedCredentials();
+  if (!stored[name] || stored[name].token !== token || JSON.stringify(stored[name].binding) !== JSON.stringify(binding(profile))) return false;
+  delete stored[name];
+  await files.write(statePath(), JSON.stringify(stored));
+  return true;
+}
+
+export async function acquisitionKey(): Promise<string> {
+  const path = join(dirname(statePath()), 'acquisition-key');
+  try { await files.create(path, randomBytes(32).toString('hex')); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
+  return files.read(path);
 }
 
 export function readOnly(): boolean {
@@ -106,16 +141,9 @@ export async function selectProfile(options: { config?: string; profile?: string
     if ('env' in tokenRef) token = process.env[tokenRef.env];
     else if ('file' in tokenRef) token = (await files.read(tokenRef.file)).replace(/^\uFEFF/, '').trimEnd();
     else {
-      let stored: Record<string, { binding: unknown; token: string }>;
-      try { stored = JSON.parse(await files.read(statePath())); }
-      catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-        stored = {};
-      }
+      const stored = await storedCredentials();
       const entry = stored[name];
-      const binding = { origin: profile.origin, username: profile.username ?? null, tokenKind: profile.tokenKind,
-        tlsServerName: profile.tlsServerName ?? null, caFile: profile.caFile ?? null };
-      if (entry && JSON.stringify(entry.binding) === JSON.stringify(binding)) token = entry.token;
+      if (entry && JSON.stringify(entry.binding) === JSON.stringify(binding(profile))) token = entry.token;
     }
     if (!token) throw new ToolError('AUTH_REQUIRED', 'A supplied token is required', 'Set the environment variable or protected file named by the selected token SecretRef', 1);
     if (/[\s\x00-\x1f\x7f]/.test(token)) invalid('Token contains invalid header characters');

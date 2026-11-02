@@ -16,6 +16,7 @@ export async function fakeVendors(temporary, run, env) {
   const traces = [];
   const started = performance.now();
   const tokens = new Map();
+  const clusterTokens = new Map();
   const tokenKinds = new Map();
   const faults = new Map();
   const responders = new Map();
@@ -34,7 +35,8 @@ export async function fakeVendors(temporary, run, env) {
           bearerHash: bearer ? createHash('sha256').update(bearer).digest('hex') : null, identity });
         const responder = responders.get(incoming.url) ?? responders.get(new URL(incoming.url, 'https://fixture.test').pathname);
         if (responder) {
-          const response = bearer !== tokens.get(identity) ? { body: { status: 'invalid-token' } } : await responder(incoming, body);
+          const acquisition = incoming.url === '/api/user/login' || incoming.url === '/api/user/createToken' && !bearer;
+          const response = !acquisition && bearer !== tokens.get(identity) && !(clusterTokens.has(identity) && bearer === clusterTokens.get(identity)) ? { body: { status: 'invalid-token' } } : await responder(incoming, body);
           if (incoming.socket.destroyed) return;
           outgoing.writeHead(response.status ?? 200, { 'content-type': response.contentType ?? 'application/json', ...response.headers });
           outgoing.end(response.bytes ?? JSON.stringify(response.body));
@@ -58,7 +60,7 @@ export async function fakeVendors(temporary, run, env) {
     }
     return {
       traces,
-      tokens, tokenKinds, faults, responders, caFile: cert,
+      tokens, clusterTokens, tokenKinds, faults, responders, caFile: cert,
       origins: servers.map(server => `https://127.0.0.1:${server.address().port}`),
       async check() {
         for (const [index, server] of servers.entries()) {
