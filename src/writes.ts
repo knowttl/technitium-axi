@@ -97,7 +97,23 @@ function baselineValue(key: string, value: unknown): unknown {
     if (key === 'dnsServerLocalEndPoints') return ['0.0.0.0:53', '[::]:53'];
     if (key === 'webServiceLocalAddresses') return ['0.0.0.0', '[::]'];
   }
-  if (key === 'webServiceRealIpHeader' && value === '') return 'X-Real-IP';
+  if (['webServiceRealIpHeader', 'dnsOverHttpRealIpHeader'].includes(key) && value === '') return 'X-Real-IP';
+  if (['eDnsClientSubnetIpv4Override', 'eDnsClientSubnetIpv6Override'].includes(key) && typeof value === 'string' && value !== '') return network(value);
+  if (['dnsServerIPv4SourceAddresses', 'dnsServerIPv6SourceAddresses', 'zoneTransferAllowedNetworks', 'notifyAllowedNetworks', 'qpmLimitBypassList', 'webServiceReverseProxyAddresses', 'dnsReverseProxyNetworkACL', 'reverseProxyNetworkACL', 'recursionNetworkACL', 'blockingBypassList'].includes(key) && Array.isArray(value)) return value.map(item => network(String(item)));
+  if (key === 'customBlockingAddresses' && Array.isArray(value)) {
+    const addresses = value.map(item => address(String(item)));
+    return [...addresses.filter(item => isIP(item) === 4), ...addresses.filter(item => isIP(item) === 6)];
+  }
+  if (key === 'webServiceLocalAddresses' && Array.isArray(value)) return value.map(item => {
+    const ip = address(String(item).replace(/^\[|\]$/g, ''));
+    return isIP(ip) === 6 ? `[${ip}]` : ip;
+  });
+  if (key === 'dnsServerLocalEndPoints' && Array.isArray(value)) return value.map(item => {
+    const endpoint = String(item);
+    const parts = /^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/.exec(endpoint);
+    const ip = address((parts?.[1] ?? endpoint).replace(/^\[|\]$/g, ''));
+    return `${isIP(ip) === 6 ? `[${ip}]` : ip}:${Number(parts?.[2]) || 53}`;
+  });
   if (key === 'webServiceCspFrameAncestorsHeader' && value === '') return "'none'";
   if (key === 'forwarderProtocol' && value === 'HttpsJson') return 'Https';
   if (settingsFields[key]?.type === 'string' && value === null) return '';
@@ -429,7 +445,8 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     if (contract.id === 'OP-080') for (const prefix of ['webServiceTlsCertificate', 'dnsTlsCertificate']) {
       if (Object.hasOwn(selected, `${prefix}Password`)) selected[`${prefix}Password`] = (parameters[`${prefix}Path`] ?? preserved[`${prefix}Path`]) ? '************' : '';
     }
-    if (contract.id === 'OP-080' && Array.isArray(selected.forwarders) && selected.forwarders.length === 0) {
+    const forwarders = selected.forwarders ?? preserved.forwarders;
+    if (contract.id === 'OP-080' && Array.isArray(forwarders) && forwarders.length === 0) {
       if (Object.hasOwn(selected, 'forwarderProtocol')) selected.forwarderProtocol = 'Udp';
       else preserved.forwarderProtocol = 'Udp';
     }

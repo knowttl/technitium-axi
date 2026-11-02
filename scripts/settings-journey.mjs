@@ -108,6 +108,24 @@ export async function settingsJourney({ task, directory, env, run, executable, v
     await execute('settings set', { parameters: { maxLogFileDays: 0, webServiceHttpUnixSocket: '' }, baseline: { maxLogFileDays: 365, webServiceHttpUnixSocket: 'dns.sock' } });
     assert.equal(state.maxLogFileDays, 0);
     assert.equal(state.webServiceHttpUnixSocket, '');
+    const addressCases = [
+      ['dnsOverHttpRealIpHeader', '', 'X-Real-IP'],
+      ['eDnsClientSubnetIpv4Override', '192.0.2.129/24', '192.0.2.0/24'],
+      ['eDnsClientSubnetIpv6Override', '2001:0DB8:0:0:0:0:0:1234/64', '2001:db8::/64'],
+      ['dnsServerLocalEndPoints', ['2001:0DB8::1', '[0:0:0:0:0:0:0:1]:0053', '192.0.2.1:0'], ['[2001:db8::1]:53', '[::1]:53', '192.0.2.1:53']],
+      ['webServiceLocalAddresses', ['0:0:0:0:0:0:0:1'], ['[::1]']],
+      ['dnsServerIPv4SourceAddresses', ['192.0.2.129/24'], ['192.0.2.0/24']],
+      ['dnsServerIPv6SourceAddresses', ['2001:0DB8::1234/64'], ['2001:db8::/64']],
+      ['zoneTransferAllowedNetworks', ['2001:0DB8::1234/64'], ['2001:db8::/64']],
+      ['notifyAllowedNetworks', ['2001:0DB8::1234/64'], ['2001:db8::/64']],
+      ['qpmLimitBypassList', ['2001:0DB8::1234/64'], ['2001:db8::/64']],
+      ['webServiceReverseProxyAddresses', ['!2001:0DB8::1234/64', '0:0:0:0:0:0:0:1'], ['!2001:db8::/64', '::1']],
+      ['dnsReverseProxyNetworkACL', ['!2001:0DB8::1234/64'], ['!2001:db8::/64']],
+      ['reverseProxyNetworkACL', ['!2001:0DB8::1234/64'], ['!2001:db8::/64']],
+      ['recursionNetworkACL', ['!2001:0DB8::1234/64'], ['!2001:db8::/64']],
+      ['blockingBypassList', ['2001:0DB8::1234/64'], ['2001:db8::/64']],
+      ['customBlockingAddresses', ['0:0:0:0:0:0:0:1', '192.0.2.2', '2001:0DB8::2', '192.0.2.3'], ['192.0.2.2', '192.0.2.3', '::1', '2001:db8::2']],
+    ];
     const settingsResponder = vendors.responders.get('/api/settings/set');
     vendors.responders.set('/api/settings/set', (incoming, bytes) => {
       const json = incoming.headers['content-type'] === 'application/json';
@@ -115,7 +133,7 @@ export async function settingsJourney({ task, directory, env, run, executable, v
       writes++;
       for (const [key, raw] of Object.entries(data)) {
         let value = raw;
-        if (['dnsServerLocalEndPoints', 'webServiceLocalAddresses', 'proxyBypass', 'forwarders'].includes(key)) value = json ? raw : raw === '' ? [] : raw.split(',');
+        if (fields[key].type === 'list') value = json ? raw : raw === '' ? [] : raw.split(',');
         if (key === 'proxyPort' && !json) value = Number(raw);
         if (key === 'dnsServerDomain') value = value.replace(/\.+$/, '');
         if (key === 'dnsServerLocalEndPoints' && value.length === 0) value = ['0.0.0.0:53', '[::]:53'];
@@ -123,11 +141,14 @@ export async function settingsJourney({ task, directory, env, run, executable, v
         if (key === 'webServiceRealIpHeader' && value === '') value = 'X-Real-IP';
         if (key === 'webServiceCspFrameAncestorsHeader' && value === '') value = "'none'";
         if (key === 'forwarderProtocol' && value === 'HttpsJson') value = 'Https';
+        const addressCase = addressCases.find(([field, requested]) => field === key && JSON.stringify(requested) === JSON.stringify(value));
+        if (addressCase) value = structuredClone(addressCase[2]);
         if (key.startsWith('proxy')) {
           state.proxy ??= {};
           state.proxy[key.slice(5).toLowerCase()] = value;
-        } else state[key] = value;
+        } else setField(key, value);
       }
+      if (Array.isArray(state.forwarders) && state.forwarders.length === 0) state.forwarderProtocol = 'Udp';
       for (const prefix of ['webServiceTlsCertificate', 'dnsTlsCertificate']) {
         state[`${prefix}Password`] = state[`${prefix}Path`] ? '************' : null;
       }
@@ -188,6 +209,49 @@ export async function settingsJourney({ task, directory, env, run, executable, v
       await success('settings set', { ...normalizedInput, encoding }, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
       assert.equal(writes, afterLost, 'Reconciliation only reads vendor state');
       assert.deepEqual(state, { ...initial(), ...normalizedExpected });
+      for (const alias of ['dnsReverseProxyNetworkACL', 'reverseProxyNetworkACL']) {
+        const cases = addressCases.filter(([key]) => !['dnsReverseProxyNetworkACL', 'reverseProxyNetworkACL'].includes(key) || key === alias);
+        const parameters = Object.fromEntries(cases.map(([key, requested]) => [key, requested]));
+        const baseline = Object.fromEntries(cases.map(([key, requested]) => [key, Array.isArray(requested) ? [] : '']));
+        state = { ...initial(), ...baseline };
+        if (alias === 'reverseProxyNetworkACL') { delete state.reverseProxyNetworkACL; state.dnsReverseProxyNetworkACL = []; }
+        const before = structuredClone(state);
+        const expected = { ...before, ...Object.fromEntries(cases.map(([key, , returned]) => [key === 'reverseProxyNetworkACL' ? 'dnsReverseProxyNetworkACL' : key, returned])) };
+        const input = { parameters, baseline, encoding };
+        await execute('settings set', input);
+        assert.deepEqual(state, expected);
+        const sameBaseline = await success('settings set', { parameters, baseline: parameters, encoding });
+        await success('settings set', { parameters, baseline: parameters, encoding }, ['--execute', '--confirm', sameBaseline.preview.digest]);
+        state = structuredClone(before);
+        drop = true;
+        const preview = await success('settings set', input);
+        const lost = await failure('OUTCOME_UNKNOWN', 'settings set', input, ['--execute', '--confirm', preview.preview.digest]);
+        const afterLost = writes;
+        drop = false;
+        await failure('CONFLICT', 'settings set', input, ['--execute', '--confirm', preview.preview.digest]);
+        const auditId = lost.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
+        await success('settings set', input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+        assert.equal(writes, afterLost);
+        assert.deepEqual(state, expected);
+      }
+      for (const parameters of [{ forwarderProtocol: 'Tls' }, { forwarders: [] }, { forwarders: [], forwarderProtocol: 'Tls' }]) {
+        state = { ...initial(), forwarders: null, forwarderProtocol: 'Udp' };
+        const baseline = Object.fromEntries(Object.keys(parameters).map(key => [key, key === 'forwarders' ? [] : 'Udp']));
+        const input = { parameters, baseline, encoding };
+        await execute('settings set', input);
+        assert.deepEqual(state.forwarders, []);
+        assert.equal(state.forwarderProtocol, 'Udp');
+        state.forwarders = null;
+        drop = true;
+        const preview = await success('settings set', input);
+        const lost = await failure('OUTCOME_UNKNOWN', 'settings set', input, ['--execute', '--confirm', preview.preview.digest]);
+        const afterLost = writes;
+        drop = false;
+        await failure('REPLAY_DENIED', 'settings set', input, ['--execute', '--confirm', preview.preview.digest]);
+        const auditId = lost.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
+        await success('settings set', input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+        assert.equal(writes, afterLost);
+      }
     }
     vendors.responders.set('/api/settings/set', settingsResponder);
     await failure('USAGE', 'settings set', { parameters: { enableBlocking: null }, baseline: { enableBlocking: true } });
