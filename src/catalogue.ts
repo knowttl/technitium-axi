@@ -37,7 +37,7 @@ export const commands = [
       ...(['OP-115', 'OP-142', 'OP-143'].includes(item.id) ? { configuration: Object.fromEntries(item.fields.map(key => [key, identityFields[key]])), target: item.id === 'OP-143' ? 'Outbound LDAP bind using stored fields and explicit overrides; requires exact OP-143 write grant' : 'Only supplied fields change; scopes and group maps replace their selected collection', ...(item.id === 'OP-115' ? { scopesEncoding: 'pipe-delimited string array' } : {}) } : {}),
       ...(item.command.startsWith('dhcp lease ') ? { target: 'Exactly one of clientIdentifier or hardwareAddress' } : {}),
       ...(item.id === 'OP-077' ? { capabilities: ['OP-077.resolve', 'OP-077.import'] } : {}),
-      ...(['OP-049', 'OP-051', 'OP-052'].includes(item.id) ? { recordFamilies, dnameDeletion: 'pending shipped-library mapping and independent review' } : {}) } })),
+      ...(['OP-049', 'OP-051', 'OP-052'].includes(item.id) ? { recordFamilies } : {}) } })),
 ];
 
 export const inventory = { version: 1, tool: 'technitium-axi', commands, dhcpFields };

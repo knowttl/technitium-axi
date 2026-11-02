@@ -19,6 +19,8 @@ technitium-axi admin cluster primary transfer-config --include-zones example.tes
 TOON is the default output; `--json` serializes the same approved projection.
 The encoder is pinned to TOON 2.3.1 to match the Artium host decoder contract.
 Unknown vendor fields are tolerated and omitted from ordinary output.
+For `zone record get` and `cache list`, omitted non-sensitive fields also set `output.complete` to `false` and appear in `output.omittedFields`, grouped by response path with array indexes represented as `[]`.
+This reporting applies even with `--full`; use a protected result file for exact response bytes.
 Required envelope and collection fields and the types of projected fields are validated before output.
 Known passwords, TSIG shared secrets and token values are excluded from generic projections.
 Session output preserves the existing typed identity and permission projection.
@@ -47,7 +49,7 @@ One immediate retry is permitted for HTTP 429, 502, 503 or 504 within the reques
 A nonzero Retry-After prevents an immediate retry and produces retry guidance.
 Single-use identities never retry.
 Transport, malformed JSON, missing required fields, invalid credentials, second-factor requirements, permission denial, unavailable operations and vendor failures have structured errors.
-Vendor error messages and stack traces are not echoed.
+Vendor error messages have control characters removed and are limited to 300 characters; stack traces are not echoed.
 Permission rows require all three boolean grants (`canView`, `canModify`, `canDelete`); a missing grant is an invalid response.
 Record projections preserve TXT text and FWD routing metadata, including the string transport protocol used by FWD and the numeric protocol used by DNSKEY.
 Proxy passwords remain available only in the protected result file.

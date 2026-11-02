@@ -18,8 +18,6 @@ const parameterDispositions = {
   'OP-002.includeInfo': 'Fixed true for private Standard-session acquisition and identity verification',
   'OP-022.domain': 'Compatibility spelling rejected; zone is the sole creation target',
 };
-export const closureExclusions = [{ operation: 'OP-052', branch: 'DNAME deletion', issue: 'https://github.com/knowttl/technitium-axi/issues/18',
-  reason: 'Shipped library mapping and independent deletion review are unavailable; diagnostic rejection does not complete the mutation' }];
 
 function outcomeTask(operation, command, readContract) {
   if (['OP-001', 'OP-006'].includes(operation)) return `B1.${operation}`;
@@ -139,8 +137,8 @@ export async function closureJourney({ temporary, env, run, executable, packageR
   return { checks, expected: 3 + tasks.length, audit: { revision: source.revision, operations: commands.length, capabilities: outcomes.length,
     apiRoutes: source.routes.length, methodPathCombinations: 287, aliases: 2, obsoleteSpellings: obsolete.length,
     parameters: { reconciled: parameterCount, dispositions: parameterDispositions },
-    outcomes: outcomes.map(row => ({ ...row, native: row.operation === 'OP-052' ? 'passed-with-excluded-branch' : 'passed', hosted: 'release-candidate-check-not-selected' })),
-    browserRoutes: source.browserRoutes, exclusions: closureExclusions,
+    outcomes: outcomes.map(row => ({ ...row, native: 'passed', hosted: 'release-candidate-check-not-selected' })),
+    browserRoutes: source.browserRoutes, exclusions: [],
     scope: 'Pinned catalogue declarations and existing executable outcome journeys; not a new stable-version review or certification of every semantic branch',
-    fullManagementComplete: false } };
+    fullManagementComplete: true } };
 }

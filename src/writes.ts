@@ -7,7 +7,7 @@ import { readOnly, storeSession, removeSession } from './credentials.js';
 import type { Profile } from './credentials.js';
 import { ToolError } from './errors.js';
 import { PrivateFiles } from './private-file.js';
-import { checkStatus, Redactor, vendorRead, vendorRequest } from './vendor.js';
+import { checkStatus, Redactor, vendorMessage, vendorRead, vendorRequest } from './vendor.js';
 import { recordFamilies, recordTypeNames } from './write-contracts.js';
 import type { WriteContract } from './write-contracts.js';
 import { settingsFields, dhcpFields, identityFields, validateIdentity, validateConfiguration, configurationForm, settingValue, dhcpValue, validateDhcp } from './configuration.js';
@@ -190,7 +190,7 @@ function validateValue(key: string, value: unknown): void {
   }
   if (['userPermissions', 'groupPermissions'].includes(key)) { permissionRows(key, value); }
   else if (booleans.has(key)) { if (typeof value !== 'boolean') usage('Boolean input requires true or false'); }
-  else if (integers.has(key)) { if (!Number.isSafeInteger(value) || Number(value) < 0 || Number(value) > 4294967295) usage('Integer input is outside its supported range'); }
+  else if (integers.has(key)) { if (!Number.isSafeInteger(value) || Number(value) < 0 || Number(value) > 4294967295) usage(`${key} must be an integer from 0 to 4294967295`); }
   else if (lists.has(key)) { if (!Array.isArray(value) || value.some(item => typeof item !== 'string' || /[\x00-\x1f\x7f,]/.test(item))) usage('List input requires an array of strings without separators'); }
   else if ((key === 'algorithm' || key === 'newAlgorithm') && typeof value === 'number') {
     if (!Number.isSafeInteger(value) || value < 0 || value > 255) usage('Invalid DNSSEC algorithm');
@@ -210,7 +210,6 @@ function validateRecord(contract: WriteContract, parameters: Record<string, unkn
   const action = contract.id;
   if (type === 'SOA' && action !== 'OP-051') usage('SOA records use apex update or zone lifecycle operations');
   if (type === 'SOA' && parameters.domain !== parameters.zone) usage('SOA must select the zone apex');
-  if (type === 'DNAME' && action === 'OP-052') throw new ToolError('PREREQUISITE_PENDING', 'DNAME deletion requires reviewed shipped-library mapping', 'Track the DNAME mapping follow-up before accepting deletion coverage', 1);
   const metadata = action === 'OP-049' ? ['ttl', 'overwrite', 'comments', 'expiryTtl'] : action === 'OP-051' ? ['ttl', 'newDomain', 'disable', 'comments', 'expiryTtl'] : [];
   const optional = action === 'OP-052' ? (['A', 'AAAA'].includes(type) ? ['updateSvcbHints'] : type === 'TXT' ? ['splitText', 'characterStringsBase64'] : [])
     : (family.optional ?? []).filter(key => action !== 'OP-049' || !key.startsWith('new'));
@@ -600,10 +599,18 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
       body = Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${archive ? 'package.zip' : 'zone.txt'}"\r\nContent-Type: ${archive ? 'application/zip' : 'text/plain'}\r\n\r\n`), upload, Buffer.from(`\r\n--${boundary}--\r\n`)]);
     }
   }
+  let refusal: ToolError | undefined;
   try {
     const response = await vendorRequest(profile, requestPath, body, acquisition ? undefined : token, headers, { bytes: 16 * 1024 * 1024, elapsedMs: 10000 });
     if (response.status !== 200 || response.contentType !== 'application/json') throw new Error('Response unavailable');
     const value: unknown = JSON.parse(response.bytes.toString());
+    if (mutating && object(value) && value.status === 'error' && contract.id === 'OP-143') {
+      const reason = vendorMessage(value);
+      refusal = new ToolError('UPSTREAM_ERROR', `Server refused the operation${reason ? `: ${reason}` : ''}; audit ID ${auditId}${profile.tokenKind === 'single-use' ? '; credential consumed' : ''}`,
+        'The server reported an explicit failure; fix the cause and preview again', 1);
+      await files.write(path, JSON.stringify({ auditId, digest, operation: capability, state: 'failed', postconditionHash: expected, resyncSerial, clusterBefore }));
+      throw refusal;
+    }
     checkStatus(value);
     if (['OP-002', 'OP-003', 'OP-004', 'OP-099'].includes(contract.id)) {
       const credential = ['OP-004', 'OP-099'].includes(contract.id) ? value.response : value;
@@ -662,7 +669,7 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
       await files.write(path, JSON.stringify({ auditId, digest, operation: capability, state: 'revoke-failed', localRemoved }));
       return { bytes: Buffer.alloc(0), projection: { status: 'revoke-failed', operation: capability, auditId, revoked: false, localRemoved } };
     }
-    if (error instanceof ToolError && ['AUTH_REQUIRED', 'TWO_FACTOR_REQUIRED'].includes(error.code)) throw error;
+    if (error === refusal || error instanceof ToolError && ['AUTH_REQUIRED', 'TWO_FACTOR_REQUIRED'].includes(error.code)) throw error;
     if (!mutating) throw error;
     // The durable intent deliberately survives transport, handler and final-read failures.
     throw new ToolError('OUTCOME_UNKNOWN', `Mutation may have applied; audit ID ${auditId}${profile.tokenKind === 'single-use' ? '; credential consumed-or-uncertain' : ''}`,

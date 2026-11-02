@@ -105,7 +105,10 @@ export async function ssoLdapJourney({ task, env, run, executable, vendors, conf
     }
     expectedWire = { ...expectedWire, ldapBindPassword: 'wrong-bind' };
     const preview = await success('admin ldap test', { parameters: override }, [], { OPERATION_SECRET: 'wrong-bind' });
-    await failure('OUTCOME_UNKNOWN', 'admin ldap test', { parameters: override }, ['--execute', '--confirm', preview.preview.digest], { OPERATION_SECRET: 'wrong-bind' });
+    const refused = await failure('UPSTREAM_ERROR', 'admin ldap test', { parameters: override }, ['--execute', '--confirm', preview.preview.digest], { OPERATION_SECRET: 'wrong-bind' });
+    assert.match(refused.error.message, /audit ID [a-f0-9-]+/);
+    const receipt = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${preview.preview.digest}.json`), 'utf8'));
+    assert.equal(receipt.state, 'failed');
     assert.deepEqual(state, initial, 'Connection tests must not save configuration');
     for (const [grants, extraEnv] of [[[], {}], [['OP-142'], {}], [['OP-143'], { TECHNITIUM_AXI_READ_ONLY: '1' }]]) {
       await configure(grants);

@@ -314,6 +314,22 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
   }
   if (id === 'OP-032') {
     const command = 'zone options set';
+    const target = zones.get('example.test');
+    target.catalog = '';
+    vendors.responders.set('/api/zones/options/set', (_incoming, bytes) => {
+      const p = parameters(bytes);
+      target.disabled = p.disabled === 'true';
+      return { body: { status: 'error', errorMessage: `No such Catalog zone was found: ${p.catalog}` } };
+    });
+    const partial = { parameters: { zone: target.name, disabled: true, catalog: 'missing.test' }, baseline: { disabled: false, catalog: '' } };
+    const partialPreview = await success(command, partial);
+    const partialError = await failure('OUTCOME_UNKNOWN', command, partial, ['--execute', '--confirm', partialPreview.preview.digest]);
+    assert.match(partialError.error.message, /audit ID [a-f0-9-]+/);
+    const partialReadback = await options(target.name);
+    assert.equal(partialReadback.disabled, true);
+    assert.equal(partialReadback.catalog, '');
+    const receipt = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${partialPreview.preview.digest}.json`), 'utf8'));
+    assert.equal(receipt.state, 'intent');
     const zone = '1';
     const identifiers = [['key/a', 'key/b'], ['key/b', 'key/a'], ['127.1', '127.0.0.1'], ['127.0.0.1', '127.1']];
     const cases = [

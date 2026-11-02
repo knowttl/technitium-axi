@@ -193,9 +193,8 @@ if (!inside) {
     assert.ok(checks.length > 0, 'Zero assertions executed');
     assert.equal(checks.length, expected, 'Selected journey did not execute every expected case');
     console.log(JSON.stringify({ task, paths, expected, actual: checks.length, failed: 0,
-      pending: ['B3.02', 'B3.OP-052'].includes(task) ? 1 : 0, skipped: 0,
+      pending: 0, skipped: 0,
       ...(audit ? { audit } : {}),
-      ...(['B3.02', 'B3.OP-052'].includes(task) ? { limitations: ['DNAME deletion and B3.02 full-management coverage remain pending shipped-library mapping and independent review'] } : {}),
       platformEvidence: { linux: 'native', windows: identityTask ? 'PENDING - native Windows verification deferred' : 'not selected' }, package: { version: pack.version, sha256, integrity: pack.integrity }, checks }));
   } catch (error) {
     console.log(JSON.stringify({ task, paths, expected, actual: checks.length, failed: 1,

@@ -120,7 +120,8 @@ npm run check:journey -- --task B3.lists-cache --paths native --offline
 npm run check:journey -- --task B3.OP-077 --paths native --offline
 ```
 
-B3.02 and B3.OP-052 report one pending case for the accepted [DNAME deletion deferral](../README.md#writes), rather than claiming full-management coverage.
+B3.02 and B3.OP-052 add, update, delete and read back every record type, including [DNAME deletion](../README.md#writes), which must remove exactly the selected owner and type.
+B2.02 generates a read-back case per record type for `zone record get`, `cache list` and the block and allow lists.
 The record cases live in [record-inputs.json](../tests/fixtures/record-inputs.json).
 
 Run the zone lifecycle and record-write suite alone with `npm run test:zones`.
@@ -199,5 +200,4 @@ Generated contract freshness is checked before packing can regenerate files.
 Each outcome journey gets its own private home, credential state and loopback HTTPS vendors inside the network namespace.
 The native report does not establish hosted admission, current stable source review, live commissioning or Windows conformance.
 Hosted outcomes remain assigned to the separate release-candidate check.
-The report explicitly excludes the [DNAME deletion deferral](../README.md#writes).
-Passing rejection diagnostics do not complete that mutation, and the report keeps `fullManagementComplete` false.
+The report lists no exclusions and sets `fullManagementComplete` true when every outcome journey passes.
