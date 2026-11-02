@@ -79,6 +79,35 @@ function network(value: string): string {
   return `${denied ? '!' : ''}${address(result)}/${prefix}`;
 }
 
+function settingsAddress(value: string): string {
+  const denied = value.startsWith('!');
+  const [literal, suffix] = (denied ? value.slice(1) : value).split('/');
+  const [ip, scope] = literal!.replace(/^\[|\]$/g, '').split('%');
+  const version = isIP(ip!);
+  if (!version) return value;
+  const bits = version === 4 ? 32 : 128;
+  const prefix = suffix === undefined ? bits : Number(suffix);
+  if (!Number.isInteger(prefix) || prefix < 0 || prefix > bits) return value;
+  let words: string[];
+  if (version === 4) words = ip!.split('.');
+  else {
+    const hex = ip!.replace(/\d+\.\d+\.\d+\.\d+$/, tail => {
+      const octets = tail.split('.').map(Number);
+      return `${(octets[0]! * 256 + octets[1]!).toString(16)}:${(octets[2]! * 256 + octets[3]!).toString(16)}`;
+    });
+    const [left, right] = hex.split('::');
+    const start = left ? left.split(':') : [];
+    const end = right ? right.split(':') : [];
+    words = right === undefined ? start : [...start, ...Array(8 - start.length - end.length).fill('0'), ...end];
+  }
+  const width = version === 4 ? 8n : 16n;
+  const numeric = words.reduce((result, word) => (result << width) + BigInt(parseInt(word, version === 4 ? 10 : 16)), 0n);
+  const shift = BigInt(bits - prefix);
+  const masked = (numeric >> shift) << shift;
+  const result = Array.from({ length: version === 4 ? 4 : 8 }, (_, index) => Number((masked >> (BigInt((version === 4 ? 3 : 7) - index) * width)) & ((1n << width) - 1n)).toString(version === 4 ? 10 : 16)).join(version === 4 ? '.' : ':');
+  return `${denied ? '!' : ''}${result}${scope === undefined ? '' : `%${scope}`}${prefix === bits ? '' : `/${prefix}`}`;
+}
+
 function baselineValue(key: string, value: unknown): unknown {
   if (['userPermissions', 'groupPermissions'].includes(key)) {
     const name = key === 'userPermissions' ? 'username' : 'name';
@@ -92,26 +121,27 @@ function baselineValue(key: string, value: unknown): unknown {
     return value.map(item => key.endsWith('NetworkACL') ? network(String(item)) : address(String(item)));
   }
   if (['blockListUrls', 'forwarders'].includes(key) && value === null) return [];
-  if (key === 'dnsServerDomain' && typeof value === 'string') return value.replace(/\.+$/, '');
+  if (key === 'dnsServerDomain' && typeof value === 'string') return value.replace(/\.+$/, '').toLowerCase();
+  if (key === 'defaultResponsiblePerson' && typeof value === 'string') return (/<(.+)>\s*$/.exec(value)?.[1] ?? value).trim();
   if (Array.isArray(value) && value.length === 0) {
-    if (key === 'dnsServerLocalEndPoints') return ['0.0.0.0:53', '[::]:53'];
-    if (key === 'webServiceLocalAddresses') return ['0.0.0.0', '[::]'];
+    if (key === 'dnsServerLocalEndPoints') value = ['0.0.0.0:53', '[::]:53'];
+    if (key === 'webServiceLocalAddresses') value = ['0.0.0.0', '[::]'];
   }
   if (['webServiceRealIpHeader', 'dnsOverHttpRealIpHeader'].includes(key) && value === '') return 'X-Real-IP';
-  if (['eDnsClientSubnetIpv4Override', 'eDnsClientSubnetIpv6Override'].includes(key) && typeof value === 'string' && value !== '') return network(value);
-  if (['dnsServerIPv4SourceAddresses', 'dnsServerIPv6SourceAddresses', 'zoneTransferAllowedNetworks', 'notifyAllowedNetworks', 'qpmLimitBypassList', 'webServiceReverseProxyAddresses', 'dnsReverseProxyNetworkACL', 'reverseProxyNetworkACL', 'recursionNetworkACL', 'blockingBypassList'].includes(key) && Array.isArray(value)) return value.map(item => network(String(item)));
+  if (['eDnsClientSubnetIpv4Override', 'eDnsClientSubnetIpv6Override'].includes(key) && typeof value === 'string' && value !== '') return settingsAddress(value);
+  if (['dnsServerIPv4SourceAddresses', 'dnsServerIPv6SourceAddresses', 'zoneTransferAllowedNetworks', 'notifyAllowedNetworks', 'qpmLimitBypassList', 'webServiceReverseProxyAddresses', 'dnsReverseProxyNetworkACL', 'reverseProxyNetworkACL', 'recursionNetworkACL', 'blockingBypassList'].includes(key) && Array.isArray(value)) return value.map(item => settingsAddress(String(item)));
   if (key === 'customBlockingAddresses' && Array.isArray(value)) {
-    const addresses = value.map(item => address(String(item)));
+    const addresses = value.map(item => settingsAddress(String(item)));
     return [...addresses.filter(item => isIP(item) === 4), ...addresses.filter(item => isIP(item) === 6)];
   }
   if (key === 'webServiceLocalAddresses' && Array.isArray(value)) return value.map(item => {
-    const ip = address(String(item).replace(/^\[|\]$/g, ''));
+    const ip = settingsAddress(String(item));
     return isIP(ip) === 6 ? `[${ip}]` : ip;
   });
   if (key === 'dnsServerLocalEndPoints' && Array.isArray(value)) return value.map(item => {
     const endpoint = String(item);
     const parts = /^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/.exec(endpoint);
-    const ip = address((parts?.[1] ?? endpoint).replace(/^\[|\]$/g, ''));
+    const ip = settingsAddress(parts?.[1] ?? endpoint);
     return `${isIP(ip) === 6 ? `[${ip}]` : ip}:${Number(parts?.[2]) || 53}`;
   });
   if (key === 'webServiceCspFrameAncestorsHeader' && value === '') return "'none'";
@@ -119,7 +149,7 @@ function baselineValue(key: string, value: unknown): unknown {
   if (settingsFields[key]?.type === 'string' && value === null) return '';
   if (['webServiceTlsCertificatePassword', 'dnsTlsCertificatePassword'].includes(key) && typeof value === 'string') return value === '' ? '' : '************';
   if (settingsFields[key] && ['list', 'ports', 'rows'].includes(settingsFields[key]!.type) && value === null) return [];
-  if (key === 'tsigKeys' && Array.isArray(value)) return value.map(row => ({ ...row, keyName: row.keyName.toLowerCase().replace(/\.$/, ''), algorithmName: row.algorithmName.toLowerCase().replace(/\.$/, '') })).sort((a, b) => a.keyName.localeCompare(b.keyName));
+  if (key === 'tsigKeys' && Array.isArray(value)) return value.map(row => ({ ...row, keyName: domainName(row.keyName), algorithmName: row.algorithmName.toLowerCase().replace(/\.$/, '') })).sort((a, b) => a.keyName.localeCompare(b.keyName));
   if (['catalog', 'primaryZoneTransferTsigKeyName'].includes(key) && value === null) return '';
   if (['catalog', 'primaryZoneTransferTsigKeyName'].includes(key) && typeof value === 'string') return literalName(value);
   if (['primaryZoneTransferProtocol', 'queryAccess', 'zoneTransfer', 'notify', 'update'].includes(key) && typeof value === 'string') return value.toLowerCase();

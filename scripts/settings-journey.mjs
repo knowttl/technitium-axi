@@ -108,23 +108,25 @@ export async function settingsJourney({ task, directory, env, run, executable, v
     await execute('settings set', { parameters: { maxLogFileDays: 0, webServiceHttpUnixSocket: '' }, baseline: { maxLogFileDays: 365, webServiceHttpUnixSocket: 'dns.sock' } });
     assert.equal(state.maxLogFileDays, 0);
     assert.equal(state.webServiceHttpUnixSocket, '');
-    const addressCases = [
+    const normalizationCases = [
+      ['dnsServerDomain', 'DNS.EXAMPLE.TEST', 'dns.example.test'],
+      ['defaultResponsiblePerson', 'DNS Admin <admin@example.test>', 'admin@example.test'],
       ['dnsOverHttpRealIpHeader', '', 'X-Real-IP'],
       ['eDnsClientSubnetIpv4Override', '192.0.2.129/24', '192.0.2.0/24'],
-      ['eDnsClientSubnetIpv6Override', '2001:0DB8:0:0:0:0:0:1234/64', '2001:db8::/64'],
-      ['dnsServerLocalEndPoints', ['2001:0DB8::1', '[0:0:0:0:0:0:0:1]:0053', '192.0.2.1:0'], ['[2001:db8::1]:53', '[::1]:53', '192.0.2.1:53']],
-      ['webServiceLocalAddresses', ['0:0:0:0:0:0:0:1'], ['[::1]']],
+      ['eDnsClientSubnetIpv6Override', 'FE80:0:0:0:0:0:0:1%3/128', 'fe80::1%3'],
+      ['dnsServerLocalEndPoints', ['2001:0DB8::1', '[0:0:0:0:0:0:0:1]:0053', '192.0.2.1:0', '[FE80:0:0:0:0:0:0:1%3]:53'], ['[2001:db8::1]:53', '[::1]:53', '192.0.2.1:53', '[fe80::1%3]:53']],
+      ['webServiceLocalAddresses', ['0:0:0:0:0:0:0:1', 'FE80:0:0:0:0:0:0:1%3'], ['[::1]', '[fe80::1%3]']],
       ['dnsServerIPv4SourceAddresses', ['192.0.2.129/24'], ['192.0.2.0/24']],
-      ['dnsServerIPv6SourceAddresses', ['2001:0DB8::1234/64'], ['2001:db8::/64']],
-      ['zoneTransferAllowedNetworks', ['2001:0DB8::1234/64'], ['2001:db8::/64']],
-      ['notifyAllowedNetworks', ['2001:0DB8::1234/64'], ['2001:db8::/64']],
-      ['qpmLimitBypassList', ['2001:0DB8::1234/64'], ['2001:db8::/64']],
-      ['webServiceReverseProxyAddresses', ['!2001:0DB8::1234/64', '0:0:0:0:0:0:0:1'], ['!2001:db8::/64', '::1']],
-      ['dnsReverseProxyNetworkACL', ['!2001:0DB8::1234/64'], ['!2001:db8::/64']],
-      ['reverseProxyNetworkACL', ['!2001:0DB8::1234/64'], ['!2001:db8::/64']],
-      ['recursionNetworkACL', ['!2001:0DB8::1234/64'], ['!2001:db8::/64']],
-      ['blockingBypassList', ['2001:0DB8::1234/64'], ['2001:db8::/64']],
-      ['customBlockingAddresses', ['0:0:0:0:0:0:0:1', '192.0.2.2', '2001:0DB8::2', '192.0.2.3'], ['192.0.2.2', '192.0.2.3', '::1', '2001:db8::2']],
+      ['dnsServerIPv6SourceAddresses', ['2001:0DB8::1234/64', 'FE80:0:0:0:0:0:0:1%3'], ['2001:db8::/64', 'fe80::1%3']],
+      ['zoneTransferAllowedNetworks', ['2001:0DB8::1234/64', 'FE80:0:0:0:0:0:0:1%3'], ['2001:db8::/64', 'fe80::1%3']],
+      ['notifyAllowedNetworks', ['2001:0DB8::1234/64', 'FE80:0:0:0:0:0:0:1%3'], ['2001:db8::/64', 'fe80::1%3']],
+      ['qpmLimitBypassList', ['2001:0DB8::1234/64', 'FE80:0:0:0:0:0:0:1%3'], ['2001:db8::/64', 'fe80::1%3']],
+      ['webServiceReverseProxyAddresses', ['!2001:0DB8::1234/64', 'FE80:0:0:0:0:0:0:1%3'], ['!2001:db8::/64', 'fe80::1%3']],
+      ['dnsReverseProxyNetworkACL', ['!2001:0DB8::1234/64', '!FE80:0:0:0:0:0:0:1%3'], ['!2001:db8::/64', '!fe80::1%3']],
+      ['reverseProxyNetworkACL', ['!2001:0DB8::1234/64', '!FE80:0:0:0:0:0:0:1%3'], ['!2001:db8::/64', '!fe80::1%3']],
+      ['recursionNetworkACL', ['!2001:0DB8::1234/64', '!FE80:0:0:0:0:0:0:1%3'], ['!2001:db8::/64', '!fe80::1%3']],
+      ['blockingBypassList', ['2001:0DB8::1234/64', 'FE80:0:0:0:0:0:0:1%3'], ['2001:db8::/64', 'fe80::1%3']],
+      ['customBlockingAddresses', ['0:0:0:0:0:0:0:1', '192.0.2.2', 'FE80:0:0:0:0:0:0:1%3', '192.0.2.3'], ['192.0.2.2', '192.0.2.3', '::1', 'fe80::1%3']],
     ];
     const settingsResponder = vendors.responders.get('/api/settings/set');
     vendors.responders.set('/api/settings/set', (incoming, bytes) => {
@@ -134,15 +136,23 @@ export async function settingsJourney({ task, directory, env, run, executable, v
       for (const [key, raw] of Object.entries(data)) {
         let value = raw;
         if (fields[key].type === 'list') value = json ? raw : raw === '' ? [] : raw.split(',');
-        if (key === 'proxyPort' && !json) value = Number(raw);
-        if (key === 'dnsServerDomain') value = value.replace(/\.+$/, '');
+        if (fields[key].type === 'integer' && !json) value = Number(raw);
+        if (key === 'dnsServerDomain') value = value.replace(/\.+$/, '').toLowerCase();
         if (key === 'dnsServerLocalEndPoints' && value.length === 0) value = ['0.0.0.0:53', '[::]:53'];
         if (key === 'webServiceLocalAddresses' && value.length === 0) value = ['0.0.0.0', '[::]'];
         if (key === 'webServiceRealIpHeader' && value === '') value = 'X-Real-IP';
         if (key === 'webServiceCspFrameAncestorsHeader' && value === '') value = "'none'";
         if (key === 'forwarderProtocol' && value === 'HttpsJson') value = 'Https';
-        const addressCase = addressCases.find(([field, requested]) => field === key && JSON.stringify(requested) === JSON.stringify(value));
-        if (addressCase) value = structuredClone(addressCase[2]);
+        if (key === 'tsigKeys') {
+          if (!json) {
+            const cells = raw === '' ? [] : raw.split('|');
+            value = [];
+            for (let i = 0; i < cells.length; i += 3) value.push({ keyName: cells[i], sharedSecret: cells[i + 1], algorithmName: cells[i + 2] });
+          }
+          value = value.map(row => ({ ...row, keyName: row.keyName === 'BÜCHER.Example.' ? 'xn--bcher-kva.example' : row.keyName }));
+        }
+        const normalizationCase = normalizationCases.find(([field, requested]) => field === key && JSON.stringify(requested) === JSON.stringify(value));
+        if (normalizationCase) value = structuredClone(normalizationCase[2]);
         if (key.startsWith('proxy')) {
           state.proxy ??= {};
           state.proxy[key.slice(5).toLowerCase()] = value;
@@ -210,7 +220,7 @@ export async function settingsJourney({ task, directory, env, run, executable, v
       assert.equal(writes, afterLost, 'Reconciliation only reads vendor state');
       assert.deepEqual(state, { ...initial(), ...normalizedExpected });
       for (const alias of ['dnsReverseProxyNetworkACL', 'reverseProxyNetworkACL']) {
-        const cases = addressCases.filter(([key]) => !['dnsReverseProxyNetworkACL', 'reverseProxyNetworkACL'].includes(key) || key === alias);
+        const cases = normalizationCases.filter(([key]) => !['dnsReverseProxyNetworkACL', 'reverseProxyNetworkACL'].includes(key) || key === alias);
         const parameters = Object.fromEntries(cases.map(([key, requested]) => [key, requested]));
         const baseline = Object.fromEntries(cases.map(([key, requested]) => [key, Array.isArray(requested) ? [] : '']));
         state = { ...initial(), ...baseline };
@@ -233,7 +243,24 @@ export async function settingsJourney({ task, directory, env, run, executable, v
         await success('settings set', input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
         assert.equal(writes, afterLost);
         assert.deepEqual(state, expected);
+        const unchanged = structuredClone(state);
+        await execute('settings set', { parameters: { defaultRecordTtl: 600 }, baseline: { defaultRecordTtl: 3600 }, encoding });
+        assert.deepEqual(state, { ...unchanged, defaultRecordTtl: 600 });
       }
+      const tsigInput = { parameters: { tsigKeys: [{ keyName: 'BÜCHER.Example.', sharedSecret: { env: 'OPERATION_SECRET' }, algorithmName: 'hmac-sha256' }] }, baseline: { tsigKeys: [] }, encoding };
+      state = { ...initial(), tsigKeys: [] };
+      await execute('settings set', tsigInput);
+      assert.deepEqual(state.tsigKeys, [{ keyName: 'xn--bcher-kva.example', sharedSecret: secret, algorithmName: 'hmac-sha256' }]);
+      state.tsigKeys = [];
+      drop = true;
+      const tsigPreview = await success('settings set', tsigInput);
+      const tsigLost = await failure('OUTCOME_UNKNOWN', 'settings set', tsigInput, ['--execute', '--confirm', tsigPreview.preview.digest]);
+      const afterTsigLost = writes;
+      drop = false;
+      await failure('CONFLICT', 'settings set', tsigInput, ['--execute', '--confirm', tsigPreview.preview.digest]);
+      const tsigAuditId = tsigLost.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
+      await success('settings set', tsigInput, ['--confirm', tsigPreview.preview.digest, '--reconcile', tsigAuditId]);
+      assert.equal(writes, afterTsigLost);
       for (const parameters of [{ forwarderProtocol: 'Tls' }, { forwarders: [] }, { forwarders: [], forwarderProtocol: 'Tls' }]) {
         state = { ...initial(), forwarders: null, forwarderProtocol: 'Udp' };
         const baseline = Object.fromEntries(Object.keys(parameters).map(key => [key, key === 'forwarders' ? [] : 'Udp']));
