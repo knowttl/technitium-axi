@@ -106,7 +106,7 @@ if (!inside) {
     const setup = JSON.parse(await readFile(new URL('../tests/fixtures/setup.json', import.meta.url), 'utf8'));
     const invoke = argv => run(executable, argv, { cwd: home, env });
     if (task === 'B1.02' || identityTask || readTask || writeTask) {
-      vendors = await fakeVendors(temporary, run, env);
+      vendors = await fakeVendors(temporary);
       await vendors.check();
     }
     if (paths.includes('native') && identityTask) {

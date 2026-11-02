@@ -1,18 +1,16 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { chmod, readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { createServer, request } from 'node:https';
 import { connect } from 'node:net';
 import { join } from 'node:path';
 
-export async function fakeVendors(temporary, run, env) {
-  const key = join(temporary, 'vendor-key.pem');
+export async function fakeVendors(temporary) {
   const cert = join(temporary, 'vendor-ca.pem');
-  const generated = await run('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1',
-    '-keyout', key, '-out', cert, '-subj', '/CN=localhost', '-addext', 'subjectAltName=IP:127.0.0.1,DNS:localhost'], { env });
-  assert.equal(generated.code, 0, generated.stderr);
-  await chmod(cert, 0o600);
-  const tls = { key: await readFile(key), cert: await readFile(cert) };
+  // Test-only localhost identity, valid 2020-2120 so clock adjustments cannot cross its issuance time.
+  const tls = { key: await readFile(new URL('../tests/fixtures/localhost-key.pem', import.meta.url)),
+    cert: await readFile(new URL('../tests/fixtures/localhost-cert.pem', import.meta.url)) };
+  await writeFile(cert, tls.cert, { mode: 0o600 });
   const traces = [];
   const started = performance.now();
   const tokens = new Map();
