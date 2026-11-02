@@ -125,10 +125,10 @@ An unsafe explicit result destination is rejected before write dispatch.
 
 DHCP lease removal and conversion require a scope `name` and exactly one of `clientIdentifier` or `hardwareAddress`.
 Scope enable, disable and delete take `name`; reservation removal also requires `hardwareAddress`.
-Reservation addition requires `hardwareAddress` and `ipAddress`, with optional `hostName` and `comments`, and checks for an existing hardware or address reservation before dispatch.
+Reservation addition requires `name`, `hardwareAddress` and `ipAddress`, with optional `hostName` and `comments`, and checks for an existing hardware or address reservation before dispatch.
 Use a single-writer window for this check because the vendor does not atomically reject a concurrent duplicate address.
 `dhcp scope set` updates an existing scope using typed fields from the inventory's `dhcpFields` map.
-Supply the baseline for every changed field; when renaming, `baseline.newName` is the current scope name.
+When renaming, `baseline.newName` is the current scope name.
 Omitted fields are preserved, arrays replace collections, and empty arrays clear them.
 Structured rows retain the listed column order when encoded for the vendor, including option bytes, static routes, exclusions and reservations.
 Scope setters and reservation addition need a reusable API or session credential for their preflight reads.
@@ -180,14 +180,14 @@ Failure to persist an intent prevents dispatch.
 Dispatched mutations never retry automatically; a failed response or unproven postcondition returns `OUTCOME_UNKNOWN` and an audit ID.
 Never replay an uncertain write or create a new preview to bypass its journal entry.
 
-`zone options set`, `zone permission set`, `settings set` and `admin group set` require an additional `baseline` object containing exactly the changed fields, excluding target identifiers.
+`zone options set`, `zone permission set`, `settings set`, `dhcp scope set` and `admin group set` require an additional `baseline` object containing exactly the changed fields, excluding target identifiers.
 Read the selected target first and supply its current values; execution re-reads them and returns `CONFLICT` before dispatch if they differ.
 Zone-option and group lists are explicit replacements, including empty arrays; omitted fields remain unchanged.
 See the settings guidance above for collection reset and coupled-field behavior.
 Null settings collection baselines map to empty arrays, and null catalog/primary-transfer TSIG names map to empty strings.
 Group renames use `baseline.newGroup` for the current group name; settings proxy fields use the getter's nested `proxy` values.
 Update-security-policy baselines accept getter rows or the setter string representation.
-These operations verify selected fields after dispatch, including the renamed group target.
+These operations verify selected fields after dispatch, including renamed group and scope targets.
 The vendor has no atomic conditional setter, so maintain a single-writer window between the final read and write.
 For these operations, use `--reconcile <audit-id> --confirm '<original-preview.digest>'` with the original input and profile to prove the postcondition without resending the mutation.
 Other operations, except resync as described below, require manual inspection of the exact selected target when their outcome is uncertain.
