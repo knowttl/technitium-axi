@@ -24,6 +24,8 @@ export const commands = [
     arguments: [], flags: writeFlags, input: { envelope: ['parameters', 'baseline', 'upload'], fields: item.fields,
       required: item.required, secrets: item.secrets ?? [], baseline: item.baselinePath ?? null,
       ...(['OP-022', 'OP-023'].includes(item.id) ? { upload: { file: 'protected absolute path', format: item.id === 'OP-023' ? ['multipart (default)', 'text'] : ['multipart'] } } : {}),
+      ...(['OP-072', 'OP-073', 'OP-085'].includes(item.id) ? { upload: { file: 'required protected absolute ZIP path', transport: 'multipart first binary file; parameters in query string' } } : {}),
+      ...(item.id === 'OP-076' ? { config: 'File SecretRef containing the exact opaque config string; never printed' } : {}),
       ...(item.id === 'OP-029' ? { target: 'Exactly one of zone or nonempty zones array' } : {}),
       ...(item.id === 'OP-034' ? { permissions: { userPermissions: ['username', 'canView', 'canModify', 'canDelete'], groupPermissions: ['name', 'canView', 'canModify', 'canDelete'], shape: 'Array of rows; permission flags are booleans; an empty user array clears user permissions; group replacements retain Administrators and DNS Administrators with all permissions' } } : {}),
       ...(item.id === 'OP-080' ? { configuration: settingsFields, encoding: ['form', 'json'], secretRows: 'tsigKeys rows require a SecretRef for sharedSecret' } : {}),

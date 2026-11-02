@@ -5500,6 +5500,147 @@
       }
     },
     {
+      "command": "app download-and-install",
+      "description": "Preview or execute app download-and-install",
+      "effect": "write",
+      "operation": "OP-070",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "name",
+          "url"
+        ],
+        "required": [
+          "name",
+          "url"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "app download-and-update",
+      "description": "Preview or execute app download-and-update",
+      "effect": "write",
+      "operation": "OP-071",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "name",
+          "url"
+        ],
+        "required": [
+          "name",
+          "url"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "app uninstall",
+      "description": "Preview or execute app uninstall",
+      "effect": "write",
+      "operation": "OP-074",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "name"
+        ],
+        "required": [
+          "name"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "app config set",
+      "description": "Preview or execute app config set",
+      "effect": "write",
+      "operation": "OP-076",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "name",
+          "config"
+        ],
+        "required": [
+          "name",
+          "config"
+        ],
+        "secrets": [
+          "config"
+        ],
+        "baseline": null,
+        "config": "File SecretRef containing the exact opaque config string; never printed"
+      }
+    },
+    {
       "command": "app install",
       "description": "Preview or execute app install",
       "effect": "write",
@@ -5530,7 +5671,11 @@
           "name"
         ],
         "secrets": [],
-        "baseline": null
+        "baseline": null,
+        "upload": {
+          "file": "required protected absolute ZIP path",
+          "transport": "multipart first binary file; parameters in query string"
+        }
       }
     },
     {
@@ -5564,7 +5709,11 @@
           "name"
         ],
         "secrets": [],
-        "baseline": null
+        "baseline": null,
+        "upload": {
+          "file": "required protected absolute ZIP path",
+          "transport": "multipart first binary file; parameters in query string"
+        }
       }
     },
     {
@@ -5609,7 +5758,11 @@
         ],
         "required": [],
         "secrets": [],
-        "baseline": null
+        "baseline": null,
+        "upload": {
+          "file": "required protected absolute ZIP path",
+          "transport": "multipart first binary file; parameters in query string"
+        }
       }
     },
     {

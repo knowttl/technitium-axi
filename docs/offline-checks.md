@@ -135,6 +135,13 @@ npm run check:journey -- --task B3.CR-014 --paths native --offline
 ```
 
 Node diagnostics report actual child PID, argv and executable hash without replacing the runner.
+
+B4.OP-070, B4.OP-071, B4.OP-072, B4.OP-073, B4.OP-074, B4.OP-076 and B4.OP-085 cover app downloads, package uploads, uninstall, opaque config replacement and selected backup restore.
+Run each with `npm run check:journey -- --task <id> --paths native --offline`, or run all seven with `npm run test:apps-restore`, also included in `npm test`.
+The shared matrix checks exact form or multipart mapping, preserved unrelated state, protected response bytes and journal secrecy.
+Handler failures report an unknown outcome and cannot replay the confirmed mutation.
+Restore checks both delete-existing modes, a failure after an earlier category changed, and returned secrets with DNS settings excluded.
+
 B4 settings checks use the field matrix in [configuration-matrix.json](../tests/fixtures/configuration-matrix.json) for form/JSON patches, structured fields, omitted-secret preservation and protected results.
 The transfer checks cover file-only multipart, exact ZIP entry bytes, preview hash changes, size limits and custody denial before dispatch.
 The settings and log action checks exercise success and vendor failure, retaining uncertain journal entries without replay.

@@ -94,6 +94,13 @@ export const writeContracts: WriteContract[] = [
   { id: 'OP-080', command: 'settings set', path: '/api/settings/set', fields: Object.keys(settingsFields), required: [], secrets: Object.keys(settingsFields).filter(key => settingsFields[key]!.secret), baselinePath: '/api/settings/get', baselineTarget: [] },
   { id: 'OP-082', command: 'settings force-update-block-lists', path: '/api/settings/forceUpdateBlockLists', fields: [], required: [] },
   { id: 'OP-083', command: 'settings temporary-disable-blocking', path: '/api/settings/temporaryDisableBlocking', fields: ['minutes'], required: ['minutes'] },
+  ...[
+    ['OP-070', 'download-and-install', 'downloadAndInstall'],
+    ['OP-071', 'download-and-update', 'downloadAndUpdate'],
+    ['OP-074', 'uninstall', 'uninstall'],
+  ].map(([id, command, path]) => ({ id: id!, command: `app ${command}`, path: `/api/apps/${path}`,
+    fields: command === 'uninstall' ? ['name'] : ['name', 'url'], required: command === 'uninstall' ? ['name'] : ['name', 'url'] })),
+  { id: 'OP-076', command: 'app config set', path: '/api/apps/config/set', fields: ['name', 'config'], required: ['name', 'config'], secrets: ['config'] },
   { id: 'OP-072', command: 'app install', path: '/api/apps/install', fields: ['node', 'name'], required: ['name'] },
   { id: 'OP-073', command: 'app update', path: '/api/apps/update', fields: ['node', 'name'], required: ['name'] },
   { id: 'OP-085', command: 'settings restore', path: '/api/settings/restore', fields: words('node authConfig clusterConfig webServiceSettings dnsSettings logSettings zones allowedZones blockedZones blockLists apps scopes stats logs deleteExistingFiles'), required: [] },

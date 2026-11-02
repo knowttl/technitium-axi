@@ -7,8 +7,9 @@ import { dnssecJourney, dnssecTasks } from './dnssec-journey.mjs';
 import { listsCacheJourney, listsCacheTasks } from './lists-cache-journey.mjs';
 import { zoneJourney, zoneTasks } from './zone-journey.mjs';
 import { settingsJourney, settingsTasks } from './settings-journey.mjs';
+import { appsRestoreJourney, appsRestoreTasks } from './apps-restore-journey.mjs';
 
-export const writeTasks = ['B3.01', 'B3.02', 'B3.03', 'B3.04', 'B3.05', 'B3.CR-013', 'B3.CR-014', 'B3.dnssec', ...dnssecTasks, 'B3.lists-cache', ...listsCacheTasks, ...zoneTasks, ...settingsTasks, 'B3.OP-049', 'B3.OP-051', 'B3.OP-052'];
+export const writeTasks = ['B3.01', 'B3.02', 'B3.03', 'B3.04', 'B3.05', 'B3.CR-013', 'B3.CR-014', 'B3.dnssec', ...dnssecTasks, 'B3.lists-cache', ...listsCacheTasks, ...zoneTasks, ...settingsTasks, ...appsRestoreTasks, 'B3.OP-049', 'B3.OP-051', 'B3.OP-052'];
 const hash = value => createHash('sha256').update(value).digest('hex');
 
 export async function writeJourney({ task, temporary, env, run, executable, vendors }) {
@@ -47,6 +48,10 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     const preview = await success(command, input, [], extraEnv);
     return await success(command, input, ['--execute', '--confirm', preview.preview.digest], extraEnv);
   };
+  if (appsRestoreTasks.includes(task)) {
+    await appsRestoreJourney({ task, directory, env, run, executable, vendors, config, token, secret, configure, success, failure });
+    return [`native:${task}:write-behavior`];
+  }
   if (settingsTasks.includes(task)) {
     await settingsJourney({ task, directory, env, run, executable, vendors, config, token, secret, configure, success, failure, execute });
     return [`native:${task}:write-behavior`];

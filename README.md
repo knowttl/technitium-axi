@@ -111,8 +111,14 @@ Settings are not transactional: a handler error can leave earlier assignments sa
 `app install`, `app update` and `settings restore` use `upload: {"file": "/absolute/path/package.zip"}` in the input envelope.
 These uploads must be ZIP archives with safe relative entry names and no symbolic links; invalid archives are rejected locally with `UPLOAD_INVALID`.
 The preview binds the exact upload hash, and execution sends one binary file with operation parameters in the query string for vendor proxy compatibility.
+`app download-and-install` and `app download-and-update` take `name` and an HTTPS `url` in `parameters`; the DNS server downloads the package.
+`app uninstall` takes `name` and leaves APP records intact.
+`app config set` takes `name` and `config: {"file": "/absolute/path/dnsApp.config"}` in `parameters`.
+The protected config file is sent as an exact opaque string, including unknown keys and whitespace, and is never printed.
 Restore selection flags are independent booleans and default to false at the vendor.
+Restore is not transactional: a handler error can leave earlier categories restored and requires inspection before another write.
 Use `--result-file` to retain exact settings or restore responses, including returned proxy and TSIG secrets, in a protected file.
+Restore responses can include current DNS settings secrets even when `dnsSettings` is false.
 An unsafe explicit result destination is rejected before write dispatch.
 `settings temporary-disable-blocking` takes a positive integer `minutes` and returns the vendor's expiry time; `settings force-update-block-lists` triggers an asynchronous update.
 `log delete` takes the `fileName` returned by `log list` as its `log` value, without a path, and optional `node`; `log delete-all` accepts optional `node`.

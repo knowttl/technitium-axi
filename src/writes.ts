@@ -244,6 +244,7 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
   if (!object(input) || !object(input.parameters) || Object.keys(input).some(key => !['parameters', 'baseline', 'upload', 'encoding'].includes(key))) usage('Input requires parameters and optional baseline or upload');
   if (input.encoding !== undefined && (contract.id !== 'OP-080' || !['form', 'json'].includes(String(input.encoding)))) usage('Only settings set supports form or json encoding');
   const parameters = input.parameters;
+  if (contract.id === 'OP-076' && (!object(parameters.config) || typeof parameters.config.file !== 'string')) usage('App config requires a protected absolute file SecretRef');
   if (contract.id === 'OP-080') for (const values of [parameters, input.baseline]) {
     if (!object(values) || !Object.hasOwn(values, 'defaultResponsiblePerson')) continue;
     const value = values.defaultResponsiblePerson;
@@ -254,6 +255,11 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
   }
   for (const key of Object.keys(parameters)) if (!contract.fields.includes(key)) usage('Unknown input field');
   for (const key of contract.required) if (!Object.hasOwn(parameters, key) || parameters[key] === '') usage('Required input is missing');
+  if (['OP-070', 'OP-071'].includes(contract.id)) {
+    let url: URL;
+    try { url = new URL(String(parameters.url)); } catch { usage('App download URL must be an absolute HTTPS URL'); }
+    if (url.protocol !== 'https:') usage('App download URL must use HTTPS');
+  }
   if (contract.id === 'OP-136' && (typeof parameters.log !== 'string' || /[\\/:]/.test(parameters.log) || ['.', '..'].includes(parameters.log))) usage('Log deletion requires the fileName returned by log list, without a path');
   for (const [key, value] of Object.entries(parameters)) {
     if (contract.secrets?.includes(key)) {
