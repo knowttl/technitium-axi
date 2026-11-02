@@ -92,7 +92,7 @@ The DNSSEC matrix covers signing, unsigning, NSEC/NSEC3 conversion and parameter
 Select an individual DNSSEC write with `--task B3.OP-035`, replacing `035` with the desired operation number, without a separate `--operation` flag.
 Synthetic worlds check exact form inputs, protected PEM references, preview and replay boundaries, vendor prerequisite failures, selected-zone properties and records, and preservation of other zones.
 NSEC3 conversion includes omitted values, explicit zeros, effective maxima of 50 iterations and 32 salt bytes, and rejection before dispatch above those bounds.
-Lifecycle fixtures advance explicitly to show published, active and retired keys; the CLI returns the accepted request without waiting for automatic vendor lifecycle progress.
+Lifecycle fixtures advance explicitly to show published, active and retired keys; see [Writes](../README.md#writes) for success semantics and subsequent inspection.
 These fixtures prove CLI behavior against a fake vendor, not cryptographic correctness or live-server interoperability.
 
 ```sh
