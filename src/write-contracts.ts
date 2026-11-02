@@ -1,4 +1,4 @@
-import { settingsFields } from './configuration.js';
+import { settingsFields, dhcpFields } from './configuration.js';
 
 export interface WriteContract {
   id: string; command: string; path: string;
@@ -54,6 +54,16 @@ export const recordFamilies: Record<string, { selector: string[]; replacement: s
 const words = (value: string) => value.split(' ');
 const recordFields = [...new Set(Object.values(recordFamilies).flatMap(row => [...row.selector, ...row.replacement, ...row.optional ?? []]))];
 export const writeContracts: WriteContract[] = [
+  ...[
+    ['OP-087', 'remove', 'remove'], ['OP-088', 'convert-to-reserved', 'convertToReserved'], ['OP-089', 'convert-to-dynamic', 'convertToDynamic'],
+  ].map(([id, command, path]) => ({ id: id!, command: `dhcp lease ${command}`, path: `/api/dhcp/leases/${path}`,
+    fields: words('name clientIdentifier hardwareAddress'), required: ['name'] })),
+  { id: 'OP-092', command: 'dhcp scope set', path: '/api/dhcp/scopes/set', fields: Object.keys(dhcpFields), required: ['name'], baselinePath: '/api/dhcp/scopes/get', baselineTarget: ['name'] },
+  { id: 'OP-093', command: 'dhcp scope add-reserved-lease', path: '/api/dhcp/scopes/addReservedLease', fields: words('name hardwareAddress ipAddress hostName comments'), required: words('name hardwareAddress ipAddress') },
+  { id: 'OP-094', command: 'dhcp scope remove-reserved-lease', path: '/api/dhcp/scopes/removeReservedLease', fields: words('name hardwareAddress'), required: words('name hardwareAddress') },
+  ...[['OP-095', 'enable'], ['OP-096', 'disable'], ['OP-097', 'delete']].map(([id, action]) => ({
+    id: id!, command: `dhcp scope ${action}`, path: `/api/dhcp/scopes/${action}`, fields: ['name'], required: ['name'],
+  })),
   { id: 'OP-019', command: 'dashboard stats delete-all', path: '/api/dashboard/stats/deleteAll', fields: ['node'], required: [] },
   ...[
     ['OP-054', 'cache', 'delete', 'domain'], ['OP-055', 'cache', 'flush', ''],

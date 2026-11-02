@@ -2218,6 +2218,489 @@
       ]
     },
     {
+      "command": "dhcp lease remove",
+      "description": "Preview or execute dhcp lease remove",
+      "effect": "write",
+      "operation": "OP-087",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "name",
+          "clientIdentifier",
+          "hardwareAddress"
+        ],
+        "required": [
+          "name"
+        ],
+        "secrets": [],
+        "baseline": null,
+        "target": "Exactly one of clientIdentifier or hardwareAddress"
+      }
+    },
+    {
+      "command": "dhcp lease convert-to-reserved",
+      "description": "Preview or execute dhcp lease convert-to-reserved",
+      "effect": "write",
+      "operation": "OP-088",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "name",
+          "clientIdentifier",
+          "hardwareAddress"
+        ],
+        "required": [
+          "name"
+        ],
+        "secrets": [],
+        "baseline": null,
+        "target": "Exactly one of clientIdentifier or hardwareAddress"
+      }
+    },
+    {
+      "command": "dhcp lease convert-to-dynamic",
+      "description": "Preview or execute dhcp lease convert-to-dynamic",
+      "effect": "write",
+      "operation": "OP-089",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "name",
+          "clientIdentifier",
+          "hardwareAddress"
+        ],
+        "required": [
+          "name"
+        ],
+        "secrets": [],
+        "baseline": null,
+        "target": "Exactly one of clientIdentifier or hardwareAddress"
+      }
+    },
+    {
+      "command": "dhcp scope set",
+      "description": "Preview or execute dhcp scope set",
+      "effect": "write",
+      "operation": "OP-092",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "name",
+          "newName",
+          "startingAddress",
+          "endingAddress",
+          "subnetMask",
+          "domainName",
+          "serverAddress",
+          "serverHostName",
+          "bootFileName",
+          "routerAddress",
+          "leaseTimeDays",
+          "leaseTimeHours",
+          "leaseTimeMinutes",
+          "offerDelayTime",
+          "pingCheckTimeout",
+          "pingCheckRetries",
+          "dnsTtl",
+          "pingCheckEnabled",
+          "dnsUpdates",
+          "dnsOverwriteForDynamicLease",
+          "useThisDnsServer",
+          "allowOnlyReservedLeases",
+          "blockLocallyAdministeredMacAddresses",
+          "ignoreClientIdentifierOption",
+          "domainSearchList",
+          "dnsServers",
+          "winsServers",
+          "ntpServers",
+          "ntpServerDomainNames",
+          "capwapAcIpAddresses",
+          "tftpServerAddresses",
+          "staticRoutes",
+          "vendorInfo",
+          "genericOptions",
+          "exclusions",
+          "reservedLeases"
+        ],
+        "required": [
+          "name"
+        ],
+        "secrets": [],
+        "baseline": "/api/dhcp/scopes/get",
+        "configuration": {
+          "name": {
+            "type": "string"
+          },
+          "newName": {
+            "type": "string"
+          },
+          "startingAddress": {
+            "type": "string"
+          },
+          "endingAddress": {
+            "type": "string"
+          },
+          "subnetMask": {
+            "type": "string"
+          },
+          "domainName": {
+            "type": "string"
+          },
+          "serverAddress": {
+            "type": "string"
+          },
+          "serverHostName": {
+            "type": "string"
+          },
+          "bootFileName": {
+            "type": "string"
+          },
+          "routerAddress": {
+            "type": "string"
+          },
+          "leaseTimeDays": {
+            "type": "integer"
+          },
+          "leaseTimeHours": {
+            "type": "integer"
+          },
+          "leaseTimeMinutes": {
+            "type": "integer"
+          },
+          "offerDelayTime": {
+            "type": "integer"
+          },
+          "pingCheckTimeout": {
+            "type": "integer"
+          },
+          "pingCheckRetries": {
+            "type": "integer"
+          },
+          "dnsTtl": {
+            "type": "integer"
+          },
+          "pingCheckEnabled": {
+            "type": "boolean"
+          },
+          "dnsUpdates": {
+            "type": "boolean"
+          },
+          "dnsOverwriteForDynamicLease": {
+            "type": "boolean"
+          },
+          "useThisDnsServer": {
+            "type": "boolean"
+          },
+          "allowOnlyReservedLeases": {
+            "type": "boolean"
+          },
+          "blockLocallyAdministeredMacAddresses": {
+            "type": "boolean"
+          },
+          "ignoreClientIdentifierOption": {
+            "type": "boolean"
+          },
+          "domainSearchList": {
+            "type": "list"
+          },
+          "dnsServers": {
+            "type": "list"
+          },
+          "winsServers": {
+            "type": "list"
+          },
+          "ntpServers": {
+            "type": "list"
+          },
+          "ntpServerDomainNames": {
+            "type": "list"
+          },
+          "capwapAcIpAddresses": {
+            "type": "list"
+          },
+          "tftpServerAddresses": {
+            "type": "list"
+          },
+          "staticRoutes": {
+            "type": "rows",
+            "columns": [
+              "destination",
+              "subnetMask",
+              "router"
+            ]
+          },
+          "vendorInfo": {
+            "type": "rows",
+            "columns": [
+              "identifier",
+              "information"
+            ]
+          },
+          "genericOptions": {
+            "type": "rows",
+            "columns": [
+              "code",
+              "value"
+            ]
+          },
+          "exclusions": {
+            "type": "rows",
+            "columns": [
+              "startingAddress",
+              "endingAddress"
+            ]
+          },
+          "reservedLeases": {
+            "type": "rows",
+            "columns": [
+              "hostName",
+              "hardwareAddress",
+              "address",
+              "comments"
+            ]
+          }
+        },
+        "target": "Existing scope; baseline.newName is the current name when renaming; collections replace the selected collection"
+      }
+    },
+    {
+      "command": "dhcp scope add-reserved-lease",
+      "description": "Preview or execute dhcp scope add-reserved-lease",
+      "effect": "write",
+      "operation": "OP-093",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "name",
+          "hardwareAddress",
+          "ipAddress",
+          "hostName",
+          "comments"
+        ],
+        "required": [
+          "name",
+          "hardwareAddress",
+          "ipAddress"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "dhcp scope remove-reserved-lease",
+      "description": "Preview or execute dhcp scope remove-reserved-lease",
+      "effect": "write",
+      "operation": "OP-094",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "name",
+          "hardwareAddress"
+        ],
+        "required": [
+          "name",
+          "hardwareAddress"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "dhcp scope enable",
+      "description": "Preview or execute dhcp scope enable",
+      "effect": "write",
+      "operation": "OP-095",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "name"
+        ],
+        "required": [
+          "name"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "dhcp scope disable",
+      "description": "Preview or execute dhcp scope disable",
+      "effect": "write",
+      "operation": "OP-096",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "name"
+        ],
+        "required": [
+          "name"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "dhcp scope delete",
+      "description": "Preview or execute dhcp scope delete",
+      "effect": "write",
+      "operation": "OP-097",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "name"
+        ],
+        "required": [
+          "name"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
       "command": "dashboard stats delete-all",
       "description": "Preview or execute dashboard stats delete-all",
       "effect": "write",

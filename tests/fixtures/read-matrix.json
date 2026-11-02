@@ -77,7 +77,31 @@
           }
         ]
       },
-      "scenarios": []
+      "scenarios": [
+        {
+          "name": "session without User-Agent",
+          "patch": {
+            "sessions": [
+              {
+                "username": "planner",
+                "lastSeenUserAgent": null
+              }
+            ]
+          }
+        },
+        {
+          "name": "malformed User-Agent",
+          "patch": {
+            "sessions": [
+              {
+                "username": "planner",
+                "lastSeenUserAgent": 7
+              }
+            ]
+          },
+          "error": "UPSTREAM_INVALID"
+        }
+      ]
     },
     {
       "operation": "OP-014",
@@ -2084,7 +2108,31 @@
           }
         ]
       },
-      "scenarios": []
+      "scenarios": [
+        {
+          "name": "session without User-Agent",
+          "patch": {
+            "sessions": [
+              {
+                "username": "planner",
+                "lastSeenUserAgent": null
+              }
+            ]
+          }
+        },
+        {
+          "name": "malformed User-Agent",
+          "patch": {
+            "sessions": [
+              {
+                "username": "planner",
+                "lastSeenUserAgent": 7
+              }
+            ]
+          },
+          "error": "UPSTREAM_INVALID"
+        }
+      ]
     },
     {
       "operation": "OP-101",
@@ -2272,6 +2320,29 @@
           "name": "nonexistent user",
           "httpStatus": 404,
           "error": "UNSUPPORTED_OPERATION"
+        },
+        {
+          "name": "session without User-Agent",
+          "patch": {
+            "sessions": [
+              {
+                "username": "planner",
+                "lastSeenUserAgent": null
+              }
+            ]
+          }
+        },
+        {
+          "name": "malformed User-Agent",
+          "patch": {
+            "sessions": [
+              {
+                "username": "planner",
+                "lastSeenUserAgent": 7
+              }
+            ]
+          },
+          "error": "UPSTREAM_INVALID"
         }
       ]
     },

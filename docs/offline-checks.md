@@ -148,6 +148,11 @@ The settings and log action checks exercise success and vendor failure, retainin
 Run each task with `npm run check:journey -- --task <id> --paths native --offline`, using `B4.01`, `B4.02`, `B4.03`, `B4.OP-080`, `B4.OP-082`, `B4.OP-083`, `B4.OP-136` or `B4.OP-137`.
 Hosted proof remains a separate release-candidate check.
 
+`B4.dhcp` runs the DHCP write matrix, or select `B4.OP-087`, `088`, `089`, `092`, `093`, `094`, `095`, `096` or `097` with the full `B4.OP-` prefix.
+The native journeys verify lease selectors, conversions, reservation conflicts, scope rename and configuration preservation, scope state and disk deletion through loopback HTTPS.
+Scope replacement checks include stale baselines and reconciliation after a lost response.
+The worlds are synthetic and do not establish live-server interoperability.
+
 The harness verifies exact executable paths before normalizing their prefixes in emitted evidence.
 Public request traces retain method, path, safe header metadata, input hash and synthetic caller identity.
 They omit authorization values and request bodies.
