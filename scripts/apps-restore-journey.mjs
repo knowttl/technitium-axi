@@ -41,6 +41,13 @@ export async function appsRestoreJourney({ task, directory, env, run, executable
     const preview = await success(command, input);
     assert.equal(vendors.traces.length, before, 'Preview must not dispatch');
     const resultFile = join(directory, `result-${before}.json`);
+    if (id === '085') {
+      const deniedResult = join(directory, 'denied-result.json');
+      await writeFile(deniedResult, 'unchanged', { mode: 0o644 });
+      await failure('CONFIG_INSECURE', command, input, ['--execute', '--confirm', preview.preview.digest, '--result-file', deniedResult]);
+      assert.equal(vendors.traces.length, before, 'Denied restore result custody must prevent dispatch');
+      assert.equal(await readFile(deniedResult, 'utf8'), 'unchanged');
+    }
     const result = await success(command, input, ['--execute', '--confirm', preview.preview.digest, '--result-file', resultFile]);
     assert.equal((await stat(resultFile)).mode & 0o777, 0o600);
     const bytes = await readFile(resultFile);

@@ -1,6 +1,6 @@
 # Offline package journeys
 
-The B1, B2, B3 and B4 package, credential, read and write checks run the installed npm tarball, never a TypeScript loader.
+The B1 through B5 package, credential, read and write checks run the installed npm tarball, never a TypeScript loader.
 They require Linux with user, PID, mount and network namespaces, iproute2, OpenSSL and a C compiler for process-interruption checks.
 The namespace enables only loopback and contains the CLI, server, adapter and subprocesses.
 Follow the [README setup](../README.md) to fetch the pinned npm dependencies once, then keep all journeys offline.
@@ -8,6 +8,9 @@ The runner removes inherited credentials and packs and installs the executable i
 Discovery commands make zero vendor requests.
 B1.02 and the credential journeys start two disposable HTTPS boundaries with synthetic identities.
 Status and session fixtures follow the vendor top-level JSON response shapes.
+`npm run test:users` covers explicit login, bound session storage and removal, user mutations, protected issuance, and actual SSO caller authorization through a secondary-to-primary HTTPS proxy fixture.
+Every B5 identity and user task also accepts its individual plan ID through `check:journey -- --task <id> --paths native --offline`.
+The B5 protected-result journey repeats the restore secrets and custody-denial checks.
 
 ```sh
 npm test
