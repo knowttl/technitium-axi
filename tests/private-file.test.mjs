@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -8,6 +8,33 @@ import { promisify } from 'node:util';
 import { PrivateFiles } from '../dist/private-file.js';
 
 const execute = promisify(execFile);
+
+test('protected results larger than the input cap can be overwritten', async () => {
+  const temporary = await mkdtemp(join(tmpdir(), 'technitium-private-'));
+  try {
+    const files = new PrivateFiles();
+    const path = join(temporary, 'backup.zip');
+    const bytes = Buffer.alloc(20 * 1024 * 1024, 42);
+    await files.write(path, bytes);
+    await files.write(path, 'replacement');
+    assert.equal(await readFile(path, 'utf8'), 'replacement');
+    assert.equal((await stat(path)).mode & 0o777, 0o600);
+  } finally { await rm(temporary, { recursive: true, force: true }); }
+});
+
+test('rejected destinations preserve existing directory access and target data', async () => {
+  const temporary = await mkdtemp(join(tmpdir(), 'technitium-private-'));
+  try {
+    await chmod(temporary, 0o755);
+    const path = join(temporary, 'original');
+    const link = join(temporary, 'result');
+    await writeFile(path, 'original', { mode: 0o600 });
+    await symlink(path, link);
+    await assert.rejects(new PrivateFiles().write(link, 'replacement'), { code: 'CONFIG_INSECURE' });
+    assert.equal(await readFile(path, 'utf8'), 'original');
+    assert.equal((await stat(temporary)).mode & 0o777, 0o755);
+  } finally { await rm(temporary, { recursive: true, force: true }); }
+});
 
 for (const secret of [false, true]) {
   test(`Windows refuses existing files with secret=${secret}`, async () => {

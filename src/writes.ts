@@ -8,6 +8,8 @@ import { PrivateFiles } from './private-file.js';
 import { checkStatus, Redactor, vendorRequest } from './vendor.js';
 import { recordFamilies, recordTypeNames } from './write-contracts.js';
 import type { WriteContract } from './write-contracts.js';
+import { settingsFields, validateConfiguration, configurationForm, settingValue } from './configuration.js';
+import { validateUploadArchive } from './archive-contract.js';
 
 const files = new PrivateFiles();
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -23,7 +25,11 @@ const integers = new Set('ttl expiryTtl preference newPreference priority newPri
 const lists = new Set('primaryNameServerAddresses queryAccessNetworkACL zoneTransferNetworkACL zoneTransferTsigKeyNames notifyNameServers notifySecondaryCatalogsNameServers updateNetworkACL blockListUrls forwarders proxyBypass members glue'.split(' '));
 
 function baselineValue(key: string, value: unknown): unknown {
-  if (['blockListUrls', 'forwarders'].includes(key) && value === null) return [];
+  if (settingsFields[key]?.type === 'string' && value === null) return '';
+  if (['webServiceTlsCertificatePassword', 'dnsTlsCertificatePassword'].includes(key) && typeof value === 'string') return '************';
+  if (settingsFields[key] && ['list', 'ports', 'rows'].includes(settingsFields[key]!.type) && value === null) return [];
+  if (key === 'members' && Array.isArray(value)) return [...new Set(value.map(item => String(item).toLowerCase()))].sort();
+  if (key === 'tsigKeys' && Array.isArray(value)) return value.map(row => ({ ...row, keyName: row.keyName.toLowerCase().replace(/\.$/, ''), algorithmName: row.algorithmName.toLowerCase().replace(/\.$/, '') })).sort((a, b) => a.keyName.localeCompare(b.keyName));
   if (['catalog', 'primaryZoneTransferTsigKeyName'].includes(key) && value === null) return '';
   if (key === 'updateSecurityPolicies') {
     let policies: string[] | undefined;
@@ -100,6 +106,7 @@ export interface WriteInput {
   parameters: Record<string, unknown>;
   baseline?: Record<string, unknown>;
   upload?: { file: string };
+  encoding?: 'form' | 'json';
 }
 
 export async function writeInput(contract: WriteContract, path?: string): Promise<WriteInput> {
@@ -109,17 +116,27 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
     if (error instanceof SyntaxError) usage('Input must be valid JSON');
     throw error;
   }
-  if (!object(input) || !object(input.parameters) || Object.keys(input).some(key => !['parameters', 'baseline', 'upload'].includes(key))) usage('Input requires parameters and optional baseline or upload');
+  if (!object(input) || !object(input.parameters) || Object.keys(input).some(key => !['parameters', 'baseline', 'upload', 'encoding'].includes(key))) usage('Input requires parameters and optional baseline or upload');
+  if (input.encoding !== undefined && (contract.id !== 'OP-080' || !['form', 'json'].includes(String(input.encoding)))) usage('Only settings set supports form or json encoding');
   const parameters = input.parameters;
+  if (contract.id === 'OP-080') for (const [modern, legacy] of [['ipv6Mode', 'preferIPv6'], ['loggingType', 'enableLogging'], ['dnsReverseProxyNetworkACL', 'reverseProxyNetworkACL']]) {
+    if (Object.hasOwn(parameters, modern!) && Object.hasOwn(parameters, legacy!)) usage('Choose the modern setting or its compatibility alias, not both');
+  }
   for (const key of Object.keys(parameters)) if (!contract.fields.includes(key)) usage('Unknown input field');
   for (const key of contract.required) if (!Object.hasOwn(parameters, key) || parameters[key] === '') usage('Required input is missing');
+  if (contract.id === 'OP-136' && (typeof parameters.log !== 'string' || /[\\/:]/.test(parameters.log) || ['.', '..'].includes(parameters.log))) usage('Log deletion requires the fileName returned by log list, without a path');
   for (const [key, value] of Object.entries(parameters)) {
     if (contract.secrets?.includes(key)) {
       if (!object(value) || Object.keys(value).length !== 1 || !(
         (typeof value.env === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(value.env)) ||
         (typeof value.file === 'string' && isAbsolute(value.file)))) usage('Secret fields require an environment or protected absolute file SecretRef');
     } else {
-      validateValue(key, value);
+      if (contract.id === 'OP-080') validateConfiguration(settingsFields[key]!, value);
+      else if (contract.id === 'OP-083' && key === 'minutes') {
+        if (!Number.isSafeInteger(value) || Number(value) <= 0 || Number(value) > 2147483647) usage('Minutes must be a positive 32-bit integer');
+      } else if (contract.id === 'OP-085' && key !== 'node') {
+        if (typeof value !== 'boolean') usage('Restore selections require true or false');
+      } else validateValue(key, value);
       if (key === 'updateSecurityPolicies') baselineValue(key, value);
     }
   }
@@ -134,13 +151,17 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
   if (contract.baselinePath) {
     const fields = Object.keys(parameters).filter(key => !contract.baselineTarget?.includes(key));
     if (!fields.length || !object(input.baseline) || canonical(Object.keys(input.baseline).sort()) !== canonical(fields.sort())) usage('Provide the exact selected baseline for every changed field');
-    for (const [key, value] of Object.entries(input.baseline)) validateValue(key, baselineValue(key, value));
+    for (const [key, value] of Object.entries(input.baseline)) {
+      if (contract.id === 'OP-080') validateConfiguration(settingsFields[key]!, baselineValue(key, value));
+      else validateValue(key, baselineValue(key, value));
+    }
   } else if (input.baseline !== undefined) usage('Baseline is not supported by this operation');
   if (input.upload !== undefined) {
-    if (!['OP-022', 'OP-023'].includes(contract.id) || !object(input.upload) || Object.keys(input.upload).length !== 1 || typeof input.upload.file !== 'string' || !isAbsolute(input.upload.file)) usage('Upload requires a protected absolute file for zone create or import');
+    if (!['OP-022', 'OP-023', 'OP-072', 'OP-073', 'OP-085'].includes(contract.id) || !object(input.upload) || Object.keys(input.upload).length !== 1 || typeof input.upload.file !== 'string' || !isAbsolute(input.upload.file)) usage('Upload requires a protected absolute file for a supported upload operation');
     if (Object.hasOwn(parameters, 'records') || (contract.id === 'OP-022' && parameters.type !== 'Primary')) usage('Uploaded records require Primary creation or an import without inline records');
   }
   if (contract.id === 'OP-023' && input.upload === undefined && typeof parameters.records !== 'string') usage('Import requires records or an upload');
+  if (['OP-072', 'OP-073', 'OP-085'].includes(contract.id) && !input.upload) usage('A protected package or backup upload is required');
   return input as unknown as WriteInput;
 }
 
@@ -162,29 +183,60 @@ async function baselineRead(contract: WriteContract, profile: Profile, token: st
   if (!object(value.response)) throw new ToolError('UPSTREAM_INVALID', 'Selected baseline fields are missing', 'Check the selected target and API version', 1);
   const response = value.response;
   const preserved: Record<string, unknown> = {};
-  if (contract.id === 'OP-080' && fields.includes('forwarders')) {
+  if (contract.id === 'OP-080') for (const prefix of ['webServiceTlsCertificate', 'dnsTlsCertificate']) {
+    if (fields.includes(`${prefix}Password`) && !fields.includes(`${prefix}Path`)) {
+      const path = response[`${prefix}Path`];
+      if (typeof path !== 'string' || !path) usage('A certificate password update requires an existing or selected certificate path');
+      preserved[`${prefix}Path`] = path;
+    }
+  }
+  if (contract.id === 'OP-080' && fields.includes('forwarders') && !fields.includes('forwarderProtocol')) {
     validateValue('forwarderProtocol', response.forwarderProtocol);
     preserved.forwarderProtocol = response.forwarderProtocol;
   }
-  if (contract.id === 'OP-080' && fields.includes('proxyBypass')) {
-    if (!object(response.proxy)) usage('Proxy bypass replacement requires an existing proxy');
+  if (contract.id === 'OP-080' && fields.includes('forwarderProtocol') && !fields.includes('forwarders')) {
+    preserved.forwarders = baselineValue('forwarders', response.forwarders);
+    validateConfiguration(settingsFields.forwarders!, preserved.forwarders, true);
+  }
+  if (contract.id === 'OP-080' && fields.some(key => key.startsWith('proxy')) && parameters.proxyType !== 'None') {
+    const proxy = object(response.proxy) ? response.proxy : {};
     for (const [source, target] of Object.entries({ type: 'proxyType', address: 'proxyAddress', port: 'proxyPort', username: 'proxyUsername', password: 'proxyPassword' })) {
-      const item = response.proxy[source];
+      if (fields.includes(target)) continue;
+      const item = proxy[source];
       if (['username', 'password'].includes(source) && (item === undefined || item === null)) continue;
       validateValue(target, item);
       preserved[target] = item;
     }
+    if (!fields.includes('proxyBypass') && Array.isArray(proxy.bypass)) preserved.proxyBypass = proxy.bypass;
   }
   const selected = Object.fromEntries(fields.map(key => {
+    if (contract.id === 'OP-080') {
+      const item = baselineValue(key, settingValue(response, key));
+      validateConfiguration(settingsFields[key]!, item, true);
+      return [key, item];
+    }
     const source = contract.id === 'OP-109' && key === 'newGroup' ? 'name' : key;
-    const container = contract.id === 'OP-080' && key === 'proxyBypass' ? response.proxy : response;
-    const field = container === response ? source : 'bypass';
-    if (!object(container) || !Object.hasOwn(container, field)) throw new ToolError('UPSTREAM_INVALID', 'Selected baseline fields are missing', 'Check the selected target and API version', 1);
-    const item = baselineValue(key, container[field]);
+    if (!Object.hasOwn(response, source)) throw new ToolError('UPSTREAM_INVALID', 'Selected baseline fields are missing', 'Check the selected target and API version', 1);
+    const item = baselineValue(key, response[source]);
     validateValue(key, item);
     return [key, item];
   }));
-  return { selected, preserved };
+  const unchanged: Record<string, unknown> = {};
+  if (contract.id === 'OP-080') {
+    const changed = new Set(fields);
+    if (changed.has('preferIPv6')) changed.add('ipv6Mode');
+    if (changed.has('enableLogging')) changed.add('loggingType');
+    if (changed.has('reverseProxyNetworkACL')) changed.add('dnsReverseProxyNetworkACL');
+    if (changed.has('proxyType') && parameters.proxyType === 'None') for (const key of Object.keys(settingsFields).filter(key => key.startsWith('proxy'))) changed.add(key);
+    if (changed.has('forwarders')) changed.add('forwarderProtocol');
+    for (const prefix of ['webServiceTlsCertificate', 'dnsTlsCertificate']) if (changed.has(`${prefix}Path`)) changed.add(`${prefix}Password`);
+    for (const key of Object.keys(settingsFields)) {
+      if (changed.has(key) || ['preferIPv6', 'enableLogging', 'reverseProxyNetworkACL'].includes(key)) continue;
+      const item = settingValue(response, key);
+      if (item !== undefined) unchanged[key] = baselineValue(key, item);
+    }
+  }
+  return { selected, preserved, ...(contract.id === 'OP-080' ? { unchanged } : {}) };
 }
 
 export async function writeOperation(contract: WriteContract, input: WriteInput, profile: Profile, identity: string, token: string,
@@ -192,27 +244,42 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
   const capability = contract.id === 'OP-077' ? input.parameters.import === true ? 'OP-077.import' : 'OP-077.resolve' : contract.id;
   const mutating = capability !== 'OP-077.resolve';
   const parameters = { ...input.parameters };
-  for (const key of contract.secrets ?? []) {
-    const ref = parameters[key];
+  const baselineInput = input.baseline ? { ...input.baseline } : undefined;
+  if (contract.id === 'OP-080') for (const values of [parameters, baselineInput]) {
+    if (!Array.isArray(values?.tsigKeys)) continue;
+    values!.tsigKeys = await Promise.all(values!.tsigKeys.map(async row => {
+      const ref = row.sharedSecret as { env?: string; file?: string };
+      const value = ref.file ? await files.read(ref.file) : process.env[ref.env!];
+      if (value === undefined || value.length > 1024 * 1024) usage('TSIG SecretRef is missing or too large');
+      redactor.add(value);
+      const resolved = { ...row, sharedSecret: value };
+      validateConfiguration(settingsFields.tsigKeys!, [resolved], true);
+      return resolved;
+    }));
+  }
+  for (const values of [parameters, baselineInput]) for (const key of contract.secrets ?? []) {
+    const ref = values?.[key];
     if (ref === undefined) continue;
     const selected = ref as { env?: string; file?: string };
     const value = selected.file ? await files.read(selected.file) : process.env[selected.env!];
     if (value === undefined || value.length > 1024 * 1024) usage('SecretRef is missing or too large');
     redactor.add(value);
-    parameters[key] = value;
+    if (contract.id === 'OP-080') validateConfiguration(settingsFields[key]!, value, true);
+    values![key] = value;
   }
   let upload: Buffer | undefined;
   if (input.upload) {
     upload = await files.readBytes(input.upload.file);
+    if (['OP-072', 'OP-073', 'OP-085'].includes(contract.id)) validateUploadArchive(upload);
   }
   // A keyed digest binds credential and secret revisions without publishing an offline secret verifier.
   const intentId = !options.execute && !options.reconcile ? randomUUID() : options.confirm?.split('.')[0];
   const digest = `${intentId}.${createHmac('sha256', token).update(canonical({ intentId, origin: profile.origin, identity, username: profile.username ?? null,
     tokenKind: profile.tokenKind, caFile: profile.caFile ?? null, tlsServerName: profile.tlsServerName ?? null,
-    capability, parameters, baseline: input.baseline ?? null, upload: upload ? hash(upload) : null })).digest('hex')}`;
+    capability, parameters, baseline: baselineInput ?? null, encoding: input.encoding ?? 'form', upload: upload ? hash(upload) : null })).digest('hex')}`;
   const permitted = !mutating || (!readOnly() && profile.writes?.allowWrites === true && profile.writes.operations.includes(capability));
   if (!options.execute && !options.reconcile) return { bytes: Buffer.alloc(0), projection: { preview: { digest, operation: capability,
-    origin: profile.origin, identity, node: parameters.node ?? null, target: parameters.zone ?? parameters.domain ?? parameters.group ?? null,
+    origin: profile.origin, identity, node: parameters.node ?? null, target: parameters.zone ?? parameters.domain ?? parameters.group ?? parameters.log ?? parameters.name ?? null,
     permitted, upload: upload ? { bytes: upload.length, sha256: hash(upload) } : null,
     replaces: contract.baselinePath ? Object.keys(input.baseline!) : [],
     ...(contract.baselinePath ? { concurrency: 'A single-writer window is required between the final read and write; the vendor has no atomic conditional setter' } : {}) } } };
@@ -237,13 +304,18 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     return { bytes: Buffer.alloc(0), projection: { status: 'reconciled', auditId: prior.auditId, operation: capability } };
   }
   let expected: string | undefined;
+  let expectedState: Awaited<ReturnType<typeof baselineRead>> | undefined;
   if (contract.baselinePath) {
     const baseline = await baselineRead(contract, profile, token, parameters, Object.keys(input.baseline!));
-    if (canonical(baseline.selected) !== canonical(selectedValues(input.baseline!))) throw new ToolError('CONFLICT', 'Selected baseline changed after preview', 'Read the selected values and preview a new explicit replacement', 1);
+    if (canonical(baseline.selected) !== canonical(selectedValues(baselineInput!))) throw new ToolError('CONFLICT', 'Selected baseline changed after preview', 'Read the selected values and preview a new explicit replacement', 1);
     const selected = selectedValues(Object.fromEntries(Object.keys(input.baseline!).map(key => [key, parameters[key]])));
     const preserved = { ...baseline.preserved };
-    if (contract.id === 'OP-080' && Array.isArray(selected.forwarders) && selected.forwarders.length === 0) preserved.forwarderProtocol = 'Udp';
-    expected = postconditionHash({ selected, preserved });
+    if (contract.id === 'OP-080' && Array.isArray(selected.forwarders) && selected.forwarders.length === 0) {
+      if (Object.hasOwn(selected, 'forwarderProtocol')) selected.forwarderProtocol = 'Udp';
+      else preserved.forwarderProtocol = 'Udp';
+    }
+    expectedState = { selected, preserved, ...('unchanged' in baseline ? { unchanged: baseline.unchanged } : {}) };
+    expected = postconditionHash(expectedState);
     if (typeof baseline.preserved.proxyPassword === 'string') redactor.add(baseline.preserved.proxyPassword);
     Object.assign(parameters, baseline.preserved);
   }
@@ -254,22 +326,43 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
       throw new ToolError('JOURNAL_FAILED', 'Durable intent could not be recorded', 'Repair the protected journal before executing any mutation', 1);
     }
   }
-  const form = new URLSearchParams(Object.entries(parameters).map(([key, value]) => [key, Array.isArray(value) ? value.join(',') : String(value)]));
+  const form = new URLSearchParams(Object.entries(parameters).map(([key, value]) => [key, configurationForm(contract.id === 'OP-080' ? settingsFields[key] : undefined, value)]));
   let body: string | Buffer = form.toString();
   let requestPath = contract.path;
   const headers: Record<string, string> = {};
+  if (input.encoding === 'json') {
+    body = JSON.stringify(parameters);
+    headers['content-type'] = 'application/json';
+  }
   if (upload) {
     const boundary = `technitium-${randomUUID()}`;
     requestPath += `?${form}`;
     headers['content-type'] = `multipart/form-data; boundary=${boundary}`;
-    body = Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="zone.txt"\r\nContent-Type: text/plain\r\n\r\n`), upload, Buffer.from(`\r\n--${boundary}--\r\n`)]);
+    const archive = ['OP-072', 'OP-073', 'OP-085'].includes(contract.id);
+    body = Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${archive ? 'package.zip' : 'zone.txt'}"\r\nContent-Type: ${archive ? 'application/zip' : 'text/plain'}\r\n\r\n`), upload, Buffer.from(`\r\n--${boundary}--\r\n`)]);
   }
   try {
     const response = await vendorRequest(profile, requestPath, body, token, headers, { bytes: 16 * 1024 * 1024, elapsedMs: 10000 });
     if (response.status !== 200 || response.contentType !== 'application/json') throw new Error('Response unavailable');
     const value: unknown = JSON.parse(response.bytes.toString());
     checkStatus(value);
+    if (contract.id === 'OP-080' && expectedState && Array.isArray(parameters.tsigKeys) && parameters.tsigKeys.some(row => row.sharedSecret === '')) {
+      if (!object(value.response)) throw new Error('Generated TSIG keys are unavailable');
+      const returned = baselineValue('tsigKeys', value.response.tsigKeys);
+      validateConfiguration(settingsFields.tsigKeys!, returned, true);
+      const requested = baselineValue('tsigKeys', parameters.tsigKeys) as Record<string, string>[];
+      const generated = returned as Record<string, string>[];
+      if (generated.length !== requested.length || generated.some((row, i) => row.keyName !== requested[i]!.keyName || row.algorithmName !== requested[i]!.algorithmName || !row.sharedSecret || requested[i]!.sharedSecret !== '' && row.sharedSecret !== requested[i]!.sharedSecret)) throw new Error('Generated TSIG keys do not match the selected replacement');
+      for (const row of generated) redactor.add(row.sharedSecret!);
+      expectedState.selected.tsigKeys = generated;
+      expected = postconditionHash(expectedState);
+      await files.write(path, JSON.stringify({ auditId, digest, operation: capability, state: 'intent', postconditionHash: expected }));
+    }
     let resolution: Record<string, unknown> | undefined;
+    if (contract.id === 'OP-083') {
+      if (!object(value.response) || typeof value.response.temporaryDisableBlockingTill !== 'string' || !Number.isFinite(Date.parse(value.response.temporaryDisableBlockingTill))) throw new ToolError('UPSTREAM_INVALID', 'Invalid blocking expiry response', 'Read settings to verify the blocking expiry', 1);
+      resolution = { response: { temporaryDisableBlockingTill: value.response.temporaryDisableBlockingTill } };
+    }
     if (contract.id === 'OP-077') {
       if (!object(value.response) || !object(value.response.result) || (value.response.warningMessage !== undefined && typeof value.response.warningMessage !== 'string')) throw new ToolError('UPSTREAM_INVALID', 'Invalid DNS client response', 'Check the selected server API version', 1);
       resolution = { response: value.response.result,

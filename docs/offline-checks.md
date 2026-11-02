@@ -1,6 +1,6 @@
 # Offline package journeys
 
-The B1, B2 and B3 package, credential, read and write checks run the installed npm tarball, never a TypeScript loader.
+The B1, B2, B3 and B4 package, credential, read and write checks run the installed npm tarball, never a TypeScript loader.
 They require Linux with user, PID, mount and network namespaces, iproute2, OpenSSL and a C compiler for process-interruption checks.
 The namespace enables only loopback and contains the CLI, server, adapter and subprocesses.
 Follow the [README setup](../README.md) to fetch the pinned npm dependencies once, then keep all journeys offline.
@@ -125,6 +125,12 @@ npm run check:journey -- --task B3.CR-014 --paths native --offline
 ```
 
 Node diagnostics report actual child PID, argv and executable hash without replacing the runner.
+B4 settings checks use the field matrix in [configuration-matrix.json](../tests/fixtures/configuration-matrix.json) for form/JSON patches, structured fields, omitted-secret preservation and protected results.
+The transfer checks cover file-only multipart, exact ZIP entry bytes, preview hash changes, size limits and custody denial before dispatch.
+The settings and log action checks exercise success and vendor failure, retaining uncertain journal entries without replay.
+Run each task with `npm run check:journey -- --task <id> --paths native --offline`, using `B4.01`, `B4.02`, `B4.03`, `B4.OP-080`, `B4.OP-082`, `B4.OP-083`, `B4.OP-136` or `B4.OP-137`.
+Hosted proof remains a separate release-candidate check.
+
 The harness verifies exact executable paths before normalizing their prefixes in emitted evidence.
 Public request traces retain method, path, safe header metadata, input hash and synthetic caller identity.
 They omit authorization values and request bodies.

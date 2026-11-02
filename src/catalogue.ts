@@ -1,6 +1,7 @@
 import { readContracts } from './read-contracts.js';
 import { archiveContract } from './archive-contract.js';
 import { writeContracts, writeFlags, recordFamilies } from './write-contracts.js';
+import { settingsFields, dhcpFields } from './configuration.js';
 
 export const readFlags = ['--json', '--help', '--config', '--profile', '--result-file', '--fields', '--full', '--max-bytes', '--max-requests', '--max-pages', '--max-elapsed-ms'];
 
@@ -22,8 +23,9 @@ export const commands = [
   ...writeContracts.map(item => ({ command: item.command, description: `Preview or execute ${item.command}`, effect: item.id === 'OP-077' ? 'conditional' : 'write', operation: item.id,
     arguments: [], flags: writeFlags, input: { envelope: ['parameters', 'baseline', 'upload'], fields: item.fields,
       required: item.required, secrets: item.secrets ?? [], baseline: item.baselinePath ?? null,
+      ...(item.id === 'OP-080' ? { configuration: settingsFields, encoding: ['form', 'json'], secretRows: 'tsigKeys rows require a SecretRef for sharedSecret' } : {}),
       ...(item.id === 'OP-077' ? { capabilities: ['OP-077.resolve', 'OP-077.import'] } : {}),
       ...(['OP-049', 'OP-051', 'OP-052'].includes(item.id) ? { recordFamilies, dnameDeletion: 'pending shipped-library mapping and independent review' } : {}) } })),
 ];
 
-export const inventory = { version: 1, tool: 'technitium-axi', commands };
+export const inventory = { version: 1, tool: 'technitium-axi', commands, dhcpFields };

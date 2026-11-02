@@ -1,3 +1,5 @@
+import { settingsFields } from './configuration.js';
+
 export interface WriteContract {
   id: string; command: string; path: string;
   fields: string[]; required: string[]; secrets?: string[];
@@ -83,8 +85,14 @@ export const writeContracts: WriteContract[] = [
   ...[['OP-049', 'add'], ['OP-051', 'update'], ['OP-052', 'delete']].map(([id, action]) => ({ id: id!, command: `zone record ${action}`, path: `/api/zones/records/${action}`,
     fields: [...words('node zone domain type ttl overwrite comments expiryTtl newDomain disable'), ...recordFields], required: ['zone', 'domain', 'type'], secrets: ['proxyPassword'] })),
   { id: 'OP-077', command: 'dns-client resolve', path: '/api/dnsClient/resolve', fields: words('node server domain type protocol dnssec eDnsClientSubnet import'), required: ['server', 'domain', 'type'] },
-  // Other settings fields are introduced with their domain operation journeys.
-  { id: 'OP-080', command: 'settings set', path: '/api/settings/set', fields: words('blockListUrls forwarders proxyBypass'), required: [], baselinePath: '/api/settings/get', baselineTarget: [] },
+  { id: 'OP-080', command: 'settings set', path: '/api/settings/set', fields: Object.keys(settingsFields), required: [], secrets: Object.keys(settingsFields).filter(key => settingsFields[key]!.secret), baselinePath: '/api/settings/get', baselineTarget: [] },
+  { id: 'OP-082', command: 'settings force-update-block-lists', path: '/api/settings/forceUpdateBlockLists', fields: [], required: [] },
+  { id: 'OP-083', command: 'settings temporary-disable-blocking', path: '/api/settings/temporaryDisableBlocking', fields: ['minutes'], required: ['minutes'] },
+  { id: 'OP-072', command: 'app install', path: '/api/apps/install', fields: ['node', 'name'], required: ['name'] },
+  { id: 'OP-073', command: 'app update', path: '/api/apps/update', fields: ['node', 'name'], required: ['name'] },
+  { id: 'OP-085', command: 'settings restore', path: '/api/settings/restore', fields: words('node authConfig clusterConfig webServiceSettings dnsSettings logSettings zones allowedZones blockedZones blockLists apps scopes stats logs deleteExistingFiles'), required: [] },
+  { id: 'OP-136', command: 'log delete', path: '/api/logs/delete', fields: ['node', 'log'], required: ['log'] },
+  { id: 'OP-137', command: 'log delete-all', path: '/api/logs/deleteAll', fields: ['node'], required: [] },
   { id: 'OP-109', command: 'admin group set', path: '/api/admin/groups/set', fields: words('group newGroup description members'), required: ['group'], baselinePath: '/api/admin/groups/get', baselineTarget: ['group'] },
   { id: 'OP-143', command: 'admin ldap test', path: '/api/admin/ldap/test', fields: words('ldapServer ldapPort ldapSslOption ldapIgnoreSslErrors ldapBindUsername ldapBindPassword ldapSearchBase ldapUserSearchFilter ldapGroupAttribute'), required: [], secrets: ['ldapBindPassword'] },
 ];

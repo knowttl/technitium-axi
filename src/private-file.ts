@@ -1,5 +1,5 @@
 import { constants } from 'node:fs';
-import { chmod, lstat, mkdir, open, realpath, rename, rm } from 'node:fs/promises';
+import { lstat, mkdir, open, realpath, rename, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { ToolError } from './errors.js';
@@ -44,16 +44,30 @@ export class PrivateFiles {
     } finally { await handle.close(); }
   }
 
-  async write(path: string, bytes: string | Uint8Array): Promise<void> {
+  async destination(path: string): Promise<void> {
     this.requireFileProtection();
     if (!isAbsolute(path)) this.insecure(path);
     const directory = dirname(path);
     await mkdir(directory, { recursive: true, mode: 0o700 });
     await this.direct(directory);
-    if ((await lstat(directory)).uid !== process.getuid?.()) this.insecure(directory);
-    await chmod(directory, 0o700);
-    try { await this.read(path); }
+    const parent = await lstat(directory);
+    if (!parent.isDirectory() || parent.uid !== process.getuid?.() || (parent.mode & 0o022) !== 0) this.insecure(directory);
+    try {
+      await this.direct(path);
+      const before = await lstat(path);
+      if (!before.isFile() || before.uid !== process.getuid?.() || (before.mode & 0o077) !== 0) this.insecure(path);
+      const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+      try {
+        const stat = await handle.stat();
+        if (!stat.isFile() || stat.dev !== before.dev || stat.ino !== before.ino || stat.uid !== process.getuid?.() || (stat.mode & 0o077) !== 0) this.insecure(path);
+      } finally { await handle.close(); }
+    }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+  }
+
+  async write(path: string, bytes: string | Uint8Array): Promise<void> {
+    await this.destination(path);
+    const directory = dirname(path);
     const temporary = `${path}.${randomUUID()}.tmp`;
     const handle = await open(temporary, 'wx', 0o600);
     try {

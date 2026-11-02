@@ -13,7 +13,7 @@ export const readTasks = ['B2.01', 'B2.02', 'B2.03', 'B2.04', 'B2.05', 'B2.admin
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 // Stored ZIP records keep independently reviewed entry names and payload bytes visible.
-function archive(names) {
+export function archive(names) {
   const local = [];
   const central = [];
   let offset = 0;
@@ -100,7 +100,7 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
         ['OP-001', 'OP-006', ...matrix.operations.map(row => row.operation)].sort());
       const writes = inventory.commands.filter(command => command.operation && command.effect !== 'read');
       assert.deepEqual(writes.map(command => command.operation).sort(),
-        ['OP-019', 'OP-022', 'OP-023', 'OP-032', 'OP-035', 'OP-036', 'OP-039', 'OP-040', 'OP-041', 'OP-042', 'OP-043', 'OP-044', 'OP-045', 'OP-046', 'OP-047', 'OP-048', 'OP-049', 'OP-051', 'OP-052', 'OP-054', 'OP-055', 'OP-057', 'OP-058', 'OP-059', 'OP-060', 'OP-063', 'OP-064', 'OP-065', 'OP-066', 'OP-077', 'OP-080', 'OP-109', 'OP-140', 'OP-143']);
+        ['OP-019', 'OP-022', 'OP-023', 'OP-032', 'OP-035', 'OP-036', 'OP-039', 'OP-040', 'OP-041', 'OP-042', 'OP-043', 'OP-044', 'OP-045', 'OP-046', 'OP-047', 'OP-048', 'OP-049', 'OP-051', 'OP-052', 'OP-054', 'OP-055', 'OP-057', 'OP-058', 'OP-059', 'OP-060', 'OP-063', 'OP-064', 'OP-065', 'OP-066', 'OP-072', 'OP-073', 'OP-077', 'OP-080', 'OP-082', 'OP-083', 'OP-085', 'OP-109', 'OP-136', 'OP-137', 'OP-140', 'OP-143']);
       for (const command of writes) {
         assert.equal(command.effect, command.operation === 'OP-077' ? 'conditional' : 'write');
         assert.deepEqual(command.flags, ['--json', '--help', '--config', '--profile', '--input-file', '--execute', '--confirm', '--result-file', '--reconcile']);
