@@ -23,7 +23,7 @@ function canonical(value: unknown): string {
 const booleans = new Set('overwrite overwriteZone overwriteSoaSerial disabled disable ptr createPtrZone updateSvcbHints autoIpv4Hint autoIpv6Hint dnssecValidation useSerialDateScheme useSoaSerialDateScheme validateZone initializeForwarder overrideCatalogQueryAccess overrideCatalogZoneTransfer overrideCatalogNotify import dnssec ldapIgnoreSslErrors splitText newSplitText'.split(' '));
 const integers = new Set('ttl expiryTtl preference newPreference priority newPriority weight newWeight port newPort naptrOrder naptrPreference naptrNewOrder naptrNewPreference keyTag newKeyTag digestType newDigestType sshfpAlgorithm newSshfpAlgorithm sshfpFingerprintType newSshfpFingerprintType tlsaCertificateUsage newTlsaCertificateUsage tlsaSelector newTlsaSelector tlsaMatchingType newTlsaMatchingType svcPriority newSvcPriority uriPriority newUriPriority uriWeight newUriWeight flags newFlags serial refresh retry expire minimum proxyPort forwarderPriority ldapPort kskKeySize zskKeySize keySize dnsKeyTtl zskRolloverDays rolloverDays iterations saltLength'.split(' '));
 const lists = new Set('zones primaryNameServerAddresses queryAccessNetworkACL zoneTransferNetworkACL zoneTransferTsigKeyNames notifyNameServers notifySecondaryCatalogsNameServers updateNetworkACL blockListUrls forwarders proxyBypass members glue'.split(' '));
-const domainName = (value: string) => domainToASCII(value.replace(/^\.+|\.+$/g, '')).toLowerCase();
+const domainName = (value: string) => domainToASCII(`${value.replace(/^\.+|\.+$/g, '')}.invalid`).slice(0, -8).toLowerCase();
 
 function permissionRows(key: string, value: unknown): Record<string, unknown>[] {
   const name = key === 'userPermissions' ? 'username' : 'name';

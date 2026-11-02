@@ -213,6 +213,28 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
     assert.equal(reconciled.status, 'reconciled');
     assert.equal(reconciled.auditId, auditId);
     assert.equal(dispatches, 2);
+    for (const [zone, other] of [['127.1', '127.0.0.1'], ['127.0.0.1', '127.1']]) {
+      let serial = 10, otherSerial = 100, writes = 0;
+      vendors.responders.set('/api/zones/records/get', (_incoming, bytes) => {
+        assert.equal(parameters(bytes).zone, zone);
+        return ok({ records: [record(other, 'SOA', { serial: otherSerial }), record(`${zone}.`, 'SOA', { serial })] });
+      });
+      vendors.responders.set('/api/zones/resync', () => { writes++; return ok(); });
+      const input = { parameters: { zone } };
+      const preview = await success('zone resync', input);
+      const unknown = await failure('OUTCOME_UNKNOWN', 'zone resync', input, ['--execute', '--confirm', preview.preview.digest]);
+      const auditId = unknown.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
+      otherSerial++;
+      await failure('OUTCOME_UNKNOWN', 'zone resync', input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+      serial++;
+      await success('zone resync', input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+      assert.equal(writes, 1);
+    }
+    let serial = 10;
+    vendors.responders.set('/api/zones/records/get', () => ok({ records: [record('xn--bcher-kva.test', 'SOA', { serial })] }));
+    vendors.responders.set('/api/zones/resync', () => { serial++; return ok(); });
+    await execute('zone resync', { parameters: { zone: 'BÜCHER.test.' } });
+    vendors.responders.set('/api/zones/records/get', (_incoming, bytes) => ok({ records: zones.get(parameters(bytes).zone).records }));
   }
   if (id === 'OP-032' || id === 'OP-034') {
     const permission = id === 'OP-034';
@@ -286,6 +308,55 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
         await failure('OUTCOME_UNKNOWN', command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
         zone.groupPermissions = structuredClone(mandatory);
       }
+    }
+  }
+  if (id === 'OP-032') {
+    const command = 'zone options set';
+    const zone = '1';
+    const cases = [
+      ['zoneTransferTsigKeyNames', name => [name], name => [name]],
+      ['primaryZoneTransferTsigKeyName', name => name, name => name],
+      ['catalog', name => name, name => name],
+      ['updateSecurityPolicies', name => `${name}|host.1|A`, name => [{ tsigKeyName: name, domain: 'host.1', allowedTypes: ['A'] }]],
+      ['updateSecurityPolicies', name => `key|${name}|A`, name => [{ tsigKeyName: 'key', domain: name, allowedTypes: ['A'] }]],
+    ];
+    for (const [field, inputValue, responseValue] of cases) for (const [before, after] of [['127.1', '127.0.0.1'], ['127.0.0.1', '127.1']]) {
+      let writes = 0;
+      let observed = before;
+      let drop = false;
+      vendors.responders.set('/api/zones/options/get', () => ok({ [field]: responseValue(observed) }));
+      vendors.responders.set('/api/zones/options/set', (incoming, bytes) => {
+        assert.deepEqual(parameters(bytes), { zone, [field]: String(inputValue(after)) });
+        writes++;
+        if (drop) { incoming.socket.destroy(); return {}; }
+        return ok();
+      });
+      for (const baseline of [inputValue(before), responseValue(before)]) {
+        const input = { parameters: { zone, [field]: inputValue(after) }, baseline: { [field]: baseline } };
+        const preview = await success(command, input);
+        observed = after;
+        await failure('CONFLICT', command, input, ['--execute', '--confirm', preview.preview.digest]);
+        assert.equal(writes, 0, 'Numeric DNS names cannot bypass a stale baseline');
+        observed = before;
+      }
+      const input = { parameters: { zone, [field]: inputValue(after) }, baseline: { [field]: responseValue(before) } };
+      const preview = await success(command, input);
+      const unknown = await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', preview.preview.digest]);
+      const auditId = unknown.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
+      await failure('OUTCOME_UNKNOWN', command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+      observed = after;
+      const reconciled = await success(command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+      assert.equal(reconciled.status, 'reconciled');
+      assert.equal(writes, 1);
+      observed = before;
+      drop = true;
+      const droppedPreview = await success(command, input);
+      const dropped = await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', droppedPreview.preview.digest]);
+      const droppedAuditId = dropped.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
+      await failure('OUTCOME_UNKNOWN', command, input, ['--confirm', droppedPreview.preview.digest, '--reconcile', droppedAuditId]);
+      observed = after;
+      await success(command, input, ['--confirm', droppedPreview.preview.digest, '--reconcile', droppedAuditId]);
+      assert.equal(writes, 2, 'Reconciliation never dispatches another setter');
     }
   }
   assert.deepEqual(zones.get('keep.test'), keep, 'Other zones remain unchanged');
