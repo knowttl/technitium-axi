@@ -140,18 +140,21 @@ The vendor has no atomic conditional setter, so maintain a single-writer window 
 For these operations, use `--reconcile <audit-id> --confirm '<original-preview.digest>'` with the original input and profile to prove the postcondition without resending the mutation.
 Other operations, except resync as described below, require manual inspection of the exact selected target when their outcome is uncertain.
 Baseline checks, verification and reconciliation account for vendor member ordering and case, TSIG name sets, catalog names, enum case, IPv6 formatting, ACL network prefixes and merged update-policy rows.
+TSIG names, catalog names and update-policy keys and domains compare case-insensitively after trimming leading and trailing dots; other ASCII characters and numeric labels remain literal, so `key/a` differs from `key/b` and `127.1` differs from `127.0.0.1`.
 Permission replacements use arrays of getter-shaped rows: `userPermissions` rows contain `username`, `canView`, `canModify` and `canDelete`; `groupPermissions` rows use `name` instead of `username`.
 An empty user permission array clears that collection; group permission replacements always retain Administrators and DNS Administrators with all permissions.
 An omitted collection remains unchanged.
 Administrators membership replacements retain the authenticated caller.
 
 Zone import and Primary or Forwarder zone creation accept `upload: {"file":"/absolute/path/zone.txt"}` alongside `parameters`, without inline `records`.
-The upload is read before preview or dispatch, bound into the confirmation by its bytes and hash, and sent as multipart data.
+The upload is read before preview or dispatch and bound into the confirmation by its bytes, hash and format.
 For imports, `upload.format: "text"` sends the exact file bytes with `Content-Type: text/plain`; the default format is `"multipart"`.
+Creation uploads require multipart format.
 Zone imports also accept inline zone text in `parameters.records` through the form transport.
 Zone creation, cloning, conversion, enable, disable, deletion and resync use the same preview and exact-grant boundary.
 Delete accepts either `parameters.zone` or a nonempty `parameters.zones` array; mixed batch results report `status: "partial"` with the deleted and failed targets.
 Resync requires an API or session credential, reads the original SOA serial, then checks up to three complete zone reads for serial advancement.
+SOA matching trims leading and trailing dots, ignores case and normalizes internationalized zone names to ASCII while preserving distinct ASCII labels.
 If advancement cannot be proven, it returns `OUTCOME_UNKNOWN` with an audit ID and never resends the resync.
 Reconciliation can prove later serial advancement with the original input, confirmation and audit ID.
 An unchanged serial can conservatively remain unknown even after a successful transfer.
