@@ -61,6 +61,8 @@ Choose an explicit page number when saving a particular vendor page.
 Windows file output remains refused until native ACL verification is implemented.
 All downloads reject JSON error envelopes and unexpected content types.
 An incomplete, oversized or failed response cannot replace a previously valid result file.
+An existing protected result larger than 16 MiB currently refuses replacement with `INPUT_LIMIT`, even when the response cap permits a larger download; the prior bytes survive.
+Use a new destination for such downloads until [issue #21](https://github.com/knowttl/technitium-axi/issues/21) is resolved.
 Zone exports, ZIP archives, CSV, logs and allowed/blocked exports produce metadata in ordinary output and exact bytes in the protected file.
 Prometheus output also permits a bounded text preview.
 Hosted result paths are supplied by the host; callers cannot choose server filesystem destinations.

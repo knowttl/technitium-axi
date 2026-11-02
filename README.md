@@ -1,16 +1,16 @@
 # technitium-axi
 
-Agent-facing CLI for Technitium DNS Server, read-only by design.
-It provides 46 read operations, strict credential profiles, offline discovery and protected result files.
+Agent-facing CLI for Technitium DNS Server with reads and explicitly granted writes.
+It provides strict credential profiles, offline discovery, protected result files and a durable mutation journal.
 
-[Why](#why-this-exists) | [Quickstart](#quickstart) | [Commands](#commands) | [Safety](#safety) | [Configuration](#configuration) | [Limitations](#limitations) | [Development](#development)
+[Why](#why-this-exists) | [Quickstart](#quickstart) | [Commands](#commands) | [Writes](#writes) | [Safety](#safety) | [Configuration](#configuration) | [Limitations](#limitations) | [Development](#development)
 
 ## Why this exists
 
 Agents need to inspect a DNS server without holding broad credentials or flooding their context.
 `technitium-axi` returns bounded TOON output by default (`--json` serializes the same projection) with next-step hints on errors.
 Collections, strings, pages, requests, time and response bytes all have caps.
-Vendor mutations are unavailable, and secrets are only accepted as references, never inline.
+Vendor mutations require explicit grants and preview confirmation, and secrets are only accepted as references, never inline.
 
 ## Quickstart
 
@@ -73,9 +73,80 @@ technitium-axi settings backup --profile automation --zones true --result-file /
 
 See [Read contracts and protected results](docs/reads.md) for output bounds, paging, transfer formats and the reviewed archive-entry map.
 
+## Writes
+
+`technitium-axi inventory --json` is the generated reference for write commands, operation IDs, input fields, required fields, SecretRef fields and record selectors.
+Write inputs use vendor parameter names inside a JSON `parameters` object, supplied through a protected absolute `--input-file` owned by the current user with no group or other access (for example, mode 0600).
+Input and upload files are limited to 16 MiB each.
+Booleans and integers use JSON types; list fields use arrays of strings.
+Write commands use the flags listed in their `--help`, rather than the read projection and paging flags.
+
+Mutations require the selected file profile's `writes.allowWrites` to be `true` and its `writes.operations` to contain the exact capability from the inventory.
+The accepted grant values live in `technitium-axi schema --json`; there are no wildcard grants.
+`TECHNITIUM_AXI_READ_ONLY=true` or `1` overrides all mutation grants; `false` or `0` leaves grants effective.
+`dns-client resolve` without `parameters.import: true` needs no write grant; importing requires `OP-077.import`.
+
+For example, authorize only record additions with this field in the selected profile:
+
+```json
+"writes": { "allowWrites": true, "operations": ["OP-049"] }
+```
+
+An input file for a record addition can contain:
+
+```json
+{"parameters":{"zone":"example.test","domain":"www.example.test","type":"A","ipAddress":"192.0.2.10","ttl":300}}
+```
+
+First preview, then execute with the exact returned `preview.digest` and the same profile and input:
+
+```sh
+technitium-axi zone record add --profile automation --input-file /absolute/path/add.json --json
+technitium-axi zone record add --profile automation --input-file /absolute/path/add.json --execute --confirm '<preview.digest>'
+```
+
+A preview resolves credentials, operation SecretRefs and uploads locally but sends no vendor request.
+It reports permission, target and upload metadata without secret values.
+Each preview issues a fresh invocation ID within its digest, bound to the selected credential, target and input contents.
+An executed mutation creates an exclusive durable intent before dispatch and retains its receipt; if that confirmation reaches journal creation again, it is refused with `REPLAY_DENIED`.
+A new preview permits a later legitimate operation with identical content.
+
+Journal entries default to `$XDG_STATE_HOME/technitium-axi/writes.log.d/<digest>.json`, or `~/.local/state/technitium-axi/writes.log.d/<digest>.json` when no absolute XDG state directory is set.
+Set `TECHNITIUM_AXI_WRITE_LOG` to an absolute base path to use `<base-path>.d/<digest>.json` instead.
+The journal stores operation identity, state and keyed hashes, without parameter or secret values.
+Failure to persist an intent prevents dispatch.
+Dispatched mutations never retry automatically; a failed response or unproven postcondition returns `OUTCOME_UNKNOWN` and an audit ID.
+Never replay an uncertain write or create a new preview to bypass its journal entry.
+
+`zone options set`, `settings set` and `admin group set` require an additional `baseline` object containing exactly the changed fields, excluding target identifiers.
+Read the selected target first and supply its current values; execution re-reads them and returns `CONFLICT` before dispatch if they differ.
+Lists are explicit replacements, including empty arrays; omitted fields remain unchanged.
+Null forwarder/blocklist baselines map to empty arrays, and null catalog/primary-transfer TSIG names map to empty strings.
+Group renames use `baseline.newGroup` for the current group name; settings proxy bypass uses the getter's `proxy.bypass` value.
+Update-security-policy baselines accept getter rows or the setter string representation.
+Forwarder replacement preserves the current transport (clearing the list resets it to UDP); proxy bypass replacement requires an existing proxy and preserves its configuration.
+These operations verify selected fields after dispatch, including the renamed group target.
+The vendor has no atomic conditional setter, so maintain a single-writer window between the final read and write.
+For these operations, use `--reconcile <audit-id> --confirm '<original-preview.digest>'` with the original input and profile to prove the postcondition without resending the mutation.
+Other operations require manual inspection of the exact selected target when their outcome is uncertain.
+Server normalization can conservatively leave verification and reconciliation at `OUTCOME_UNKNOWN`; this accepted limitation is tracked in [issue #22](https://github.com/knowttl/technitium-axi/issues/22).
+
+Zone import and Primary zone creation accept `upload: {"file":"/absolute/path/zone.txt"}` alongside `parameters`, without inline `records`.
+The upload is read before preview or dispatch, bound into the confirmation by its bytes and hash, and sent as multipart data.
+Operation secret fields (including PEM keys, FWD proxy passwords and LDAP bind passwords) accept only `{"env":"VARIABLE"}` or `{"file":"/absolute/path/secret"}` references, not stored references or inline values.
+Resolved operation secrets are limited to 1 MiB and are not trimmed.
+
+Record selectors and replacement fields depend on both family and action; use the inventory's `recordFamilies` instead of copying a read projection.
+Known decimal record types are normalized to names before validation; raw `rdata` selectors apply only to genuinely unknown numeric types.
+SOA uses apex update, while generated DNSSEC records use lifecycle operations.
+DNAME deletion, including numeric type `"39"`, is refused with `PREREQUISITE_PENDING` until shipped-library mapping is reviewed in [issue #18](https://github.com/knowttl/technitium-axi/issues/18).
+
+Single-use credentials are never retried and are refused for operations requiring baseline reads.
+After dispatch they are reported as consumed, or consumed-or-uncertain on an unknown outcome.
+
 ## Safety
 
-- Every operation is a read. No create, update, delete or other vendor mutation is exposed.
+- Writes follow the [grant, confirmation and journal policy](#writes).
 - Ordinary reads never acquire, refresh or store credentials.
 - `status` and the no-argument view perform one unauthenticated HTTPS status read and send no credential.
 - `user session get` returns a redacted projection.
@@ -89,7 +160,8 @@ See [Read contracts and protected results](docs/reads.md) for output bounds, pag
 ## Configuration
 
 A version 1 config holds named profiles.
-Each profile has an HTTPS `origin`, `auth: "token"`, `tokenKind: "api"` and a `token` SecretRef such as `{"env": "MY_TECHNITIUM_TOKEN"}`.
+Each profile has an HTTPS `origin`, `auth: "token"`, a `tokenKind` and a `token` SecretRef such as `{"env": "MY_TECHNITIUM_TOKEN"}`.
+The accepted credential kinds and optional write policy are defined by the schema below; see [Writes](#writes) for execution requirements.
 `technitium-axi schema --json` describes the accepted profile fields.
 SecretRefs also support protected absolute files and explicitly stored credentials.
 Inline secrets and secret flags are refused.
@@ -120,7 +192,7 @@ Relative `caFile` paths resolve beside the config file that declares them; envir
 - Native Windows file protection and interruption verification are PENDING.
   Windows file reads and writes are refused until ownership and ACL verification is available.
 - Linux file protection is verified natively.
-- No vendor mutations are available.
+- Hosted write admission requires separate release-candidate proof; see [Offline package journeys](docs/offline-checks.md).
 - Session hooks and an agent skill are PENDING.
 
 ## Development
