@@ -85,13 +85,6 @@ npm run check:journey -- --task B2.OP-141 --operation OP-141 --paths native,arti
 ```
 
 B3 checks cover write policy and journal (B3.01), record inputs and composite selectors (B3.02), concurrency and unknown outcomes (B3.03), upload materialization (B3.04), operation SecretRefs (B3.05), and credential conformance (B3.CR-013 and B3.CR-014).
-
-B4.OP-070, B4.OP-071, B4.OP-072, B4.OP-073, B4.OP-074, B4.OP-076 and B4.OP-085 cover app downloads, package uploads, uninstall, opaque config replacement and selected backup restore.
-Run each with `npm run check:journey -- --task <id> --paths native --offline`.
-The shared matrix checks exact form or multipart mapping, preserved unrelated state, protected response bytes and journal secrecy.
-Handler failures report an unknown outcome and cannot replay the confirmed mutation.
-Restore checks both delete-existing modes, a failure after an earlier category changed, and returned secrets with DNS settings excluded.
-Hosted admission remains a separate release candidate check.
 They use loopback fake vendor HTTPS and synthetic credentials, and accept only `--paths native`.
 Hosted write admission is separate release-candidate proof, not established by these journeys or the existing read admission fixture.
 `npm test` includes those seven native B3 tasks, the DNSSEC write matrix (`B3.dnssec`), the list, cache, dashboard-history and DNS-client matrix (`B3.lists-cache`), and the zone lifecycle and record-write suite (`npm run test:zones`).
@@ -142,6 +135,13 @@ npm run check:journey -- --task B3.CR-014 --paths native --offline
 ```
 
 Node diagnostics report actual child PID, argv and executable hash without replacing the runner.
+
+B4.OP-070, B4.OP-071, B4.OP-072, B4.OP-073, B4.OP-074, B4.OP-076 and B4.OP-085 cover app downloads, package uploads, uninstall, opaque config replacement and selected backup restore.
+Run each with `npm run check:journey -- --task <id> --paths native --offline`, or run all seven with `npm run test:apps-restore`, also included in `npm test`.
+The shared matrix checks exact form or multipart mapping, preserved unrelated state, protected response bytes and journal secrecy.
+Handler failures report an unknown outcome and cannot replay the confirmed mutation.
+Restore checks both delete-existing modes, a failure after an earlier category changed, and returned secrets with DNS settings excluded.
+
 B4 settings checks use the field matrix in [configuration-matrix.json](../tests/fixtures/configuration-matrix.json) for form/JSON patches, structured fields, omitted-secret preservation and protected results.
 The transfer checks cover file-only multipart, exact ZIP entry bytes, preview hash changes, size limits and custody denial before dispatch.
 The settings and log action checks exercise success and vendor failure, retaining uncertain journal entries without replay.
