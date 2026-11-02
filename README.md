@@ -249,9 +249,9 @@ This moves only the journal; stored sessions and the acquisition key stay under 
 The journal stores operation identity, state and keyed hashes, plus the preflight topology for cluster lifecycle reconciliation; it never stores secrets.
 Failure to persist an intent prevents dispatch.
 Dispatched mutations never retry automatically.
-An explicit error response from the server to the mutation itself is a refusal: it returns `UPSTREAM_ERROR` with the server's message and the audit ID, and the journal entry becomes `failed`.
+An explicit error response is a definitive refusal only for `admin ldap test`, whose handler does not change configuration: it returns `UPSTREAM_ERROR` with the server's message and the audit ID, and the journal entry becomes `failed`.
 A lost response, a non-JSON response or an unproven postcondition returns `OUTCOME_UNKNOWN` and an audit ID.
-`settings set` and `settings restore` apply several categories per request, so even an error response from them stays `OUTCOME_UNKNOWN`.
+Other dispatched mutations can fail after changing state, including during persistence, so their error responses stay `OUTCOME_UNKNOWN` with an audit ID; `user logout` reports `revoke-failed` when revocation cannot be confirmed.
 Never replay an uncertain write or create a new preview to bypass its journal entry.
 
 `zone options set`, `zone permission set`, `settings set`, `dhcp scope set`, `admin group set` and `admin permission set` require an additional `baseline` object containing exactly the changed fields, excluding target identifiers.

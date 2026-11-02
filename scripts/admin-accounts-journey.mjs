@@ -244,7 +244,7 @@ export async function adminAccountsJourney({ task, temporary, env, run, executab
     if (id === '107') {
       assert.deepEqual(await read('group get', ['--group', 'NewGroup']), { name: 'NewGroup', description: 'New DNS group', members: [] });
       const preview = await success(fullCommand, input);
-      await failure('UPSTREAM_ERROR', fullCommand, input, ['--execute', '--confirm', preview.preview.digest]);
+      await failure('OUTCOME_UNKNOWN', fullCommand, input, ['--execute', '--confirm', preview.preview.digest]);
       assert.equal((await read('group list')).groups.filter(row => row.name === 'NewGroup').length, 1);
     }
     if (id === '109') {
@@ -260,7 +260,7 @@ export async function adminAccountsJourney({ task, temporary, env, run, executab
       reset();
       const duplicate = { parameters: { group: 'Operators', members: ['PLANNER', 'planner'] }, baseline: { members: ['planner'] } };
       const duplicated = await success(fullCommand, duplicate);
-      await failure('UPSTREAM_ERROR', fullCommand, duplicate, ['--execute', '--confirm', duplicated.preview.digest]);
+      await failure('OUTCOME_UNKNOWN', fullCommand, duplicate, ['--execute', '--confirm', duplicated.preview.digest]);
       assert.deepEqual((await read('group get', ['--group', 'Operators'])).members, ['planner']);
     }
     if (id === '110') {
@@ -274,7 +274,7 @@ export async function adminAccountsJourney({ task, temporary, env, run, executab
       reset();
       await configure({ origin: vendors.origins[1] });
       const preview = await success(fullCommand, input);
-      await failure('UPSTREAM_ERROR', fullCommand, input, ['--execute', '--confirm', preview.preview.digest]);
+      await failure('OUTCOME_UNKNOWN', fullCommand, input, ['--execute', '--confirm', preview.preview.digest]);
       assert.deepEqual((await read('permission get', ['--section', 'Dashboard'])).userPermissions, [reader]);
       await configure();
     }
@@ -283,7 +283,7 @@ export async function adminAccountsJourney({ task, temporary, env, run, executab
       reset();
       deny = true;
       const preview = await success(fullCommand, input);
-      await failure('UPSTREAM_ERROR', fullCommand, input, ['--execute', '--confirm', preview.preview.digest, ...(id === '099' ? ['--result-file', destination] : [])]);
+      await failure('OUTCOME_UNKNOWN', fullCommand, input, ['--execute', '--confirm', preview.preview.digest, ...(id === '099' ? ['--result-file', destination] : [])]);
       assert.deepEqual((await read('session list')).sessions.map(row => row.partialToken), ['1111111111111111', '2222222222222222', '3333333333333333']);
       assert.ok((await read('user list')).users.some(row => row.username === 'delete-user'));
       assert.ok((await read('group list')).groups.some(row => row.name === 'DeleteGroup'));

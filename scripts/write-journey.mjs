@@ -209,12 +209,12 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         const output = await success('zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
         assert.equal(output.credential, 'consumed');
       } else if (mode === 'handler') {
-        const output = await failure('UPSTREAM_ERROR', 'zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
-        assert.match(output.error.message, /credential consumed/);
-        assert.match(output.error.message, /Cannot add record for/);
-        assert.ok(!output.error.message.includes(token), 'The vendor refusal text must not reveal the credential');
-        const refused = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${preview.preview.digest}.json`), 'utf8'));
-        assert.equal(refused.state, 'failed', 'An explicit vendor refusal is a failed journal entry, not an intent');
+        const output = await failure('OUTCOME_UNKNOWN', 'zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
+        assert.match(output.error.message, /credential consumed-or-uncertain/);
+        assert.match(output.error.message, /audit ID [a-f0-9-]+/);
+        assert.ok(!output.error.message.includes(token), 'The error text must not reveal the credential');
+        const receipt = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${preview.preview.digest}.json`), 'utf8'));
+        assert.equal(receipt.state, 'intent', 'A handler error cannot prove that no mutation applied');
       } else {
         const output = await failure('OUTCOME_UNKNOWN', 'zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
         assert.match(output.error.message, /consumed-or-uncertain/);
@@ -509,7 +509,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       await readback([keep, comparison, first], row.related?.add);
       if (row.singleton && !row.updateOnly) {
         const duplicate = recordInput({ ...params, overwrite: false });
-        await failure('UPSTREAM_ERROR', 'zone record add', duplicate, ['--execute', '--confirm', (await success('zone record add', duplicate)).preview.digest]);
+        await failure('OUTCOME_UNKNOWN', 'zone record add', duplicate, ['--execute', '--confirm', (await success('zone record add', duplicate)).preview.digest]);
         await readback([keep, comparison, first]);
         await execute('zone record add', recordInput({ ...params, ...row.updated, overwrite: true }));
         await readback([keep, comparison, { ...first, rData: row.updated }]);

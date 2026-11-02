@@ -152,7 +152,7 @@ export async function clusterJourney({ task, directory, env, run, executable, ve
     deny = true;
     const before = await read('P');
     const denied = await success(full, input);
-    await failure('UPSTREAM_ERROR', full, input, ['--execute', '--confirm', denied.preview.digest]);
+    await failure('OUTCOME_UNKNOWN', full, input, ['--execute', '--confirm', denied.preview.digest]);
     assert.deepEqual(await read('P'), before);
     if (Object.hasOwn(parameters, 'node') || ['120', '126', '128', '130', '131', '132'].includes(id)) await failure('USAGE', full, { parameters: { ...parameters, node: 'cluster' } });
     if (id === '127') {
@@ -163,7 +163,7 @@ export async function clusterJourney({ task, directory, env, run, executable, ve
       reset(id);
       parameters.forceDelete = false;
       const refused = await success(full, input);
-      await failure('UPSTREAM_ERROR', full, input, ['--execute', '--confirm', refused.preview.digest]);
+      await failure('OUTCOME_UNKNOWN', full, input, ['--execute', '--confirm', refused.preview.digest]);
       assert.deepEqual((await read('P')).clusterNodes.map(row => row.id), [100, 200, 300]);
       nodes = nodes.filter(row => row.id === 100);
       await execute(full, input);
@@ -212,7 +212,7 @@ export async function clusterJourney({ task, directory, env, run, executable, ve
       reset(id);
       const invalid = { parameters: { ...parameters, primaryNodeId: 999 } };
       const wrong = await success(full, invalid);
-      await failure('UPSTREAM_ERROR', full, invalid, ['--execute', '--confirm', wrong.preview.digest]);
+      await failure('OUTCOME_UNKNOWN', full, invalid, ['--execute', '--confirm', wrong.preview.digest]);
       assert.equal(pulls, 0);
       assert.equal((await read('S')).clusterNodes.find(row => row.id === 100).url, pUrl);
     }

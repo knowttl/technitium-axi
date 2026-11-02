@@ -207,9 +207,9 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
         assert.deepEqual(listed.response.records.map(record => record.rData), records.map(serverData), `${row.operation} read-back`);
         assert.equal(listed.output.complete, true);
       }
-      answer(cache, (record, index) => ({ name: `n${index}.alpha.example.test`, type: 'A', ttl: '30 (30 sec)', rData: { dataType: 'NameError', data: { authority: 'ns1.example.test' } } }));
+      answer(cache, (record, index) => ({ name: `n${index}.alpha.example.test`, type: 'A', ttl: '30 (30 sec)', rData: { dataType: 'DnsSpecialCacheRecordData', data: 'NXDOMAIN' } }));
       const negative = await success([...argumentsFor(cache), '--full']);
-      assert.deepEqual(negative.response.records[0].rData, { dataType: 'NameError', data: { authority: 'ns1.example.test' } });
+      assert.deepEqual(negative.response.records[0].rData, { dataType: 'DnsSpecialCacheRecordData', data: 'NXDOMAIN' });
       answer(get, (record, index) => ({ disabled: false, name: `r${index}.alpha.example.test`, type: 'MX', ttl: 60, rData: { preference: 1, exchange: 'mx.example.test', futureField: 'x' } }));
       const unlisted = await success([...argumentsFor(get), '--full']);
       assert.equal(unlisted.output.complete, false);

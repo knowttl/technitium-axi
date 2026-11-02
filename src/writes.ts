@@ -604,9 +604,7 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     const response = await vendorRequest(profile, requestPath, body, acquisition ? undefined : token, headers, { bytes: 16 * 1024 * 1024, elapsedMs: 10000 });
     if (response.status !== 200 || response.contentType !== 'application/json') throw new Error('Response unavailable');
     const value: unknown = JSON.parse(response.bytes.toString());
-    // Settings set and restore apply several categories in one request, so an error response cannot prove that none of them applied.
-    if (mutating && object(value) && value.status === 'error' && !['OP-080', 'OP-085'].includes(contract.id)) {
-      // An explicit error response to the mutation itself is a definitive refusal; later read failures stay unknown.
+    if (mutating && object(value) && value.status === 'error' && contract.id === 'OP-143') {
       const reason = vendorMessage(value);
       refusal = new ToolError('UPSTREAM_ERROR', `Server refused the operation${reason ? `: ${reason}` : ''}; audit ID ${auditId}${profile.tokenKind === 'single-use' ? '; credential consumed' : ''}`,
         'The server reported an explicit failure; fix the cause and preview again', 1);

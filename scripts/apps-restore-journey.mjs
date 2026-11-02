@@ -150,8 +150,8 @@ export async function appsRestoreJourney({ task, directory, env, run, executable
     fault = true;
     const preview = await success(command, input);
     const before = calls;
-    const refused = await failure('UPSTREAM_ERROR', command, input, ['--execute', '--confirm', preview.preview.digest]);
-    assert.match(refused.error.message, /Cannot apply for/);
+    const unknown = await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', preview.preview.digest]);
+    assert.match(unknown.error.message, /audit ID [a-f0-9-]+/);
     await failure('REPLAY_DENIED', command, input, ['--execute', '--confirm', preview.preview.digest]);
     assert.equal(calls, before + 1);
   }
