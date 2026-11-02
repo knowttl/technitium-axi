@@ -3094,6 +3094,119 @@
       }
     },
     {
+      "command": "admin session create-token",
+      "description": "Preview or execute admin session create-token",
+      "effect": "write",
+      "operation": "OP-099",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "user",
+          "tokenName"
+        ],
+        "required": [
+          "user",
+          "tokenName"
+        ],
+        "secrets": [],
+        "baseline": null,
+        "resultPolicy": {
+          "classification": "confidential-fields",
+          "ordinaryOutput": "metadata and approved projection only",
+          "localResult": "required protected result file",
+          "hostedResult": "caller and credential revision bound protected custody"
+        }
+      }
+    },
+    {
+      "command": "admin session delete",
+      "description": "Preview or execute admin session delete",
+      "effect": "write",
+      "operation": "OP-100",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "partialToken"
+        ],
+        "required": [
+          "partialToken"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin user create",
+      "description": "Preview or execute admin user create",
+      "effect": "write",
+      "operation": "OP-102",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "user",
+          "pass",
+          "displayName"
+        ],
+        "required": [
+          "user",
+          "pass"
+        ],
+        "secrets": [
+          "pass"
+        ],
+        "baseline": null
+      }
+    },
+    {
       "command": "admin user set",
       "description": "Preview or execute admin user set",
       "effect": "write",
@@ -3134,6 +3247,157 @@
           "newPass"
         ],
         "baseline": null
+      }
+    },
+    {
+      "command": "admin user delete",
+      "description": "Preview or execute admin user delete",
+      "effect": "write",
+      "operation": "OP-105",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "user"
+        ],
+        "required": [
+          "user"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin group create",
+      "description": "Preview or execute admin group create",
+      "effect": "write",
+      "operation": "OP-107",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "group",
+          "description"
+        ],
+        "required": [
+          "group"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin group delete",
+      "description": "Preview or execute admin group delete",
+      "effect": "write",
+      "operation": "OP-110",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "group"
+        ],
+        "required": [
+          "group"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "admin permission set",
+      "description": "Preview or execute admin permission set",
+      "effect": "write",
+      "operation": "OP-113",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "section",
+          "userPermissions",
+          "groupPermissions"
+        ],
+        "required": [
+          "section"
+        ],
+        "secrets": [],
+        "baseline": "/api/admin/permissions/get",
+        "permissions": {
+          "userPermissions": [
+            "username",
+            "canView",
+            "canModify",
+            "canDelete"
+          ],
+          "groupPermissions": [
+            "name",
+            "canView",
+            "canModify",
+            "canDelete"
+          ],
+          "shape": "Array of rows with boolean flags; empty arrays clear permissions; vendor retains Administrators, plus DNS Administrators for Zones or DHCP Administrators for DhcpServer; section writes require the primary"
+        }
       }
     },
     {

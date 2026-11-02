@@ -82,7 +82,7 @@ export async function main(args: string[]): Promise<void> {
     if (readContract) readInputs(readContract, readOptions);
     const writeContract = writeContracts.find(item => item.command === command);
     const input = writeContract ? await writeInput(writeContract, options.inputFile) : undefined;
-    if (writeContract && ['OP-003', 'OP-004', 'OP-009'].includes(writeContract.id) && flags.has('--execute') && !options.resultFile) throw new ToolError('USAGE', 'A protected result destination is required', 'Use --result-file <absolute-path>');
+    if (writeContract && ['OP-003', 'OP-004', 'OP-009', 'OP-099'].includes(writeContract.id) && flags.has('--execute') && !options.resultFile) throw new ToolError('USAGE', 'A protected result destination is required', 'Use --result-file <absolute-path>');
     if (writeContract && options.resultFile && flags.has('--execute')) await new PrivateFiles().destination(options.resultFile);
     const credential = await selectProfile(options);
     let token: string | undefined;

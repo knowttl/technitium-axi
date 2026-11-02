@@ -95,6 +95,14 @@ Token creation and 2FA initialization require `--result-file` on execution; thei
 Password changes use `pass` and `newPass` SecretRefs; `totp` is also a SecretRef.
 `user session delete` accepts the exact `partialToken` returned by a profile read.
 `admin user set` supports a protected `newPass` and an ordinary boolean `totpEnabled`.
+`admin session create-token` accepts `user` and `tokenName`, and requires a protected `--result-file` before issuing the API token.
+`admin session delete` selects the exact `partialToken` and optional `node`; it never deletes sessions on other nodes implicitly.
+`admin user create` requires `user` and a `pass` SecretRef, with optional `displayName`.
+`admin user set` can also rename an account with `newUser`, update its display name, disabled state and session timeout, or replace `memberOfGroups`.
+`admin user delete`, `admin group create` and `admin group delete` select one named account or group.
+`admin group set` supports `newGroup`, `description` and replacement `members`, with an exact selected baseline.
+`admin permission set` selects a `section` and optional `node`, with typed `userPermissions` and `groupPermissions` rows and an exact selected baseline.
+Section permission writes require the primary when clustering is enabled; the vendor enforces caller permissions and retains mandatory administrator groups.
 
 `admin sso user create` and `admin sso user set` require an initialized secondary profile.
 Preview and execution read the same selected caller's session with `includeInfo=true` and require exactly `info.permissions.Administration.canModify: true` before dispatch.
@@ -203,7 +211,7 @@ Failure to persist an intent prevents dispatch.
 Dispatched mutations never retry automatically; a failed response or unproven postcondition returns `OUTCOME_UNKNOWN` and an audit ID.
 Never replay an uncertain write or create a new preview to bypass its journal entry.
 
-`zone options set`, `zone permission set`, `settings set`, `dhcp scope set` and `admin group set` require an additional `baseline` object containing exactly the changed fields, excluding target identifiers.
+`zone options set`, `zone permission set`, `settings set`, `dhcp scope set`, `admin group set` and `admin permission set` require an additional `baseline` object containing exactly the changed fields, excluding target identifiers.
 Read the selected target first and supply its current values; execution re-reads them and returns `CONFLICT` before dispatch if they differ.
 Zone-option and group lists are explicit replacements, including empty arrays; omitted fields remain unchanged.
 See the settings guidance above for collection reset and coupled-field behavior.

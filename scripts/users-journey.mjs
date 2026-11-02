@@ -9,7 +9,7 @@ const operations = [
   ['003', 'create-token', 'createToken', { tokenName: 'automation-1' }],
   ['004', 'create-single-use-token', 'createSingleUseToken', {}],
   ['005', 'logout', 'logout', {}],
-  ['007', 'session delete', 'session/delete', { partialToken: 'other-2222' }],
+  ['007', 'session delete', 'session/delete', { partialToken: '2222222222222222' }],
   ['008', 'change-password', 'changePassword', { pass: { env: 'ACCOUNT_PASS' }, newPass: { env: 'ACCOUNT_PASS' }, iterations: 100000 }],
   ['009', '2fa init', '2fa/init', {}],
   ['010', '2fa enable', '2fa/enable', { totp: { env: 'ACCOUNT_TOTP' } }],
@@ -81,7 +81,12 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
     if (id === '003') return { body: { status: 'ok', username: 'planner', tokenName: p.tokenName, token: secret } };
     if (id === '004') return { body: { status: 'ok', response: { username: 'planner', token: secret } } };
     if (id === '005') { sessions.delete(token); vendors.tokens.delete('alpha'); }
-    if (id === '007') sessions.delete('other-2222');
+    if (id === '007') {
+      if (p.partialToken.length !== 16) return { body: { status: 'error', errorMessage: 'partialToken must be exactly 16 chars long.' } };
+      const selected = [...sessions.keys()].find(value => value.startsWith(p.partialToken));
+      if (!selected || selected === token) return { body: { status: 'error', errorMessage: 'No deletable session matches the prefix.' } };
+      sessions.delete(selected);
+    }
     if (id === '008') account.password = p.newPass;
     if (id === '009') { account.enrollment = secret; return { body: { status: 'ok', response: { secret, provisioningUri: `otpauth://totp/planner?secret=${secret}` } } }; }
     if (id === '010') account.totpEnabled = true;
@@ -162,7 +167,7 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
       vendors.tokens.set('alpha', token);
       sessions.clear();
       sessions.set(token, { type: 'Standard' });
-      sessions.set('other-2222', { type: 'Standard' });
+      sessions.set('2222222222222222-other-session', { type: 'Standard' });
       account.password = 'old-password';
       account.totpEnabled = id !== '010';
       fault = undefined;
@@ -187,7 +192,7 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
       }
       if (id === '003') assert.deepEqual([...sessions.values()].filter(row => row.type === 'ApiToken'), [{ type: 'ApiToken', tokenName: 'automation-1' }]);
       if (id === '007') {
-        assert.equal(sessions.has('other-2222'), false);
+        assert.equal(sessions.has('2222222222222222-other-session'), false);
         await success('user session get');
       }
       if (id === '008') assert.equal(account.password, password);
@@ -206,10 +211,10 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
       }
       if (id === '005') {
         assert.equal(result.result.revoked, true);
-        assert.deepEqual([...sessions.keys()], ['other-2222']);
+        assert.deepEqual([...sessions.keys()], ['2222222222222222-other-session']);
         await failure('AUTH_REQUIRED', 'user session get');
-        vendors.tokens.set('alpha', 'other-2222');
-        await success('user session get', undefined, [], { ACCOUNT_TOKEN: 'other-2222' });
+        vendors.tokens.set('alpha', '2222222222222222-other-session');
+        await success('user session get', undefined, [], { ACCOUNT_TOKEN: '2222222222222222-other-session' });
         vendors.tokens.set('alpha', token);
       }
       const before = vendors.traces.length;

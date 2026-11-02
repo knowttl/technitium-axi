@@ -472,7 +472,7 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     capability, parameters, route: route ?? null, baseline: baselineInput ?? null, encoding: input.encoding ?? 'form', upload: upload ? { sha256: hash(upload), format: input.upload?.format ?? 'multipart' } : null })).digest('hex')}`;
   const permitted = !mutating || (!readOnly() && profile.writes?.allowWrites === true && profile.writes.operations.includes(capability));
   if (!options.execute && !options.reconcile) return { bytes: Buffer.alloc(0), projection: { preview: { digest, operation: capability,
-    origin: profile.origin, identity, node: parameters.node ?? null, target: parameters.zone ?? parameters.zones ?? parameters.domain ?? parameters.group ?? parameters.log ?? parameters.name ?? null,
+    origin: profile.origin, identity, node: parameters.node ?? null, target: parameters.zone ?? parameters.zones ?? parameters.domain ?? parameters.group ?? parameters.user ?? parameters.partialToken ?? parameters.section ?? parameters.log ?? parameters.name ?? null,
     permitted, upload: upload ? { bytes: upload.length, sha256: hash(upload) } : null,
     ...(route ? { route } : {}),
     replaces: contract.baselinePath ? Object.keys(input.baseline!) : [],
@@ -519,8 +519,9 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     const baseline = await baselineRead(contract, profile, token, parameters, Object.keys(input.baseline!));
     if (canonical(baseline.selected) !== canonical(selectedValues(baselineInput!, contract.id === 'OP-092'))) throw new ToolError('CONFLICT', 'Selected baseline changed after preview', 'Read the selected values and preview a new explicit replacement', 1);
     const selected = selectedValues(Object.fromEntries(Object.keys(input.baseline!).map(key => [key, parameters[key]])), contract.id === 'OP-092');
-    if (contract.id === 'OP-034' && Array.isArray(selected.groupPermissions)) {
-      const mandatory = ['administrators', 'dns administrators'];
+    if (['OP-034', 'OP-113'].includes(contract.id) && Array.isArray(selected.groupPermissions)) {
+      const section = String(parameters.section).toLowerCase();
+      const mandatory = ['administrators', ...(contract.id === 'OP-034' || section === 'zones' ? ['dns administrators'] : section === 'dhcpserver' ? ['dhcp administrators'] : [])];
       selected.groupPermissions = baselineValue('groupPermissions', [
         ...permissionRows('groupPermissions', selected.groupPermissions).filter(row => !mandatory.includes(String(row.name))),
         ...mandatory.map(name => ({ name, canView: true, canModify: true, canDelete: true })),
@@ -580,10 +581,11 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     if (response.status !== 200 || response.contentType !== 'application/json') throw new Error('Response unavailable');
     const value: unknown = JSON.parse(response.bytes.toString());
     checkStatus(value);
-    if (['OP-002', 'OP-003', 'OP-004'].includes(contract.id)) {
-      const credential = contract.id === 'OP-004' ? value.response : value;
+    if (['OP-002', 'OP-003', 'OP-004', 'OP-099'].includes(contract.id)) {
+      const credential = ['OP-004', 'OP-099'].includes(contract.id) ? value.response : value;
       if (!object(credential) || typeof credential.token !== 'string' || !credential.token || /[\s\x00-\x1f\x7f]/.test(credential.token)) throw new Error('Issued credential is invalid');
       redactor.add(credential.token);
+      if (contract.id === 'OP-099' && (typeof credential.username !== 'string' || credential.username.toLowerCase() !== String(parameters.user).toLowerCase() || credential.tokenName !== parameters.tokenName)) throw new Error('Issued token does not match the selected user and name');
     }
     if (contract.id === 'OP-002') {
       if (value.username !== profile.username || typeof value.token !== 'string' || !object(value.info) || !object(value.info.permissions)) throw new Error('Issued identity does not match the selected profile');

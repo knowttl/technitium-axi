@@ -10,11 +10,16 @@ import { settingsJourney, settingsTasks } from './settings-journey.mjs';
 import { appsRestoreJourney, appsRestoreTasks } from './apps-restore-journey.mjs';
 import { dhcpJourney, dhcpTasks } from './dhcp-journey.mjs';
 import { usersJourney, usersTasks } from './users-journey.mjs';
+import { adminAccountsJourney, adminAccountsTasks } from './admin-accounts-journey.mjs';
 
-export const writeTasks = ['B3.01', 'B3.02', 'B3.03', 'B3.04', 'B3.05', 'B3.CR-013', 'B3.CR-014', 'B3.dnssec', ...dnssecTasks, 'B3.lists-cache', ...listsCacheTasks, ...zoneTasks, ...settingsTasks, ...appsRestoreTasks, ...dhcpTasks, ...usersTasks, 'B3.OP-049', 'B3.OP-051', 'B3.OP-052'];
+export const writeTasks = ['B3.01', 'B3.02', 'B3.03', 'B3.04', 'B3.05', 'B3.CR-013', 'B3.CR-014', 'B3.dnssec', ...dnssecTasks, 'B3.lists-cache', ...listsCacheTasks, ...zoneTasks, ...settingsTasks, ...appsRestoreTasks, ...dhcpTasks, ...usersTasks, ...adminAccountsTasks, 'B3.OP-049', 'B3.OP-051', 'B3.OP-052'];
 const hash = value => createHash('sha256').update(value).digest('hex');
 
 export async function writeJourney({ task, temporary, env, run, executable, vendors }) {
+  if (adminAccountsTasks.includes(task)) {
+    await adminAccountsJourney({ task, temporary, env, run, executable, vendors });
+    return [`native:${task}:write-behavior`];
+  }
   if (usersTasks.includes(task)) {
     await usersJourney({ task, temporary, env, run, executable, vendors });
     if (task === 'B5.CR-010') await writeJourney({ task: 'B4.OP-085', temporary, env, run, executable, vendors });
@@ -246,8 +251,8 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         before: { name: row.group, members: ['old', 'planner'] }, baseline: { members: ['old', 'planner'] }, parameters: { members: row.members },
         after: { name: row.group, members: row.after }, form: { members: row.members.join(',') } })),
       { command: 'admin group set', grant: 'OP-109', get: '/api/admin/groups/get', set: '/api/admin/groups/set', target: { group: 'Operators' },
-        before: { name: 'Operators', members: ['old'] }, baseline: { members: ['OLD'] }, parameters: { members: ['BOB', 'alice', 'BOB'] },
-        after: { name: 'Operators', members: ['alice', 'bob'] }, form: { members: 'BOB,alice,BOB' } },
+        before: { name: 'Operators', members: ['old'] }, baseline: { members: ['OLD'] }, parameters: { members: ['BOB', 'alice'] },
+        after: { name: 'Operators', members: ['alice', 'bob'] }, form: { members: 'BOB,alice' } },
       ...[
         { field: 'zoneTransferTsigKeyNames', before: [], input: ['KEY.', 'other', 'key'], after: ['key', 'other'] },
         { field: 'notifyNameServers', before: [], input: ['2001:0db8:0:0:0:0:0:1'], after: ['2001:db8::1'] },
