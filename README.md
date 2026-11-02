@@ -78,19 +78,22 @@ See [Read contracts and protected results](docs/reads.md) for output bounds, pag
 `technitium-axi inventory --json` is the generated reference for write commands, operation IDs, input fields, required fields, SecretRef fields and record selectors.
 Write inputs use vendor parameter names inside a JSON `parameters` object, supplied through a protected absolute `--input-file` owned by the current user with no group or other access (for example, mode 0600).
 Input and upload files are limited to 16 MiB each.
-Existing protected result files can be overwritten independently of that input limit.
-Saving a result preserves access permissions on existing destination directories; new directories are private.
+See [protected results](docs/reads.md) for result replacement and destination permissions.
 Booleans and integers use JSON types; list fields use arrays of strings.
 Write commands use the flags listed in their `--help`, rather than the read projection and paging flags.
 
 `settings set` accepts all fields listed in the inventory's configuration map, including modern fields and the `preferIPv6` and `reverseProxyNetworkACL` compatibility inputs.
-Supply a `baseline` with exactly the selected fields from a fresh protected settings read.
 Omitted fields are preserved; arrays replace collections.
 An empty array clears collections except `dnsServerLocalEndPoints` and `webServiceLocalAddresses`, which reset to wildcard listeners.
 To append, include the existing collection plus the new entries and retain the original collection in the baseline.
 The optional input `encoding` selects `form` (default) or `json`; `--json` controls output only.
-Structured QPM rows contain `prefix`, `udpLimit` and `tcpLimit`.
-TSIG rows contain `keyName`, a `sharedSecret` SecretRef and `algorithmName`; proxy and certificate passwords also require SecretRefs in both changed values and baselines.
+Use the inventory's configuration map for field types and structured row columns; its `dhcpFields` map describes DHCP fields without enabling DHCP writes.
+TSIG shared secrets and proxy and certificate passwords require SecretRefs in both changed values and baselines.
+For an absent certificate or proxy password, use a baseline SecretRef resolving to an empty string; an absent proxy username uses an empty string directly.
+Updating a certificate password requires an existing or selected certificate path.
+Proxy updates preserve unselected proxy fields; disabling the proxy clears its configuration.
+Forwarder replacement preserves the current transport unless selected explicitly; clearing the list resets it to UDP.
+Settings comparisons account for trailing dots in `dnsServerDomain`, blank web-service headers restoring defaults, and `HttpsJson` normalizing to `Https`.
 Never submit a redacted GET response as a patch.
 Settings are not transactional: a handler error can leave earlier assignments saved and requires inspection before another write.
 
@@ -159,11 +162,11 @@ Never replay an uncertain write or create a new preview to bypass its journal en
 
 `zone options set`, `zone permission set`, `settings set` and `admin group set` require an additional `baseline` object containing exactly the changed fields, excluding target identifiers.
 Read the selected target first and supply its current values; execution re-reads them and returns `CONFLICT` before dispatch if they differ.
-Lists are explicit replacements, including empty arrays; omitted fields remain unchanged.
-Null forwarder/blocklist baselines map to empty arrays, and null catalog/primary-transfer TSIG names map to empty strings.
-Group renames use `baseline.newGroup` for the current group name; settings proxy bypass uses the getter's `proxy.bypass` value.
+Zone-option and group lists are explicit replacements, including empty arrays; omitted fields remain unchanged.
+See the settings guidance above for collection reset and coupled-field behavior.
+Null settings collection baselines map to empty arrays, and null catalog/primary-transfer TSIG names map to empty strings.
+Group renames use `baseline.newGroup` for the current group name; settings proxy fields use the getter's nested `proxy` values.
 Update-security-policy baselines accept getter rows or the setter string representation.
-Forwarder replacement preserves the current transport (clearing the list resets it to UDP); proxy bypass replacement requires an existing proxy and preserves its configuration.
 These operations verify selected fields after dispatch, including the renamed group target.
 The vendor has no atomic conditional setter, so maintain a single-writer window between the final read and write.
 For these operations, use `--reconcile <audit-id> --confirm '<original-preview.digest>'` with the original input and profile to prove the postcondition without resending the mutation.
