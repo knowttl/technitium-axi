@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, readFile, realpath, rm } from 'node:fs/promises';
-import { homedir, tmpdir } from 'node:os';
+import { homedir, loadavg, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Ajv from 'ajv';
@@ -179,12 +179,13 @@ if (!inside) {
     assert.ok(checks.length > 0, 'Zero assertions executed');
     assert.equal(checks.length, expected, 'Selected journey did not execute every expected case');
     console.log(JSON.stringify({ task, paths, expected, actual: checks.length, failed: 0,
-      pending: task === 'B3.02' ? 1 : 0, skipped: 0,
-      ...(task === 'B3.02' ? { limitations: ['DNAME deletion and B3.02 full-management coverage remain pending shipped-library mapping and independent review'] } : {}),
+      pending: ['B3.02', 'B3.OP-052'].includes(task) ? 1 : 0, skipped: 0,
+      ...(['B3.02', 'B3.OP-052'].includes(task) ? { limitations: ['DNAME deletion and B3.02 full-management coverage remain pending shipped-library mapping and independent review'] } : {}),
       platformEvidence: { linux: 'native', windows: identityTask ? 'PENDING - native Windows verification deferred' : 'not selected' }, package: { version: pack.version, sha256, integrity: pack.integrity }, checks }));
   } catch (error) {
     console.log(JSON.stringify({ task, paths, expected, actual: checks.length, failed: 1,
-      pending: Math.max(0, expected - checks.length - 1), skipped: 0, error: error.message }));
+      pending: Math.max(0, expected - checks.length - 1), skipped: 0, error: error.message,
+      diagnostics: { load1: loadavg()[0], requests: vendors?.traces.map(({ elapsedMs, method, path, identity }) => ({ elapsedMs, method, path, identity })) ?? [] } }));
     process.exitCode = 1;
   } finally {
     for (const child of children) child.kill('SIGKILL');

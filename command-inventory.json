@@ -2298,7 +2298,13 @@
         "secrets": [
           "proxyPassword"
         ],
-        "baseline": null
+        "baseline": null,
+        "upload": {
+          "file": "protected absolute path",
+          "format": [
+            "multipart"
+          ]
+        }
       }
     },
     {
@@ -2331,6 +2337,221 @@
           "overwriteZone",
           "overwriteSoaSerial",
           "records"
+        ],
+        "required": [
+          "zone"
+        ],
+        "secrets": [],
+        "baseline": null,
+        "upload": {
+          "file": "protected absolute path",
+          "format": [
+            "multipart (default)",
+            "text"
+          ]
+        }
+      }
+    },
+    {
+      "command": "zone clone",
+      "description": "Preview or execute zone clone",
+      "effect": "write",
+      "operation": "OP-025",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "sourceZone"
+        ],
+        "required": [
+          "zone",
+          "sourceZone"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone convert",
+      "description": "Preview or execute zone convert",
+      "effect": "write",
+      "operation": "OP-026",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "type"
+        ],
+        "required": [
+          "zone",
+          "type"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone enable",
+      "description": "Preview or execute zone enable",
+      "effect": "write",
+      "operation": "OP-027",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone"
+        ],
+        "required": [
+          "zone"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone disable",
+      "description": "Preview or execute zone disable",
+      "effect": "write",
+      "operation": "OP-028",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone"
+        ],
+        "required": [
+          "zone"
+        ],
+        "secrets": [],
+        "baseline": null
+      }
+    },
+    {
+      "command": "zone delete",
+      "description": "Preview or execute zone delete",
+      "effect": "write",
+      "operation": "OP-029",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "zones"
+        ],
+        "required": [],
+        "secrets": [],
+        "baseline": null,
+        "target": "Exactly one of zone or nonempty zones array"
+      }
+    },
+    {
+      "command": "zone resync",
+      "description": "Preview or execute zone resync",
+      "effect": "write",
+      "operation": "OP-030",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone"
         ],
         "required": [
           "zone"
@@ -2391,6 +2612,57 @@
         ],
         "secrets": [],
         "baseline": "/api/zones/options/get"
+      }
+    },
+    {
+      "command": "zone permission set",
+      "description": "Preview or execute zone permission set",
+      "effect": "write",
+      "operation": "OP-034",
+      "arguments": [],
+      "flags": [
+        "--json",
+        "--help",
+        "--config",
+        "--profile",
+        "--input-file",
+        "--execute",
+        "--confirm",
+        "--result-file",
+        "--reconcile"
+      ],
+      "input": {
+        "envelope": [
+          "parameters",
+          "baseline",
+          "upload"
+        ],
+        "fields": [
+          "node",
+          "zone",
+          "userPermissions",
+          "groupPermissions"
+        ],
+        "required": [
+          "zone"
+        ],
+        "secrets": [],
+        "baseline": "/api/zones/permissions/get",
+        "permissions": {
+          "userPermissions": [
+            "username",
+            "canView",
+            "canModify",
+            "canDelete"
+          ],
+          "groupPermissions": [
+            "name",
+            "canView",
+            "canModify",
+            "canDelete"
+          ],
+          "shape": "Array of rows; permission flags are booleans; an empty array clears the selected collection"
+        }
       }
     },
     {

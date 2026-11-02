@@ -1,6 +1,8 @@
 import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
+import { isIP } from 'node:net';
+import { domainToASCII } from 'node:url';
 import { readOnly } from './credentials.js';
 import type { Profile } from './credentials.js';
 import { ToolError } from './errors.js';
@@ -20,11 +22,69 @@ function canonical(value: unknown): string {
 }
 const booleans = new Set('overwrite overwriteZone overwriteSoaSerial disabled disable ptr createPtrZone updateSvcbHints autoIpv4Hint autoIpv6Hint dnssecValidation useSerialDateScheme useSoaSerialDateScheme validateZone initializeForwarder overrideCatalogQueryAccess overrideCatalogZoneTransfer overrideCatalogNotify import dnssec ldapIgnoreSslErrors splitText newSplitText'.split(' '));
 const integers = new Set('ttl expiryTtl preference newPreference priority newPriority weight newWeight port newPort naptrOrder naptrPreference naptrNewOrder naptrNewPreference keyTag newKeyTag digestType newDigestType sshfpAlgorithm newSshfpAlgorithm sshfpFingerprintType newSshfpFingerprintType tlsaCertificateUsage newTlsaCertificateUsage tlsaSelector newTlsaSelector tlsaMatchingType newTlsaMatchingType svcPriority newSvcPriority uriPriority newUriPriority uriWeight newUriWeight flags newFlags serial refresh retry expire minimum proxyPort forwarderPriority ldapPort kskKeySize zskKeySize keySize dnsKeyTtl zskRolloverDays rolloverDays iterations saltLength'.split(' '));
-const lists = new Set('primaryNameServerAddresses queryAccessNetworkACL zoneTransferNetworkACL zoneTransferTsigKeyNames notifyNameServers notifySecondaryCatalogsNameServers updateNetworkACL blockListUrls forwarders proxyBypass members glue'.split(' '));
+const lists = new Set('zones primaryNameServerAddresses queryAccessNetworkACL zoneTransferNetworkACL zoneTransferTsigKeyNames notifyNameServers notifySecondaryCatalogsNameServers updateNetworkACL blockListUrls forwarders proxyBypass members glue'.split(' '));
+const domainName = (value: string) => domainToASCII(value.replace(/^\.+|\.+$/g, '')).toLowerCase();
+
+function permissionRows(key: string, value: unknown): Record<string, unknown>[] {
+  const name = key === 'userPermissions' ? 'username' : 'name';
+  if (!Array.isArray(value)) usage('Permissions require an array of named permission rows');
+  const names = new Set<string>();
+  for (const row of value) {
+    if (!object(row) || Object.keys(row).sort().join(',') !== ['canDelete', 'canModify', 'canView', name].sort().join(',') ||
+      typeof row[name] !== 'string' || !row[name] || /[|\x00-\x1f\x7f]/.test(row[name]) ||
+      ['canView', 'canModify', 'canDelete'].some(flag => typeof row[flag] !== 'boolean')) usage('Invalid permission row');
+    const normalized = (row[name] as string).toLowerCase();
+    if (names.has(normalized)) usage('Duplicate permission principal');
+    names.add(normalized);
+  }
+  return value as Record<string, unknown>[];
+}
+
+function address(value: string): string {
+  if (isIP(value) === 6) return new URL(`http://[${value}]/`).hostname.slice(1, -1);
+  return value;
+}
+
+function network(value: string): string {
+  const denied = value.startsWith('!');
+  const [ip, suffix] = (denied ? value.slice(1) : value).split('/');
+  const version = isIP(ip!);
+  if (!version) return value;
+  const bits = version === 4 ? 32 : 128;
+  const prefix = suffix === undefined ? bits : Number(suffix);
+  if (!Number.isInteger(prefix) || prefix < 0 || prefix > bits) return value;
+  let words: string[];
+  if (version === 4) words = ip!.split('.');
+  else {
+    const [left, right] = address(ip!).split('::');
+    const start = left ? left.split(':') : [];
+    const end = right ? right.split(':') : [];
+    words = right === undefined ? start : [...start, ...Array(8 - start.length - end.length).fill('0'), ...end];
+  }
+  const width = version === 4 ? 8n : 16n;
+  const numeric = words.reduce((result, word) => (result << width) + BigInt(parseInt(word, version === 4 ? 10 : 16)), 0n);
+  const shift = BigInt(bits - prefix);
+  const masked = (numeric >> shift) << shift;
+  const result = Array.from({ length: version === 4 ? 4 : 8 }, (_, index) => Number((masked >> (BigInt((version === 4 ? 3 : 7) - index) * width)) & ((1n << width) - 1n)).toString(version === 4 ? 10 : 16)).join(version === 4 ? '.' : ':');
+  return `${denied ? '!' : ''}${address(result)}/${prefix}`;
+}
 
 function baselineValue(key: string, value: unknown): unknown {
+  if (['userPermissions', 'groupPermissions'].includes(key)) {
+    const name = key === 'userPermissions' ? 'username' : 'name';
+    return permissionRows(key, value).map(row => ({ ...row, [name]: (row[name] as string).toLowerCase() }))
+      .sort((a, b) => String(a[name]).localeCompare(String(b[name])));
+  }
+  if (['members', 'zoneTransferTsigKeyNames'].includes(key) && Array.isArray(value)) {
+    return [...new Set(value.map(item => key === 'members' ? String(item).toLowerCase() : domainName(String(item))))].sort();
+  }
+  if (['notifyNameServers', 'notifySecondaryCatalogsNameServers', 'queryAccessNetworkACL', 'zoneTransferNetworkACL', 'updateNetworkACL'].includes(key) && Array.isArray(value)) {
+    return value.map(item => key.endsWith('NetworkACL') ? network(String(item)) : address(String(item)));
+  }
   if (['blockListUrls', 'forwarders'].includes(key) && value === null) return [];
   if (['catalog', 'primaryZoneTransferTsigKeyName'].includes(key) && value === null) return '';
+  if (['catalog', 'primaryZoneTransferTsigKeyName'].includes(key) && typeof value === 'string') return domainName(value);
+  if (['primaryZoneTransferProtocol', 'queryAccess', 'zoneTransfer', 'notify', 'update'].includes(key) && typeof value === 'string') return value.toLowerCase();
   if (key === 'updateSecurityPolicies') {
     let policies: string[] | undefined;
     if (Array.isArray(value)) {
@@ -36,9 +96,12 @@ function baselineValue(key: string, value: unknown): unknown {
     if (typeof value === 'string') policies = value === '' || value.toLowerCase() === 'false' ? [] : value.split('|').filter(Boolean);
     if (policies) {
       if (policies.length % 3 !== 0) usage('Update security policies require key, domain and allowed types');
-      const rows = [];
-      for (let i = 0; i < policies.length; i += 3) rows.push(`${policies[i]!.replace(/^\.+|\.+$/g, '').toLowerCase()}|${policies[i + 1]!.replace(/^\.+|\.+$/g, '').toLowerCase()}|${policies[i + 2]!.split(/[, ]+/).filter(Boolean).map(type => type.toUpperCase()).sort().join(',')}`);
-      return rows.sort().join('|');
+      const rows = new Map<string, string[]>();
+      for (let i = 0; i < policies.length; i += 3) {
+        const key = `${domainName(policies[i]!)}|${domainName(policies[i + 1]!)}`;
+        rows.set(key, [...rows.get(key) ?? [], ...policies[i + 2]!.split(/[, ]+/).filter(Boolean).map(type => type.toUpperCase())]);
+      }
+      return [...rows].map(([key, types]) => `${key}|${types.sort().join(',')}`).sort().join('|');
     }
   }
   return value;
@@ -49,7 +112,8 @@ function selectedValues(values: Record<string, unknown>): Record<string, unknown
 }
 
 function validateValue(key: string, value: unknown): void {
-  if (booleans.has(key)) { if (typeof value !== 'boolean') usage('Boolean input requires true or false'); }
+  if (['userPermissions', 'groupPermissions'].includes(key)) { permissionRows(key, value); }
+  else if (booleans.has(key)) { if (typeof value !== 'boolean') usage('Boolean input requires true or false'); }
   else if (integers.has(key)) { if (!Number.isSafeInteger(value) || Number(value) < 0 || Number(value) > 4294967295) usage('Integer input is outside its supported range'); }
   else if (lists.has(key)) { if (!Array.isArray(value) || value.some(item => typeof item !== 'string' || /[\x00-\x1f\x7f,]/.test(item))) usage('List input requires an array of strings without separators'); }
   else if ((key === 'algorithm' || key === 'newAlgorithm') && typeof value === 'number') {
@@ -95,7 +159,7 @@ function validateRecord(contract: WriteContract, parameters: Record<string, unkn
 export interface WriteInput {
   parameters: Record<string, unknown>;
   baseline?: Record<string, unknown>;
-  upload?: { file: string };
+  upload?: { file: string; format?: 'multipart' | 'text' };
 }
 
 export async function writeInput(contract: WriteContract, path?: string): Promise<WriteInput> {
@@ -126,6 +190,9 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
       if (parameters[key] !== undefined && Number(parameters[key]) > maximum) usage(`${key} must be between 0 and ${maximum}`);
     }
   }
+  if (['OP-022', 'OP-026'].includes(contract.id) && !['Primary', 'Secondary', 'Stub', 'Forwarder', 'SecondaryForwarder', 'Catalog', 'SecondaryCatalog'].includes(String(parameters.type))) usage('Unsupported zone type');
+  if (contract.id === 'OP-022' && ['SecondaryForwarder', 'SecondaryCatalog'].includes(String(parameters.type)) && (!Array.isArray(parameters.primaryNameServerAddresses) || !parameters.primaryNameServerAddresses.length)) usage('Secondary forwarder and catalog creation require primary name server addresses');
+  if (contract.id === 'OP-029' && ((parameters.zone === undefined) === (parameters.zones === undefined) || parameters.zone === '' || (Array.isArray(parameters.zones) && parameters.zones.length === 0))) usage('Choose a zone or a nonempty zones list');
   if (input.baseline !== undefined && !object(input.baseline)) usage('Baseline must be an object');
   if (contract.baselinePath) {
     const fields = Object.keys(parameters).filter(key => !contract.baselineTarget?.includes(key));
@@ -133,8 +200,9 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
     for (const [key, value] of Object.entries(input.baseline)) validateValue(key, baselineValue(key, value));
   } else if (input.baseline !== undefined) usage('Baseline is not supported by this operation');
   if (input.upload !== undefined) {
-    if (!['OP-022', 'OP-023'].includes(contract.id) || !object(input.upload) || Object.keys(input.upload).length !== 1 || typeof input.upload.file !== 'string' || !isAbsolute(input.upload.file)) usage('Upload requires a protected absolute file for zone create or import');
-    if (Object.hasOwn(parameters, 'records') || (contract.id === 'OP-022' && parameters.type !== 'Primary')) usage('Uploaded records require Primary creation or an import without inline records');
+    if (!['OP-022', 'OP-023'].includes(contract.id) || !object(input.upload) || Object.keys(input.upload).some(key => !['file', 'format'].includes(key)) || typeof input.upload.file !== 'string' || !isAbsolute(input.upload.file)) usage('Upload requires a protected absolute file for zone create or import');
+    if (input.upload.format !== undefined && !['multipart', 'text'].includes(String(input.upload.format))) usage('Upload format must be multipart or text');
+    if (Object.hasOwn(parameters, 'records') || (contract.id === 'OP-022' && (!['Primary', 'Forwarder'].includes(String(parameters.type)) || input.upload.format === 'text'))) usage('Uploaded records require Primary or Forwarder multipart creation, or an import without inline records');
   }
   if (contract.id === 'OP-023' && input.upload === undefined && typeof parameters.records !== 'string') usage('Import requires records or an upload');
   return input as unknown as WriteInput;
@@ -183,6 +251,19 @@ async function baselineRead(contract: WriteContract, profile: Profile, token: st
   return { selected, preserved };
 }
 
+async function soaSerial(profile: Profile, token: string, parameters: Record<string, unknown>): Promise<number> {
+  const form = new URLSearchParams({ domain: String(parameters.zone), zone: String(parameters.zone), listZone: 'true' });
+  if (parameters.node !== undefined) form.set('node', String(parameters.node));
+  const result = await vendorRequest(profile, '/api/zones/records/get', form.toString(), token, {}, { bytes: 16 * 1024 * 1024, elapsedMs: 10000 });
+  if (result.status !== 200 || result.contentType !== 'application/json') throw new ToolError('UPSTREAM_INVALID', 'SOA read failed', 'Read the selected secondary zone', 1);
+  const value: unknown = JSON.parse(result.bytes.toString());
+  checkStatus(value);
+  if (!object(value.response) || !Array.isArray(value.response.records)) usage('SOA read requires complete zone records');
+  const soa = value.response.records.find(record => object(record) && record.type === 'SOA' && domainName(String(record.name)) === domainName(String(parameters.zone)));
+  if (!object(soa) || !object(soa.rData) || !Number.isSafeInteger(soa.rData.serial)) usage('Selected zone SOA serial is missing');
+  return Number(soa.rData.serial);
+}
+
 export async function writeOperation(contract: WriteContract, input: WriteInput, profile: Profile, identity: string, token: string,
   options: { execute: boolean; confirm?: string; reconcile?: string }, redactor: Redactor) {
   const capability = contract.id === 'OP-077' ? input.parameters.import === true ? 'OP-077.import' : 'OP-077.resolve' : contract.id;
@@ -205,27 +286,34 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
   const intentId = !options.execute && !options.reconcile ? randomUUID() : options.confirm?.split('.')[0];
   const digest = `${intentId}.${createHmac('sha256', token).update(canonical({ intentId, origin: profile.origin, identity, username: profile.username ?? null,
     tokenKind: profile.tokenKind, caFile: profile.caFile ?? null, tlsServerName: profile.tlsServerName ?? null,
-    capability, parameters, baseline: input.baseline ?? null, upload: upload ? hash(upload) : null })).digest('hex')}`;
+    capability, parameters, baseline: input.baseline ?? null, upload: upload ? { sha256: hash(upload), format: input.upload?.format ?? 'multipart' } : null })).digest('hex')}`;
   const permitted = !mutating || (!readOnly() && profile.writes?.allowWrites === true && profile.writes.operations.includes(capability));
   if (!options.execute && !options.reconcile) return { bytes: Buffer.alloc(0), projection: { preview: { digest, operation: capability,
-    origin: profile.origin, identity, node: parameters.node ?? null, target: parameters.zone ?? parameters.domain ?? parameters.group ?? null,
+    origin: profile.origin, identity, node: parameters.node ?? null, target: parameters.zone ?? parameters.zones ?? parameters.domain ?? parameters.group ?? null,
     permitted, upload: upload ? { bytes: upload.length, sha256: hash(upload) } : null,
     replaces: contract.baselinePath ? Object.keys(input.baseline!) : [],
     ...(contract.baselinePath ? { concurrency: 'A single-writer window is required between the final read and write; the vendor has no atomic conditional setter' } : {}) } } };
   if (!permitted) throw new ToolError('WRITE_DENIED', 'Exact write grant is required and read-only mode overrides grants', 'Enable only the selected operation in the selected profile', 1);
   if (!intentId || !/^[a-f0-9-]{36}$/.test(intentId) || options.confirm !== digest) throw new ToolError('CONFIRMATION_MISMATCH', 'Preview confirmation no longer matches the selected input', 'Preview again and supply its exact digest', 1);
-  if (contract.baselinePath && profile.tokenKind === 'single-use') throw new ToolError('TOKEN_KIND', 'A read-modify-write action needs multiple authenticated requests', 'Select an API or session profile for this operation', 1);
+  if ((contract.baselinePath || contract.id === 'OP-030') && profile.tokenKind === 'single-use') throw new ToolError('TOKEN_KIND', 'This action needs multiple authenticated requests', 'Select an API or session profile for this operation', 1);
   const auditId = randomUUID();
   const path = journalPath(digest);
   const postconditionHash = (value: unknown) => createHmac('sha256', token).update(canonical(value)).digest('hex');
+  let resyncSerial: number | undefined;
   const postcondition = async (expected: string | undefined) => {
+    if (contract.id === 'OP-030' && resyncSerial !== undefined) {
+      const serial = await soaSerial(profile, token, parameters);
+      const distance = (serial - resyncSerial + 4294967296) % 4294967296;
+      return distance > 0 && distance < 2147483648;
+    }
     if (!contract.baselinePath || !expected) return false;
     const target = contract.id === 'OP-109' && parameters.newGroup !== undefined ? { ...parameters, group: parameters.newGroup } : parameters;
     return postconditionHash(await baselineRead(contract, profile, token, target, Object.keys(input.baseline!))) === expected;
   };
   if (options.reconcile) {
-    const prior = JSON.parse(await files.read(path)) as { auditId: string; state: string; postconditionHash?: string };
+    const prior = JSON.parse(await files.read(path)) as { auditId: string; state: string; postconditionHash?: string; resyncSerial?: number };
     if (prior.auditId !== options.reconcile) usage('Audit ID does not match the confirmed operation');
+    resyncSerial = prior.resyncSerial;
     let proven = false;
     try { proven = Boolean(await postcondition(prior.postconditionHash)); } catch { /* A failed read cannot prove an outcome. */ }
     if (!proven) throw new ToolError('OUTCOME_UNKNOWN', `Outcome remains unknown; audit ID ${prior.auditId}`, 'Read the exact selected target and compare its full postcondition; never replay an uncertain write', 1);
@@ -233,6 +321,7 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     return { bytes: Buffer.alloc(0), projection: { status: 'reconciled', auditId: prior.auditId, operation: capability } };
   }
   let expected: string | undefined;
+  if (contract.id === 'OP-030') resyncSerial = await soaSerial(profile, token, parameters);
   if (contract.baselinePath) {
     const baseline = await baselineRead(contract, profile, token, parameters, Object.keys(input.baseline!));
     if (canonical(baseline.selected) !== canonical(selectedValues(input.baseline!))) throw new ToolError('CONFLICT', 'Selected baseline changed after preview', 'Read the selected values and preview a new explicit replacement', 1);
@@ -244,21 +333,28 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     Object.assign(parameters, baseline.preserved);
   }
   if (mutating) {
-    try { await files.create(path, JSON.stringify({ auditId, digest, operation: capability, state: 'intent', postconditionHash: expected })); }
+    try { await files.create(path, JSON.stringify({ auditId, digest, operation: capability, state: 'intent', postconditionHash: expected, resyncSerial })); }
     catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new ToolError('REPLAY_DENIED', 'This confirmed mutation already has a durable intent', 'Inspect its protected journal entry and reconcile the original audit ID; do not replay', 1);
       throw new ToolError('JOURNAL_FAILED', 'Durable intent could not be recorded', 'Repair the protected journal before executing any mutation', 1);
     }
   }
-  const form = new URLSearchParams(Object.entries(parameters).map(([key, value]) => [key, Array.isArray(value) ? value.join(',') : String(value)]));
+  const form = new URLSearchParams(Object.entries(parameters).map(([key, value]) => [key,
+    ['userPermissions', 'groupPermissions'].includes(key) ? permissionRows(key, value).flatMap(row => [row[key === 'userPermissions' ? 'username' : 'name'], row.canView, row.canModify, row.canDelete]).join('|')
+      : Array.isArray(value) ? value.join(',') : String(value)]));
   let body: string | Buffer = form.toString();
   let requestPath = contract.path;
   const headers: Record<string, string> = {};
   if (upload) {
-    const boundary = `technitium-${randomUUID()}`;
     requestPath += `?${form}`;
-    headers['content-type'] = `multipart/form-data; boundary=${boundary}`;
-    body = Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="zone.txt"\r\nContent-Type: text/plain\r\n\r\n`), upload, Buffer.from(`\r\n--${boundary}--\r\n`)]);
+    if (input.upload?.format === 'text') {
+      headers['content-type'] = 'text/plain';
+      body = upload;
+    } else {
+      const boundary = `technitium-${randomUUID()}`;
+      headers['content-type'] = `multipart/form-data; boundary=${boundary}`;
+      body = Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="zone.txt"\r\nContent-Type: text/plain\r\n\r\n`), upload, Buffer.from(`\r\n--${boundary}--\r\n`)]);
+    }
   }
   try {
     const response = await vendorRequest(profile, requestPath, body, token, headers, { bytes: 16 * 1024 * 1024, elapsedMs: 10000 });
@@ -266,8 +362,15 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     const value: unknown = JSON.parse(response.bytes.toString());
     checkStatus(value);
     if (contract.baselinePath && !await postcondition(expected)) throw new Error('Postcondition is not proven');
-    if (mutating) await files.write(path, JSON.stringify({ auditId, digest, operation: capability, state: 'completed', postconditionHash: expected }));
-    return { bytes: response.bytes, projection: { status: 'ok', operation: capability, ...(mutating ? { auditId } : {}),
+    if (contract.id === 'OP-030') {
+      let completed = false;
+      for (let attempt = 0; attempt < 3 && !completed; attempt++) completed = await postcondition(undefined);
+      if (!completed) throw new Error('Transfer completion is not proven');
+    }
+    const partial = contract.id === 'OP-029' && object(value.response) && object(value.response.failed) && Object.keys(value.response.failed).length > 0;
+    if (mutating) await files.write(path, JSON.stringify({ auditId, digest, operation: capability, state: partial ? 'partial' : 'completed', postconditionHash: expected, resyncSerial }));
+    return { bytes: response.bytes, projection: { status: partial ? 'partial' : 'ok', operation: capability,
+      ...(partial && object(value.response) ? { deleted: value.response.deleted, failed: value.response.failed } : {}), ...(mutating ? { auditId } : {}),
       ...(profile.tokenKind === 'single-use' ? { credential: 'consumed' } : {}) } };
   } catch (error) {
     if (!mutating) throw error;

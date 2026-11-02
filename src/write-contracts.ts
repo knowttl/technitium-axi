@@ -55,7 +55,13 @@ export const writeContracts: WriteContract[] = [
   { id: 'OP-019', command: 'dashboard stats delete-all', path: '/api/dashboard/stats/deleteAll', fields: ['node'], required: [] },
   { id: 'OP-022', command: 'zone create', path: '/api/zones/create', fields: words('node zone type catalog useSoaSerialDateScheme primaryNameServerAddresses zoneTransferProtocol tsigKeyName validateZone initializeForwarder protocol forwarder dnssecValidation proxyType proxyAddress proxyPort proxyUsername proxyPassword'), required: ['zone', 'type'], secrets: ['proxyPassword'] },
   { id: 'OP-023', command: 'zone import', path: '/api/zones/import', fields: words('node zone overwrite overwriteZone overwriteSoaSerial records'), required: ['zone'] },
+  { id: 'OP-025', command: 'zone clone', path: '/api/zones/clone', fields: words('node zone sourceZone'), required: ['zone', 'sourceZone'] },
+  { id: 'OP-026', command: 'zone convert', path: '/api/zones/convert', fields: words('node zone type'), required: ['zone', 'type'] },
+  ...[['OP-027', 'enable'], ['OP-028', 'disable'], ['OP-029', 'delete'], ['OP-030', 'resync']].map(([id, action]) => ({
+    id: id!, command: `zone ${action}`, path: `/api/zones/${action}`, fields: words(action === 'delete' ? 'node zone zones' : 'node zone'), required: action === 'delete' ? [] : ['zone'],
+  })),
   { id: 'OP-032', command: 'zone options set', path: '/api/zones/options/set', fields: words('node zone disabled catalog overrideCatalogQueryAccess overrideCatalogZoneTransfer overrideCatalogNotify primaryNameServerAddresses primaryZoneTransferProtocol primaryZoneTransferTsigKeyName validateZone queryAccess queryAccessNetworkACL zoneTransfer zoneTransferNetworkACL zoneTransferTsigKeyNames notify notifyNameServers notifySecondaryCatalogsNameServers update updateNetworkACL updateSecurityPolicies'), required: ['zone'], baselinePath: '/api/zones/options/get', baselineTarget: ['zone', 'node'] },
+  { id: 'OP-034', command: 'zone permission set', path: '/api/zones/permissions/set', fields: words('node zone userPermissions groupPermissions'), required: ['zone'], baselinePath: '/api/zones/permissions/get', baselineTarget: ['zone', 'node'] },
   { id: 'OP-035', command: 'zone dnssec sign', path: '/api/zones/dnssec/sign', fields: words('node zone algorithm pemKskPrivateKey pemZskPrivateKey hashAlgorithm kskKeySize zskKeySize curve dnsKeyTtl zskRolloverDays nxProof iterations saltLength'), required: ['zone', 'algorithm'], secrets: ['pemKskPrivateKey', 'pemZskPrivateKey'] },
   { id: 'OP-036', command: 'zone dnssec unsign', path: '/api/zones/dnssec/unsign', fields: words('node zone'), required: ['zone'] },
   ...[

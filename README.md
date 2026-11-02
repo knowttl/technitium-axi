@@ -118,7 +118,7 @@ Failure to persist an intent prevents dispatch.
 Dispatched mutations never retry automatically; a failed response or unproven postcondition returns `OUTCOME_UNKNOWN` and an audit ID.
 Never replay an uncertain write or create a new preview to bypass its journal entry.
 
-`zone options set`, `settings set` and `admin group set` require an additional `baseline` object containing exactly the changed fields, excluding target identifiers.
+`zone options set`, `zone permission set`, `settings set` and `admin group set` require an additional `baseline` object containing exactly the changed fields, excluding target identifiers.
 Read the selected target first and supply its current values; execution re-reads them and returns `CONFLICT` before dispatch if they differ.
 Lists are explicit replacements, including empty arrays; omitted fields remain unchanged.
 Null forwarder/blocklist baselines map to empty arrays, and null catalog/primary-transfer TSIG names map to empty strings.
@@ -129,10 +129,20 @@ These operations verify selected fields after dispatch, including the renamed gr
 The vendor has no atomic conditional setter, so maintain a single-writer window between the final read and write.
 For these operations, use `--reconcile <audit-id> --confirm '<original-preview.digest>'` with the original input and profile to prove the postcondition without resending the mutation.
 Other operations require manual inspection of the exact selected target when their outcome is uncertain.
-Server normalization can conservatively leave verification and reconciliation at `OUTCOME_UNKNOWN`; this accepted limitation is tracked in [issue #22](https://github.com/knowttl/technitium-axi/issues/22).
+Baseline checks, verification and reconciliation account for vendor member ordering and case, TSIG name sets, catalog names, enum case, IPv6 formatting, ACL network prefixes and merged update-policy rows.
+Permission replacements use arrays of getter-shaped rows: `userPermissions` rows contain `username`, `canView`, `canModify` and `canDelete`; `groupPermissions` rows use `name` instead of `username`.
+An empty permission array clears that collection, while an omitted collection remains unchanged.
 
-Zone import and Primary zone creation accept `upload: {"file":"/absolute/path/zone.txt"}` alongside `parameters`, without inline `records`.
+Zone import and Primary or Forwarder zone creation accept `upload: {"file":"/absolute/path/zone.txt"}` alongside `parameters`, without inline `records`.
 The upload is read before preview or dispatch, bound into the confirmation by its bytes and hash, and sent as multipart data.
+For imports, `upload.format: "text"` sends the exact file bytes with `Content-Type: text/plain`; the default format is `"multipart"`.
+Zone imports also accept inline zone text in `parameters.records` through the form transport.
+Zone creation, cloning, conversion, enable, disable, deletion and resync use the same preview and exact-grant boundary.
+Delete accepts either `parameters.zone` or a nonempty `parameters.zones` array; mixed batch results report `status: "partial"` with the deleted and failed targets.
+Resync requires an API or session credential, reads the original SOA serial, then checks up to three complete zone reads for serial advancement.
+If advancement cannot be proven, it returns `OUTCOME_UNKNOWN` with an audit ID and never resends the resync.
+Reconciliation can prove later serial advancement with the original input, confirmation and audit ID.
+An unchanged serial can conservatively remain unknown even after a successful transfer.
 Operation secret fields (including PEM keys, FWD proxy passwords and LDAP bind passwords) accept only `{"env":"VARIABLE"}` or `{"file":"/absolute/path/secret"}` references, not stored references or inline values.
 Resolved operation secrets are limited to 1 MiB and are not trimmed.
 
