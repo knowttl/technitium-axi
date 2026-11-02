@@ -5,8 +5,9 @@ import { join } from 'node:path';
 import matrix from '../tests/fixtures/record-inputs.json' with { type: 'json' };
 import { dnssecJourney, dnssecTasks } from './dnssec-journey.mjs';
 import { listsCacheJourney, listsCacheTasks } from './lists-cache-journey.mjs';
+import { zoneJourney, zoneTasks } from './zone-journey.mjs';
 
-export const writeTasks = ['B3.01', 'B3.02', 'B3.03', 'B3.04', 'B3.05', 'B3.CR-013', 'B3.CR-014', 'B3.dnssec', ...dnssecTasks, 'B3.lists-cache', ...listsCacheTasks];
+export const writeTasks = ['B3.01', 'B3.02', 'B3.03', 'B3.04', 'B3.05', 'B3.CR-013', 'B3.CR-014', 'B3.dnssec', ...dnssecTasks, 'B3.lists-cache', ...listsCacheTasks, ...zoneTasks, 'B3.OP-049', 'B3.OP-051', 'B3.OP-052'];
 const hash = value => createHash('sha256').update(value).digest('hex');
 
 export async function writeJourney({ task, temporary, env, run, executable, vendors }) {
@@ -216,6 +217,27 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     }
     const proxy = { type: 'Http', address: 'proxy.example.test', port: 8080, username: 'operator', password: secret, bypass: ['old.test'] };
     const mappings = [
+      ...[
+        { group: 'Administrators', members: [], after: ['planner'] },
+        { group: 'ADMINISTRATORS', members: ['BOB'], after: ['bob', 'planner'] },
+        { group: 'Administrators', members: ['PLANNER', 'bob'], after: ['bob', 'planner'] },
+      ].map(row => ({ command: 'admin group set', grant: 'OP-109', get: '/api/admin/groups/get', set: '/api/admin/groups/set', target: { group: row.group },
+        before: { name: row.group, members: ['old', 'planner'] }, baseline: { members: ['old', 'planner'] }, parameters: { members: row.members },
+        after: { name: row.group, members: row.after }, form: { members: row.members.join(',') } })),
+      { command: 'admin group set', grant: 'OP-109', get: '/api/admin/groups/get', set: '/api/admin/groups/set', target: { group: 'Operators' },
+        before: { name: 'Operators', members: ['old'] }, baseline: { members: ['OLD'] }, parameters: { members: ['BOB', 'alice', 'BOB'] },
+        after: { name: 'Operators', members: ['alice', 'bob'] }, form: { members: 'BOB,alice,BOB' } },
+      ...[
+        { field: 'zoneTransferTsigKeyNames', before: [], input: ['KEY.', 'other', 'key'], after: ['key', 'other'] },
+        { field: 'notifyNameServers', before: [], input: ['2001:0db8:0:0:0:0:0:1'], after: ['2001:db8::1'] },
+        { field: 'updateNetworkACL', before: [], input: ['192.0.2.9/24', '!2001:db8::1234/64', '192.0.2.1/32'], after: ['192.0.2.0/24', '!2001:db8::/64', '192.0.2.1'] },
+        { field: 'primaryZoneTransferProtocol', before: 'Tls', input: 'tcp', after: 'Tcp' },
+        { field: 'catalog', before: null, input: 'CATALOG.Test.', after: 'catalog.test' },
+        { field: 'updateSecurityPolicies', before: [], input: 'KEY.|Example.Test.|TXT|key|example.test|A',
+          after: [{ tsigKeyName: 'key', domain: 'example.test', allowedTypes: ['TXT', 'A'] }] },
+      ].map(row => ({ command: 'zone options set', grant: 'OP-032', get: '/api/zones/options/get', set: '/api/zones/options/set', target: { zone: 'example.test' },
+        before: { [row.field]: row.before }, baseline: { [row.field]: row.before }, parameters: { [row.field]: row.input },
+        after: { [row.field]: row.after }, form: { [row.field]: Array.isArray(row.input) ? row.input.join(',') : row.input } })),
       { command: 'settings set', grant: 'OP-080', get: '/api/settings/get', set: '/api/settings/set', target: {},
         before: { blockListUrls: null }, baseline: { blockListUrls: null }, parameters: { blockListUrls: ['https://block.example.test/list'] },
         after: { blockListUrls: ['https://block.example.test/list'] }, form: { blockListUrls: 'https://block.example.test/list' } },
@@ -254,7 +276,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         after: { name: 'Renamed', members: ['new'] }, form: { newGroup: 'Renamed', members: 'new' } },
     ];
     for (const row of mappings) {
-      await configure([row.grant]);
+      await configure([row.grant], row.target.group?.toLowerCase() === 'administrators' ? { username: 'not-the-authenticated-caller' } : {});
       let state = row.before;
       let setters = 0;
       let drop = false;
@@ -280,6 +302,10 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       const auditId = unknown.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
       await success(row.command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
       assert.equal(setters, 2);
+      if (row.target.group?.toLowerCase() === 'administrators') {
+        state = { ...state, members: state.members.filter(member => member !== 'planner') };
+        await failure('OUTCOME_UNKNOWN', row.command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+      }
       if (row.after.forwarderProtocol === 'Tls') {
         state = { ...state, forwarderProtocol: 'Udp' };
         await failure('OUTCOME_UNKNOWN', row.command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
@@ -365,7 +391,8 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       for (const canary of [token, secret, pemBytes, encodeURIComponent(secret), Buffer.from(secret).toString('base64')]) assert.ok(!contents.includes(canary));
     }
   }
-  if (task === 'B3.02') {
+  if (zoneTasks.includes(task)) await zoneJourney({ task, directory, env, run, executable, vendors, config, token, configure, success, failure, execute });
+  if (['B3.02', 'B3.OP-049', 'B3.OP-051', 'B3.OP-052'].includes(task)) {
     await configure(['OP-049', 'OP-051', 'OP-052']);
     const numericTypes = { A: '1', SOA: '6', TXT: '16', DNAME: '39', ANAME: '65280', FWD: '65281', APP: '65282' };
     for (const row of matrix.rows.flatMap(row => numericTypes[row.type] ? [row, { ...row, inputType: numericTypes[row.type] }] : [row])) {

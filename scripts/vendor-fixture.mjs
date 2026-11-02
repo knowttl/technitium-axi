@@ -14,6 +14,7 @@ export async function fakeVendors(temporary, run, env) {
   await chmod(cert, 0o600);
   const tls = { key: await readFile(key), cert: await readFile(cert) };
   const traces = [];
+  const started = performance.now();
   const tokens = new Map();
   const tokenKinds = new Map();
   const faults = new Map();
@@ -26,7 +27,7 @@ export async function fakeVendors(temporary, run, env) {
         for await (const chunk of incoming) chunks.push(chunk);
         const body = Buffer.concat(chunks);
         const bearer = incoming.headers.authorization?.replace(/^Bearer /, '');
-        traces.push({ method: incoming.method, path: incoming.url.split('?')[0],
+        traces.push({ elapsedMs: Math.round(performance.now() - started), method: incoming.method, path: incoming.url.split('?')[0],
           headers: { 'content-type': incoming.headers['content-type'] ?? null,
             ...(incoming.headers['if-modified-since'] ? { 'if-modified-since': incoming.headers['if-modified-since'] } : {}) },
           inputHash: createHash('sha256').update(body).digest('hex'),
