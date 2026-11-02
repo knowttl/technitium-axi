@@ -2289,8 +2289,7 @@
           "proxyAddress",
           "proxyPort",
           "proxyUsername",
-          "proxyPassword",
-          "domain"
+          "proxyPassword"
         ],
         "required": [
           "zone",

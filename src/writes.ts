@@ -22,6 +22,32 @@ const booleans = new Set('overwrite overwriteZone overwriteSoaSerial disabled di
 const integers = new Set('ttl expiryTtl preference newPreference priority newPriority weight newWeight port newPort naptrOrder naptrPreference naptrNewOrder naptrNewPreference keyTag newKeyTag digestType newDigestType sshfpAlgorithm newSshfpAlgorithm sshfpFingerprintType newSshfpFingerprintType tlsaCertificateUsage newTlsaCertificateUsage tlsaSelector newTlsaSelector tlsaMatchingType newTlsaMatchingType svcPriority newSvcPriority uriPriority newUriPriority uriWeight newUriWeight flags newFlags serial refresh retry expire minimum proxyPort forwarderPriority ldapPort kskKeySize zskKeySize keySize dnsKeyTtl zskRolloverDays rolloverDays iterations saltLength'.split(' '));
 const lists = new Set('primaryNameServerAddresses queryAccessNetworkACL zoneTransferNetworkACL zoneTransferTsigKeyNames notifyNameServers notifySecondaryCatalogsNameServers updateNetworkACL blockListUrls forwarders proxyBypass members glue'.split(' '));
 
+function baselineValue(key: string, value: unknown): unknown {
+  if (['blockListUrls', 'forwarders'].includes(key) && value === null) return [];
+  if (['catalog', 'primaryZoneTransferTsigKeyName'].includes(key) && value === null) return '';
+  if (key === 'updateSecurityPolicies') {
+    let policies: string[] | undefined;
+    if (Array.isArray(value)) {
+      policies = value.flatMap(row => {
+        if (!object(row) || typeof row.tsigKeyName !== 'string' || typeof row.domain !== 'string' || !Array.isArray(row.allowedTypes) || row.allowedTypes.some(type => typeof type !== 'string')) usage('Invalid update security policy baseline');
+        return [row.tsigKeyName, row.domain, row.allowedTypes.join(',')];
+      });
+    }
+    if (typeof value === 'string') policies = value === '' || value.toLowerCase() === 'false' ? [] : value.split('|').filter(Boolean);
+    if (policies) {
+      if (policies.length % 3 !== 0) usage('Update security policies require key, domain and allowed types');
+      const rows = [];
+      for (let i = 0; i < policies.length; i += 3) rows.push(`${policies[i]!.replace(/^\.+|\.+$/g, '').toLowerCase()}|${policies[i + 1]!.replace(/^\.+|\.+$/g, '').toLowerCase()}|${policies[i + 2]!.split(/[, ]+/).filter(Boolean).map(type => type.toUpperCase()).sort().join(',')}`);
+      return rows.sort().join('|');
+    }
+  }
+  return value;
+}
+
+function selectedValues(values: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(values).map(([key, value]) => [key, baselineValue(key, value)]));
+}
+
 function validateValue(key: string, value: unknown): void {
   if (booleans.has(key)) { if (typeof value !== 'boolean') usage('Boolean input requires true or false'); }
   else if (integers.has(key)) { if (!Number.isSafeInteger(value) || Number(value) < 0 || Number(value) > 4294967295) usage('Integer input is outside its supported range'); }
@@ -85,14 +111,17 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
       if (!object(value) || Object.keys(value).length !== 1 || !(
         (typeof value.env === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(value.env)) ||
         (typeof value.file === 'string' && isAbsolute(value.file)))) usage('Secret fields require an environment or protected absolute file SecretRef');
-    } else validateValue(key, value);
+    } else {
+      validateValue(key, value);
+      if (key === 'updateSecurityPolicies') baselineValue(key, value);
+    }
   }
   if (['OP-049', 'OP-051', 'OP-052'].includes(contract.id)) validateRecord(contract, parameters);
   if (input.baseline !== undefined && !object(input.baseline)) usage('Baseline must be an object');
   if (contract.baselinePath) {
     const fields = Object.keys(parameters).filter(key => !contract.baselineTarget?.includes(key));
     if (!fields.length || !object(input.baseline) || canonical(Object.keys(input.baseline).sort()) !== canonical(fields.sort())) usage('Provide the exact selected baseline for every changed field');
-    for (const [key, value] of Object.entries(input.baseline)) validateValue(key, value);
+    for (const [key, value] of Object.entries(input.baseline)) validateValue(key, baselineValue(key, value));
   } else if (input.baseline !== undefined) usage('Baseline is not supported by this operation');
   if (input.upload !== undefined) {
     if (!['OP-022', 'OP-023'].includes(contract.id) || !object(input.upload) || Object.keys(input.upload).length !== 1 || typeof input.upload.file !== 'string' || !isAbsolute(input.upload.file)) usage('Upload requires a protected absolute file for zone create or import');
@@ -117,8 +146,32 @@ async function baselineRead(contract: WriteContract, profile: Profile, token: st
   if (result.status !== 200 || result.contentType !== 'application/json') throw new ToolError('UPSTREAM_INVALID', 'Baseline read failed', 'Repeat the selected target read', 1);
   const value: unknown = JSON.parse(result.bytes.toString());
   checkStatus(value);
-  if (!object(value.response) || fields.some(key => !Object.hasOwn(value.response as object, key))) throw new ToolError('UPSTREAM_INVALID', 'Selected baseline fields are missing', 'Check the selected target and API version', 1);
-  return Object.fromEntries(fields.map(key => [key, (value.response as Record<string, unknown>)[key]]));
+  if (!object(value.response)) throw new ToolError('UPSTREAM_INVALID', 'Selected baseline fields are missing', 'Check the selected target and API version', 1);
+  const response = value.response;
+  const preserved: Record<string, unknown> = {};
+  if (contract.id === 'OP-080' && fields.includes('forwarders')) {
+    validateValue('forwarderProtocol', response.forwarderProtocol);
+    preserved.forwarderProtocol = response.forwarderProtocol;
+  }
+  if (contract.id === 'OP-080' && fields.includes('proxyBypass')) {
+    if (!object(response.proxy)) usage('Proxy bypass replacement requires an existing proxy');
+    for (const [source, target] of Object.entries({ type: 'proxyType', address: 'proxyAddress', port: 'proxyPort', username: 'proxyUsername', password: 'proxyPassword' })) {
+      const item = response.proxy[source];
+      if (['username', 'password'].includes(source) && (item === undefined || item === null)) continue;
+      validateValue(target, item);
+      preserved[target] = item;
+    }
+  }
+  const selected = Object.fromEntries(fields.map(key => {
+    const source = contract.id === 'OP-109' && key === 'newGroup' ? 'name' : key;
+    const container = contract.id === 'OP-080' && key === 'proxyBypass' ? response.proxy : response;
+    const field = container === response ? source : 'bypass';
+    if (!object(container) || !Object.hasOwn(container, field)) throw new ToolError('UPSTREAM_INVALID', 'Selected baseline fields are missing', 'Check the selected target and API version', 1);
+    const item = baselineValue(key, container[field]);
+    validateValue(key, item);
+    return [key, item];
+  }));
+  return { selected, preserved };
 }
 
 export async function writeOperation(contract: WriteContract, input: WriteInput, profile: Profile, identity: string, token: string,
@@ -140,9 +193,10 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     upload = await files.readBytes(input.upload.file);
   }
   // A keyed digest binds credential and secret revisions without publishing an offline secret verifier.
-  const digest = createHmac('sha256', token).update(canonical({ origin: profile.origin, identity, username: profile.username ?? null,
+  const intentId = !options.execute && !options.reconcile ? randomUUID() : options.confirm?.split('.')[0];
+  const digest = `${intentId}.${createHmac('sha256', token).update(canonical({ intentId, origin: profile.origin, identity, username: profile.username ?? null,
     tokenKind: profile.tokenKind, caFile: profile.caFile ?? null, tlsServerName: profile.tlsServerName ?? null,
-    capability, parameters, baseline: input.baseline ?? null, upload: upload ? hash(upload) : null })).digest('hex');
+    capability, parameters, baseline: input.baseline ?? null, upload: upload ? hash(upload) : null })).digest('hex')}`;
   const permitted = !mutating || (!readOnly() && profile.writes?.allowWrites === true && profile.writes.operations.includes(capability));
   if (!options.execute && !options.reconcile) return { bytes: Buffer.alloc(0), projection: { preview: { digest, operation: capability,
     origin: profile.origin, identity, node: parameters.node ?? null, target: parameters.zone ?? parameters.domain ?? parameters.group ?? null,
@@ -150,23 +204,38 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     replaces: contract.baselinePath ? Object.keys(input.baseline!) : [],
     ...(contract.baselinePath ? { concurrency: 'A single-writer window is required between the final read and write; the vendor has no atomic conditional setter' } : {}) } } };
   if (!permitted) throw new ToolError('WRITE_DENIED', 'Exact write grant is required and read-only mode overrides grants', 'Enable only the selected operation in the selected profile', 1);
-  if (options.confirm !== digest) throw new ToolError('CONFIRMATION_MISMATCH', 'Preview confirmation no longer matches the selected input', 'Preview again and supply its exact digest', 1);
+  if (!intentId || !/^[a-f0-9-]{36}$/.test(intentId) || options.confirm !== digest) throw new ToolError('CONFIRMATION_MISMATCH', 'Preview confirmation no longer matches the selected input', 'Preview again and supply its exact digest', 1);
   if (contract.baselinePath && profile.tokenKind === 'single-use') throw new ToolError('TOKEN_KIND', 'A read-modify-write action needs multiple authenticated requests', 'Select an API or session profile for this operation', 1);
   const auditId = randomUUID();
   const path = journalPath(digest);
-  const postcondition = async () => contract.baselinePath && canonical(await baselineRead(contract, profile, token, parameters, Object.keys(input.baseline!))) === canonical(Object.fromEntries(Object.keys(input.baseline!).map(key => [key, parameters[key]])));
+  const postconditionHash = (value: unknown) => createHmac('sha256', token).update(canonical(value)).digest('hex');
+  const postcondition = async (expected: string | undefined) => {
+    if (!contract.baselinePath || !expected) return false;
+    const target = contract.id === 'OP-109' && parameters.newGroup !== undefined ? { ...parameters, group: parameters.newGroup } : parameters;
+    return postconditionHash(await baselineRead(contract, profile, token, target, Object.keys(input.baseline!))) === expected;
+  };
   if (options.reconcile) {
-    const prior = JSON.parse(await files.read(path)) as { auditId: string; state: string };
+    const prior = JSON.parse(await files.read(path)) as { auditId: string; state: string; postconditionHash?: string };
     if (prior.auditId !== options.reconcile) usage('Audit ID does not match the confirmed operation');
     let proven = false;
-    try { proven = Boolean(await postcondition()); } catch { /* A failed read cannot prove an outcome. */ }
+    try { proven = Boolean(await postcondition(prior.postconditionHash)); } catch { /* A failed read cannot prove an outcome. */ }
     if (!proven) throw new ToolError('OUTCOME_UNKNOWN', `Outcome remains unknown; audit ID ${prior.auditId}`, 'Read the exact selected target and compare its full postcondition; never replay an uncertain write', 1);
-    await files.write(path, JSON.stringify({ auditId: prior.auditId, digest, operation: capability, state: 'reconciled' }));
+    await files.write(path, JSON.stringify({ ...prior, state: 'reconciled' }));
     return { bytes: Buffer.alloc(0), projection: { status: 'reconciled', auditId: prior.auditId, operation: capability } };
   }
-  if (contract.baselinePath && canonical(await baselineRead(contract, profile, token, parameters, Object.keys(input.baseline!))) !== canonical(input.baseline)) throw new ToolError('CONFLICT', 'Selected baseline changed after preview', 'Read the selected values and preview a new explicit replacement', 1);
+  let expected: string | undefined;
+  if (contract.baselinePath) {
+    const baseline = await baselineRead(contract, profile, token, parameters, Object.keys(input.baseline!));
+    if (canonical(baseline.selected) !== canonical(selectedValues(input.baseline!))) throw new ToolError('CONFLICT', 'Selected baseline changed after preview', 'Read the selected values and preview a new explicit replacement', 1);
+    const selected = selectedValues(Object.fromEntries(Object.keys(input.baseline!).map(key => [key, parameters[key]])));
+    const preserved = { ...baseline.preserved };
+    if (contract.id === 'OP-080' && Array.isArray(selected.forwarders) && selected.forwarders.length === 0) preserved.forwarderProtocol = 'Udp';
+    expected = postconditionHash({ selected, preserved });
+    if (typeof baseline.preserved.proxyPassword === 'string') redactor.add(baseline.preserved.proxyPassword);
+    Object.assign(parameters, baseline.preserved);
+  }
   if (mutating) {
-    try { await files.create(path, JSON.stringify({ auditId, digest, operation: capability, state: 'intent' })); }
+    try { await files.create(path, JSON.stringify({ auditId, digest, operation: capability, state: 'intent', postconditionHash: expected })); }
     catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new ToolError('REPLAY_DENIED', 'This confirmed mutation already has a durable intent', 'Inspect its protected journal entry and reconcile the original audit ID; do not replay', 1);
       throw new ToolError('JOURNAL_FAILED', 'Durable intent could not be recorded', 'Repair the protected journal before executing any mutation', 1);
@@ -187,8 +256,8 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     if (response.status !== 200 || response.contentType !== 'application/json') throw new Error('Response unavailable');
     const value: unknown = JSON.parse(response.bytes.toString());
     checkStatus(value);
-    if (contract.baselinePath && !await postcondition()) throw new Error('Postcondition is not proven');
-    if (mutating) await files.write(path, JSON.stringify({ auditId, digest, operation: capability, state: 'completed' }));
+    if (contract.baselinePath && !await postcondition(expected)) throw new Error('Postcondition is not proven');
+    if (mutating) await files.write(path, JSON.stringify({ auditId, digest, operation: capability, state: 'completed', postconditionHash: expected }));
     return { bytes: response.bytes, projection: { status: 'ok', operation: capability, ...(mutating ? { auditId } : {}),
       ...(profile.tokenKind === 'single-use' ? { credential: 'consumed' } : {}) } };
   } catch (error) {

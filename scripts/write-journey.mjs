@@ -91,6 +91,43 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     assert.equal(receipt.auditId, result.auditId);
     await failure('REPLAY_DENIED', 'zone record add', add, ['--execute', '--confirm', allowed.preview.digest]);
     assert.equal(sent.length, 1);
+    await configure(['OP-019', 'OP-049', 'OP-052', 'OP-022']);
+    let statistics = 5;
+    let clears = 0;
+    vendors.responders.set('/api/dashboard/stats/deleteAll', () => {
+      statistics = 0;
+      clears++;
+      return { body: { status: 'ok' } };
+    });
+    const firstClear = await success('dashboard stats delete-all', { parameters: {} });
+    await success('dashboard stats delete-all', { parameters: {} }, ['--execute', '--confirm', firstClear.preview.digest]);
+    assert.equal(statistics, 0);
+    statistics = 7;
+    await failure('REPLAY_DENIED', 'dashboard stats delete-all', { parameters: {} }, ['--execute', '--confirm', firstClear.preview.digest]);
+    assert.equal(statistics, 7);
+    const nextClear = await success('dashboard stats delete-all', { parameters: {} });
+    assert.notEqual(nextClear.preview.digest, firstClear.preview.digest);
+    await success('dashboard stats delete-all', { parameters: {} }, ['--execute', '--confirm', nextClear.preview.digest]);
+    assert.equal(statistics, 0);
+    assert.equal(clears, 2);
+    let recordExists = true;
+    vendors.responders.set('/api/zones/records/delete', () => {
+      assert.equal(recordExists, true);
+      recordExists = false;
+      return { body: { status: 'ok' } };
+    });
+    vendors.responders.set('/api/zones/records/add', () => {
+      assert.equal(recordExists, false);
+      recordExists = true;
+      return { body: { status: 'ok' } };
+    });
+    const remove = { parameters: { zone: add.parameters.zone, domain: add.parameters.domain, type: 'A', ipAddress: add.parameters.ipAddress } };
+    await execute('zone record delete', remove);
+    await execute('zone record add', add);
+    await execute('zone record delete', remove);
+    await execute('zone record add', add);
+    assert.equal(recordExists, true);
+    await failure('USAGE', 'zone create', { parameters: { zone: 'example.test', type: 'Primary', domain: 'other.test' } });
     vendors.responders.set('/api/dnsClient/resolve', () => ({ body: { status: 'ok', response: { answer: [] } } }));
     await configure();
     const resolve = { parameters: { server: '192.0.2.53', domain: 'example.test', type: 'A' } };
@@ -163,6 +200,83 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       state = ['partial'];
       await failure('OUTCOME_UNKNOWN', row.command, lost, ['--confirm', lostPreview.preview.digest, '--reconcile', auditId]);
     }
+    const proxy = { type: 'Http', address: 'proxy.example.test', port: 8080, username: 'operator', password: secret, bypass: ['old.test'] };
+    const mappings = [
+      { command: 'settings set', grant: 'OP-080', get: '/api/settings/get', set: '/api/settings/set', target: {},
+        before: { blockListUrls: null }, baseline: { blockListUrls: null }, parameters: { blockListUrls: ['https://block.example.test/list'] },
+        after: { blockListUrls: ['https://block.example.test/list'] }, form: { blockListUrls: 'https://block.example.test/list' } },
+      { command: 'settings set', grant: 'OP-080', get: '/api/settings/get', set: '/api/settings/set', target: {},
+        before: { forwarders: null, forwarderProtocol: 'Udp' }, baseline: { forwarders: null }, parameters: { forwarders: ['192.0.2.53'] },
+        after: { forwarders: ['192.0.2.53'], forwarderProtocol: 'Udp' }, form: { forwarders: '192.0.2.53', forwarderProtocol: 'Udp' } },
+      { command: 'settings set', grant: 'OP-080', get: '/api/settings/get', set: '/api/settings/set', target: {},
+        before: { forwarders: ['old.example.test'], forwarderProtocol: 'Tls' }, baseline: { forwarders: ['old.example.test'] }, parameters: { forwarders: ['new.example.test'] },
+        after: { forwarders: ['new.example.test'], forwarderProtocol: 'Tls' }, form: { forwarders: 'new.example.test', forwarderProtocol: 'Tls' } },
+      { command: 'settings set', grant: 'OP-080', get: '/api/settings/get', set: '/api/settings/set', target: {},
+        before: { forwarders: ['old.example.test'], forwarderProtocol: 'Tls' }, baseline: { forwarders: ['old.example.test'] }, parameters: { forwarders: [] },
+        after: { forwarders: null, forwarderProtocol: 'Udp' }, form: { forwarders: '', forwarderProtocol: 'Tls' } },
+      { command: 'settings set', grant: 'OP-080', get: '/api/settings/get', set: '/api/settings/set', target: {},
+        before: { proxy }, baseline: { proxyBypass: ['old.test'] }, parameters: { proxyBypass: ['new.test'] },
+        after: { proxy: { ...proxy, bypass: ['new.test'] } },
+        form: { proxyBypass: 'new.test', proxyType: 'Http', proxyAddress: 'proxy.example.test', proxyPort: '8080', proxyUsername: 'operator', proxyPassword: secret } },
+      { command: 'zone options set', grant: 'OP-032', get: '/api/zones/options/get', set: '/api/zones/options/set', target: { zone: 'example.test' },
+        before: { catalog: null }, baseline: { catalog: null }, parameters: { catalog: 'catalog.test' }, after: { catalog: 'catalog.test' }, form: { catalog: 'catalog.test' } },
+      { command: 'zone options set', grant: 'OP-032', get: '/api/zones/options/get', set: '/api/zones/options/set', target: { zone: 'example.test' },
+        before: { catalog: 'catalog.test' }, baseline: { catalog: 'catalog.test' }, parameters: { catalog: '' }, after: { catalog: null }, form: { catalog: '' } },
+      { command: 'zone options set', grant: 'OP-032', get: '/api/zones/options/get', set: '/api/zones/options/set', target: { zone: 'example.test' },
+        before: { primaryZoneTransferTsigKeyName: null }, baseline: { primaryZoneTransferTsigKeyName: null }, parameters: { primaryZoneTransferTsigKeyName: 'key' },
+        after: { primaryZoneTransferTsigKeyName: 'key' }, form: { primaryZoneTransferTsigKeyName: 'key' } },
+      { command: 'zone options set', grant: 'OP-032', get: '/api/zones/options/get', set: '/api/zones/options/set', target: { zone: 'example.test' },
+        before: { primaryZoneTransferTsigKeyName: 'key' }, baseline: { primaryZoneTransferTsigKeyName: 'key' }, parameters: { primaryZoneTransferTsigKeyName: '' },
+        after: { primaryZoneTransferTsigKeyName: null }, form: { primaryZoneTransferTsigKeyName: '' } },
+      { command: 'zone options set', grant: 'OP-032', get: '/api/zones/options/get', set: '/api/zones/options/set', target: { zone: 'example.test' },
+        before: { updateSecurityPolicies: [] }, baseline: { updateSecurityPolicies: [] }, parameters: { updateSecurityPolicies: 'KEY.|Example.Test.|TXT,A' },
+        after: { updateSecurityPolicies: [{ tsigKeyName: 'key', domain: 'example.test', allowedTypes: ['A', 'TXT'] }] }, form: { updateSecurityPolicies: 'KEY.|Example.Test.|TXT,A' } },
+      { command: 'zone options set', grant: 'OP-032', get: '/api/zones/options/get', set: '/api/zones/options/set', target: { zone: 'example.test' },
+        before: { updateSecurityPolicies: [{ tsigKeyName: 'key', domain: 'example.test', allowedTypes: ['A', 'TXT'] }] },
+        baseline: { updateSecurityPolicies: [{ tsigKeyName: 'key', domain: 'example.test', allowedTypes: ['A', 'TXT'] }] }, parameters: { updateSecurityPolicies: '' },
+        after: { updateSecurityPolicies: [] }, form: { updateSecurityPolicies: '' } },
+      { command: 'admin group set', grant: 'OP-109', get: '/api/admin/groups/get', set: '/api/admin/groups/set', target: { group: 'Operators' },
+        before: { name: 'Operators', members: ['old'] }, baseline: { newGroup: 'Operators', members: ['old'] }, parameters: { newGroup: 'Renamed', members: ['new'] },
+        after: { name: 'Renamed', members: ['new'] }, form: { newGroup: 'Renamed', members: 'new' } },
+    ];
+    for (const row of mappings) {
+      await configure([row.grant]);
+      let state = row.before;
+      let setters = 0;
+      let drop = false;
+      vendors.responders.set(row.get, (_incoming, bytes) => {
+        const target = Object.fromEntries(new URLSearchParams(bytes.toString()));
+        assert.deepEqual(target, row.grant === 'OP-109' ? { group: state.name } : row.target);
+        return { body: { status: 'ok', response: state } };
+      });
+      vendors.responders.set(row.set, (incoming, bytes) => {
+        assert.deepEqual(Object.fromEntries(new URLSearchParams(bytes.toString())), { ...row.target, ...row.form });
+        setters++;
+        state = row.after;
+        if (drop) { incoming.socket.destroy(); return {}; }
+        return { body: { status: 'ok' } };
+      });
+      const input = { parameters: { ...row.target, ...row.parameters }, baseline: row.baseline };
+      await execute(row.command, input);
+      assert.deepEqual(state, row.after);
+      state = row.before;
+      drop = true;
+      const preview = await success(row.command, input);
+      const unknown = await failure('OUTCOME_UNKNOWN', row.command, input, ['--execute', '--confirm', preview.preview.digest]);
+      const auditId = unknown.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
+      await success(row.command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+      assert.equal(setters, 2);
+      if (row.after.forwarderProtocol === 'Tls') {
+        state = { ...state, forwarderProtocol: 'Udp' };
+        await failure('OUTCOME_UNKNOWN', row.command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+      }
+      if (row.after.proxy) {
+        state = { proxy: { ...state.proxy, address: 'changed.test' } };
+        await failure('OUTCOME_UNKNOWN', row.command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+      }
+    }
+    const journal = join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d');
+    for (const file of await readdir(journal)) assert.ok(!(await readFile(join(journal, file), 'utf8')).includes(secret));
   }
   if (task === 'B3.04') {
     const upload = join(directory, 'zone.txt');
