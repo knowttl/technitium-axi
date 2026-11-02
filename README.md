@@ -360,4 +360,4 @@ No `SECURITY.md` ships yet; this is PENDING.
 
 ## License
 
-`LICENSE` and `package.json` declare `UNLICENSED`.
+`LICENSE` and `package.json` declare `MIT`.

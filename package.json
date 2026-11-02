@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "AXI-standard agent-facing CLI for Technitium DNS Server",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "repository": { "type": "git", "url": "https://github.com/knowttl/technitium-axi.git" },
   "bin": { "technitium-axi": "bin/technitium-axi.js" },
   "files": ["bin/", "dist/", "axi-credential.schema.json", "command-inventory.json"],
