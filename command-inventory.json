@@ -2661,7 +2661,7 @@
             "canModify",
             "canDelete"
           ],
-          "shape": "Array of rows; permission flags are booleans; an empty array clears the selected collection"
+          "shape": "Array of rows; permission flags are booleans; an empty user array clears user permissions; group replacements retain Administrators and DNS Administrators with all permissions"
         }
       }
     },

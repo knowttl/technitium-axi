@@ -128,7 +128,7 @@ Forwarder replacement preserves the current transport (clearing the list resets 
 These operations verify selected fields after dispatch, including the renamed group target.
 The vendor has no atomic conditional setter, so maintain a single-writer window between the final read and write.
 For these operations, use `--reconcile <audit-id> --confirm '<original-preview.digest>'` with the original input and profile to prove the postcondition without resending the mutation.
-Other operations require manual inspection of the exact selected target when their outcome is uncertain.
+Other operations, except resync as described below, require manual inspection of the exact selected target when their outcome is uncertain.
 Baseline checks, verification and reconciliation account for vendor member ordering and case, TSIG name sets, catalog names, enum case, IPv6 formatting, ACL network prefixes and merged update-policy rows.
 Permission replacements use arrays of getter-shaped rows: `userPermissions` rows contain `username`, `canView`, `canModify` and `canDelete`; `groupPermissions` rows use `name` instead of `username`.
 An empty user permission array clears that collection; group permission replacements always retain Administrators and DNS Administrators with all permissions.

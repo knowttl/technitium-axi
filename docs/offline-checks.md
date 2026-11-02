@@ -87,7 +87,7 @@ npm run check:journey -- --task B2.OP-141 --operation OP-141 --paths native,arti
 B3 checks cover write policy and journal (B3.01), record inputs and composite selectors (B3.02), concurrency and unknown outcomes (B3.03), upload materialization (B3.04), operation SecretRefs (B3.05), and credential conformance (B3.CR-013 and B3.CR-014).
 They use loopback fake vendor HTTPS and synthetic credentials, and accept only `--paths native`.
 Hosted write admission is separate release-candidate proof, not established by these journeys or the existing read admission fixture.
-`npm test` includes those seven native B3 tasks and the DNSSEC write matrix (`B3.dnssec`).
+`npm test` includes those seven native B3 tasks, the DNSSEC write matrix (`B3.dnssec`) and the zone lifecycle and record-write suite (`npm run test:zones`).
 The DNSSEC matrix covers signing, unsigning, NSEC/NSEC3 conversion and parameters, DNSKEY TTL, private key creation and updates, publication, rollover, retirement, deletion and KSK activation.
 Select an individual DNSSEC write with `--task B3.OP-035`, replacing `035` with the desired operation number, without a separate `--operation` flag.
 Synthetic worlds check exact form inputs, protected PEM references, preview and replay boundaries, vendor prerequisite failures, selected-zone properties and records, and preservation of other zones.
@@ -99,8 +99,18 @@ These fixtures prove CLI behavior against a fake vendor, not cryptographic corre
 npm run check:journey -- --task B3.dnssec --paths native --offline
 npm run check:journey -- --task B3.OP-040 --paths native --offline
 ```
-B3.02 reports one pending case for the accepted [DNAME deletion deferral](../README.md#writes), rather than claiming full-management coverage.
+B3.02 and B3.OP-052 report one pending case for the accepted [DNAME deletion deferral](../README.md#writes), rather than claiming full-management coverage.
 The record cases live in [record-inputs.json](../tests/fixtures/record-inputs.json).
+
+Run the zone lifecycle and record-write suite alone with `npm run test:zones`.
+Its operation selectors are listed in [zone-writes.test.mjs](../tests/zone-writes.test.mjs), using the lifecycle task list from [zone-journey.mjs](../scripts/zone-journey.mjs).
+Select a task with `--task B3.OP-022`, for example, without a separate `--operation` flag.
+The record-add, update and delete selectors each run the complete B3.02 record matrix.
+
+```sh
+npm run test:zones
+npm run check:journey -- --task B3.OP-022 --paths native --offline
+```
 
 ```sh
 npm run check:journey -- --task B3.01 --paths native --offline
