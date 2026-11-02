@@ -66,7 +66,7 @@ Read commands share `--config`, `--profile`, `--json`, `--result-file`, `--field
 Operation-specific flags such as `--node`, `--filter-name` and `--page-number` appear in each command's `--help`.
 Boolean read flags need an explicit value, for example `--list-zone true`; `--full` takes none.
 `--fields` selects top-level or row fields only, so a nested field such as a session's `partialToken` needs `--full`.
-`zone record get` and `cache list` project every record data field the contract lists; when the server returns others, `output.complete` is `false` and `output.omittedFields` names them.
+Use `--full` or `--fields rData` to inspect record data from `zone record get` and `cache list`; see [read completeness](docs/reads.md) for omitted-field reporting.
 
 ```sh
 technitium-axi zone list --profile automation --full
