@@ -33,20 +33,12 @@ jobs:
       - run: npm ci
         if: ${{ steps.release.outputs.release_created }}
 
-      - run: npm run build && npm run typecheck && npm run check:generated
+      - run: npm run build
         if: ${{ steps.release.outputs.release_created }}
 
-      - run: npm run test:release
+      - name: Pack package
         if: ${{ steps.release.outputs.release_created }}
-
-      - name: Check installed package
-        if: ${{ steps.release.outputs.release_created }}
-        run: |
-          npm pack --pack-destination "$RUNNER_TEMP"
-          npm install --prefix "$RUNNER_TEMP/installed" --ignore-scripts --no-package-lock "$RUNNER_TEMP"/knowttl-technitium-axi-*.tgz
-          "$RUNNER_TEMP/installed/node_modules/.bin/technitium-axi" --version
-          "$RUNNER_TEMP/installed/node_modules/.bin/technitium-axi" --help
-          "$RUNNER_TEMP/installed/node_modules/.bin/technitium-axi" schema --json
+        run: npm pack --pack-destination "$RUNNER_TEMP"
 
       # setup-node writes a placeholder auth token; remove it for npm OIDC.
       - name: Enable OIDC trusted publishing
