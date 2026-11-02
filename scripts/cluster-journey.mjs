@@ -34,9 +34,9 @@ export async function clusterJourney({ task, directory, env, run, executable, ve
   let nodes, initialized, options, zones, deny, drop, pulls, replacementNode, unreachablePrimary;
   const reset = id => {
     nodes = [
-      { id: 100, name: 'P', url: pUrl, ipAddresses: ['192.0.2.10'], type: 'Primary' },
-      { id: 200, name: 'S', url: sUrl, ipAddresses: ['192.0.2.20'], type: 'Secondary' },
-      { id: 300, name: 'keep', url: 'https://keep.cluster.example.test', ipAddresses: ['192.0.2.30'], type: 'Secondary' },
+      { id: 100, name: 'dns-p.cluster.example.test', url: pUrl, ipAddresses: ['192.0.2.10'], type: 'Primary' },
+      { id: 200, name: 'dns-s.cluster.example.test', url: sUrl, ipAddresses: ['192.0.2.20'], type: 'Secondary' },
+      { id: 300, name: 'keep.cluster.example.test', url: 'https://keep.cluster.example.test', ipAddresses: ['192.0.2.30'], type: 'Secondary' },
     ];
     if (id === '121' || id === '127') nodes = nodes.filter(row => row.id !== 200);
     if (id === '119') nodes = nodes.filter(row => row.id === 100);
@@ -48,7 +48,7 @@ export async function clusterJourney({ task, directory, env, run, executable, ve
   const selected = (incoming, p) => p.node ?? (incoming.socket.localPort === Number(new URL(vendors.origins[1]).port) ? 'S' : 'P');
   const state = node => ({ version: '15.4', dnsServerDomain: `dns-${node.toLowerCase()}.cluster.example.test`, clusterInitialized: initialized[node],
     ...(initialized[node] ? { clusterDomain: 'cluster.example.test', ...options,
-      clusterNodes: nodes.map(row => ({ ...row, state: row.name === node ? 'Self' : 'Connected', ...(row.name === 'S' && pulls ? { configLastSynced: '2024-01-01T00:00:01Z' } : {}) })) } : {}) });
+      clusterNodes: nodes.map(row => ({ ...row, state: row.id === { P: 100, S: 200, keep: 300 }[node] ? 'Self' : 'Connected', ...(row.id === 200 && pulls ? { configLastSynced: '2024-01-01T00:00:01Z' } : {}) })) } : {}) });
   const ok = response => ({ body: { status: 'ok', ...(response ? { response } : {}) } });
   const rejected = () => ({ body: { status: 'error', errorMessage: 'Access denied or cluster prerequisite failed.' } });
   vendors.responders.set('/api/admin/cluster/state', (incoming, bytes) => {
@@ -74,24 +74,28 @@ export async function clusterJourney({ task, directory, env, run, executable, ve
     const p = Object.fromEntries(new URLSearchParams(bytes.toString()));
     assert.equal(incoming.headers.authorization, `Bearer ${token}`);
     assert.equal(incoming.headers['content-type'], 'application/x-www-form-urlencoded');
-    if (deny || id === '129' && p.primaryNodeId !== '100' || id === '120' && p.forceDelete !== 'true' && nodes.length > 1) return rejected();
+    if (deny || id === '129' && Number(p.primaryNodeId) >= 0 && !nodes.some(row => row.id === Number(p.primaryNodeId) && row.id !== 200) || id === '120' && p.forceDelete !== 'true' && nodes.length > 1) return rejected();
     if (id !== '128' || !incoming.url.includes('leave')) assert.deepEqual(p, Object.fromEntries(Object.entries(parameters).map(([key, value]) => [key, value?.env ? secret : Array.isArray(value) ? value.join(',') : String(value)])));
     const node = selected(incoming, p);
     if (id === '119') initialized.P = true;
     if (id === '120') initialized.P = false;
     if (id === '121' || id === '127') {
-      nodes.push({ id: 200, name: 'S', url: sUrl, ipAddresses: ['192.0.2.20'], type: 'Secondary' });
+      nodes.push({ id: 200, name: 'dns-s.cluster.example.test', url: sUrl, ipAddresses: ['192.0.2.20'], type: 'Secondary' });
       initialized.S = true; zones.replicated = 42;
     }
     if (id === '122') await leave();
     if (id === '123' || id === '128' && !unreachablePrimary) nodes = nodes.filter(row => row.id !== 200);
     if (id === '128') initialized.S = false;
-    if (id === '124') Object.assign(nodes.find(row => row.id === 200), { url: p.secondaryNodeUrl, ipAddresses: p.secondaryNodeIpAddresses.split(',') });
+    if (id === '124') Object.assign(nodes.find(row => row.id === 200), { name: new URL(p.secondaryNodeUrl).hostname, url: p.secondaryNodeUrl, ipAddresses: p.secondaryNodeIpAddresses.split(',') });
     if (id === '126') for (const [key, value] of Object.entries(p)) options[key] = Number(value);
-    if (id === '129' || id === '131') Object.assign(nodes.find(row => row.id === 100), { url: p.primaryNodeUrl, ipAddresses: p.primaryNodeIpAddresses.split(',') });
+    if (id === '129' || id === '131') {
+      const primary = nodes.find(row => id === '129' && Number(p.primaryNodeId) >= 0 ? row.id === Number(p.primaryNodeId) : row.type === 'Primary');
+      if (primary.type === 'Secondary') nodes = nodes.filter(row => row.type !== 'Primary');
+      Object.assign(primary, { name: new URL(p.primaryNodeUrl).hostname, type: 'Primary', url: p.primaryNodeUrl, ipAddresses: p.primaryNodeIpAddresses?.split(',') ?? ['192.0.2.11'] });
+    }
     if (id === '129' || id === '130') { pulls++; zones.replicated = 42; }
     if (id === '132') { nodes = nodes.filter(row => row.id !== 100); nodes.find(row => row.id === 200).type = 'Primary'; if (p.forceDeletePrimary !== 'true') initialized.P = false; zones.replicated = 42; }
-    if (id === '133') nodes.find(row => row.name === node).ipAddresses = p.ipAddresses.split(',');
+    if (id === '133') nodes.find(row => row.id === { P: 100, S: 200, keep: 300 }[node]).ipAddresses = p.ipAddresses.split(',');
     if (drop) { incoming.socket.destroy(); return {}; }
     return ok(['129', '130'].includes(id) ? undefined : state(node));
   });
@@ -122,7 +126,12 @@ export async function clusterJourney({ task, directory, env, run, executable, ve
     if (id === '124') assert.equal(primary.clusterNodes.find(row => row.id === 200).url, nextUrl);
     if (id === '126') assert.deepEqual(Object.fromEntries(Object.keys(timers).map(key => [key, primary[key]])), parameters);
     if (id === '128') { assert.equal(secondary.clusterInitialized, false); assert.deepEqual(primary.clusterNodes.map(row => row.id), [100, 300]); }
-    if (id === '129' || id === '131') assert.deepEqual(secondary.clusterNodes.find(row => row.id === 100).ipAddresses, ['192.0.2.11']);
+    if (id === '129' || id === '131') {
+      const primary = secondary.clusterNodes.find(row => row.id === 100);
+      assert.equal(primary.name, 'dns-new.cluster.example.test');
+      assert.equal(primary.url, nextUrl);
+      assert.deepEqual(primary.ipAddresses, ['192.0.2.11']);
+    }
     if (id === '129' || id === '130') {
       assert.equal(pulls, 1);
       assert.equal(secondary.clusterNodes.find(row => row.id === 200).configLastSynced, '2024-01-01T00:00:01Z');
@@ -191,6 +200,15 @@ export async function clusterJourney({ task, directory, env, run, executable, ve
       parameters[key] = false;
     }
     if (id === '129') {
+      for (const primaryNodeId of [-1, 300]) {
+        reset(id);
+        parameters.primaryNodeId = primaryNodeId;
+        await execute(full, input);
+        assert.deepEqual((await read('S')).clusterNodes.map(({ id, name, type, state, ipAddresses }) => [id, name, type, state, ipAddresses]), primaryNodeId === -1
+          ? [[100, 'dns-new.cluster.example.test', 'Primary', 'Connected', ['192.0.2.11']], [200, 'dns-s.cluster.example.test', 'Secondary', 'Self', ['192.0.2.20']], [300, 'keep.cluster.example.test', 'Secondary', 'Connected', ['192.0.2.30']]]
+          : [[200, 'dns-s.cluster.example.test', 'Secondary', 'Self', ['192.0.2.20']], [300, 'dns-new.cluster.example.test', 'Primary', 'Connected', ['192.0.2.11']]]);
+      }
+      parameters.primaryNodeId = 100;
       reset(id);
       const invalid = { parameters: { ...parameters, primaryNodeId: 999 } };
       const wrong = await success(full, invalid);

@@ -90,8 +90,10 @@ export function clusterMatches(id: string, p: Record<string, unknown>, before: C
     if (!selected || selected.type !== 'Secondary' || selected.url !== p.secondaryNodeUrl || !same(selected.ipAddresses, p.secondaryNodeIpAddresses)) return false;
     expected = [...expected.filter(row => row.id !== p.secondaryNodeId), selected].sort((a, b) => a.id - b.id);
   } else if (['OP-129', 'OP-131'].includes(id)) {
-    if (!oldPrimary || id === 'OP-129' && oldPrimary.id !== p.primaryNodeId) return false;
-    expected = expected.map(row => row.id === oldPrimary.id ? { ...row, url: String(p.primaryNodeUrl), ipAddresses: p.primaryNodeIpAddresses as string[] ?? primary?.ipAddresses } : row);
+    const selected = id === 'OP-129' && Number(p.primaryNodeId) >= 0 ? expected.find(row => row.id === p.primaryNodeId) : oldPrimary;
+    if (!oldPrimary || !selected || selected.state === 'Self') return false;
+    if (selected.id !== oldPrimary.id) expected = expected.filter(row => row.id !== oldPrimary.id);
+    expected = expected.map(row => row.id === selected.id ? { ...row, name: new URL(String(p.primaryNodeUrl)).hostname.toLowerCase(), type: 'Primary', url: String(p.primaryNodeUrl), ipAddresses: p.primaryNodeIpAddresses as string[] ?? primary?.ipAddresses } : row);
   } else if (id === 'OP-132') {
     if (!oldSelf || !oldPrimary || oldSelf.type !== 'Secondary') return false;
     expected = expected.filter(row => row.id !== oldPrimary.id).map(row => row.id === oldSelf.id ? { ...row, type: 'Primary' } : row);
