@@ -2829,7 +2829,9 @@
               "id": 100,
               "name": "primary.example.test",
               "url": "https://primary.example.test/",
-              "ipAddress": "192.0.2.100",
+              "ipAddresses": [
+                "192.0.2.100"
+              ],
               "type": "Primary",
               "state": "Connected"
             },
@@ -2837,7 +2839,9 @@
               "id": 200,
               "name": "secondary.example.test",
               "url": "https://secondary.example.test/",
-              "ipAddress": "192.0.2.200",
+              "ipAddresses": [
+                "192.0.2.200"
+              ],
               "type": "Secondary",
               "state": "Self"
             }
@@ -2862,7 +2866,9 @@
             "id": 100,
             "name": "primary.example.test",
             "url": "https://primary.example.test/",
-            "ipAddress": "192.0.2.100",
+            "ipAddresses": [
+              "192.0.2.100"
+            ],
             "type": "Primary",
             "state": "Connected"
           },
@@ -2870,7 +2876,9 @@
             "id": 200,
             "name": "secondary.example.test",
             "url": "https://secondary.example.test/",
-            "ipAddress": "192.0.2.200",
+            "ipAddresses": [
+              "192.0.2.200"
+            ],
             "type": "Secondary",
             "state": "Self"
           }

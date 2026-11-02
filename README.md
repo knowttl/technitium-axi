@@ -111,6 +111,31 @@ The preview names the requested secondary, effective primary and caller.
 The vendor proxy supplies its cluster identity; the tool never acquires that identity.
 Direct primary calls, missing or malformed permissions, and single-use credentials fail before SSO mutation.
 
+Cluster lifecycle commands are available under `admin cluster`, with `primary` and `secondary` subgroups.
+Run `inventory --json` for their exact typed inputs and routing scopes.
+Cluster preflight and verification require Administration View in addition to the vendor's Modify or Delete permission.
+Use an API token or Standard session; single-use tokens cannot support the required reads.
+Previews bind the selected topology, describe replicated effects and identify affected members.
+
+`admin cluster init-join` accepts `primaryNodePassword` and optional `primaryNodeTotp` only as SecretRefs.
+`ignoreCertificateErrors` is an explicit vendor join parameter; it does not change this tool's TLS trust.
+Join and update-secondary accept a base64url DER public certificate in `secondaryNodeCertificate`.
+Cluster options use integer intervals: heartbeat refresh and retry accept 10-300 seconds, config refresh and retry accept 30-3600 seconds, and config refresh must exceed heartbeat refresh.
+Omitted timers remain unchanged.
+
+Successful lifecycle output verifies only the selected node's topology.
+Notify and resync acknowledge scheduled synchronization; they do not prove every zone has synchronized.
+Graceful remove asks the secondary to leave; delete-secondary removes primary membership without resetting that secondary.
+Forced leave, delete and promotion can leave remote configuration behind, which requires separate reads through explicitly trusted profiles.
+Changed listeners, URLs and certificates never cause automatic credential forwarding to a new origin.
+After a lost response, retain the audit ID and use the original input and confirmation with `--reconcile` on the original trusted binding.
+For init and init-join, add `--reconcile-profile <name>` to verify through an explicitly configured trusted replacement profile after a listener or identity change.
+The replacement profile is used only for the read and receives no mutation.
+An unreachable or unverifiable target remains `OUTCOME_UNKNOWN` and must not be replayed.
+
+Literal `node=cluster` is accepted only for supported dashboard aggregation and blocking relay operations.
+Other commands require a named node or the configured origin.
+
 `settings set` accepts all fields listed in the inventory's configuration map, including modern fields and the `preferIPv6` and `reverseProxyNetworkACL` compatibility inputs.
 Omitted fields are preserved; arrays replace collections.
 An empty array clears collections except `dnsServerLocalEndPoints` and `webServiceLocalAddresses`, which reset to wildcard listeners.

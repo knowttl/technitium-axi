@@ -12,6 +12,9 @@ import { recordFamilies, recordTypeNames } from './write-contracts.js';
 import type { WriteContract } from './write-contracts.js';
 import { settingsFields, dhcpFields, validateConfiguration, configurationForm, settingValue, dhcpValue, validateDhcp } from './configuration.js';
 import { validateUploadArchive } from './archive-contract.js';
+import { clusterState, clusterMatches, clusterPreview, validateCluster, clusterTimers } from './cluster.js';
+import type { ClusterState } from './cluster.js';
+import { validateNode, routing } from './routing.js';
 
 const files = new PrivateFiles();
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -179,6 +182,8 @@ function selectedValues(values: Record<string, unknown>, dhcp = false): Record<s
 }
 
 function validateValue(key: string, value: unknown): void {
+  if (['forceDelete', 'forceLeave', 'forceDeletePrimary', 'ignoreCertificateErrors'].includes(key)) { if (typeof value !== 'boolean') usage('Boolean input requires true or false'); return; }
+  if (clusterTimers.includes(key) || key.endsWith('NodeId') || key.endsWith('IpAddresses') || key === 'ipAddresses') { validateCluster({ [key]: value }); return; }
   if (['allowedZones', 'blockedZones'].includes(key)) {
     if (!Array.isArray(value) || value.some(item => typeof item !== 'string' || !item.length || /[\x00-\x20\x7f,]/.test(item))) usage('Zone import requires an array of domain names without separators');
     return;
@@ -261,6 +266,8 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
     if (Object.hasOwn(parameters, modern!) && Object.hasOwn(parameters, legacy!)) usage('Choose the modern setting or its compatibility alias, not both');
   }
   for (const key of Object.keys(parameters)) if (!contract.fields.includes(key)) usage('Unknown input field');
+  validateNode(contract.id, parameters.node);
+  if (contract.command.startsWith('admin cluster ')) validateCluster(parameters);
   for (const key of contract.required) if (!Object.hasOwn(parameters, key) || parameters[key] === '') usage('Required input is missing');
   if (['OP-070', 'OP-071'].includes(contract.id)) {
     let url: URL;
@@ -415,10 +422,17 @@ async function soaSerial(profile: Profile, token: string, parameters: Record<str
 }
 
 export async function writeOperation(contract: WriteContract, input: WriteInput, profile: Profile, identity: string, token: string,
-  options: { execute: boolean; confirm?: string; reconcile?: string }, redactor: Redactor) {
+  options: { execute: boolean; confirm?: string; reconcile?: string; reconciliation?: { profile: Profile; token: string; name: string } }, redactor: Redactor) {
   const capability = contract.id === 'OP-077' ? input.parameters.import === true ? 'OP-077.import' : 'OP-077.resolve' : contract.id;
   const mutating = capability !== 'OP-077.resolve';
   const parameters = { ...input.parameters };
+  const cluster = contract.command.startsWith('admin cluster ');
+  if (cluster && options.reconcile && (!options.confirm || !/^[a-f0-9-]{36}\.[a-f0-9]{64}$/.test(options.confirm))) usage('Reconciliation requires the exact preview confirmation');
+  if (cluster && profile.tokenKind === 'single-use') throw new ToolError('TOKEN_KIND', 'Cluster verification requires multiple authenticated requests', 'Select an API or session profile', 1);
+  const clusterBefore: ClusterState | undefined = cluster ? options.reconcile && options.confirm
+    ? (JSON.parse(await files.read(journalPath(options.confirm))) as { clusterBefore: ClusterState }).clusterBefore
+    : await clusterState(profile, token, parameters.node) : undefined;
+  if (contract.id === 'OP-126' && clusterBefore && Number(parameters.configRefreshIntervalSeconds ?? clusterBefore.configRefreshIntervalSeconds) <= Number(parameters.heartbeatRefreshIntervalSeconds ?? clusterBefore.heartbeatRefreshIntervalSeconds)) usage('Config refresh interval must exceed heartbeat refresh interval');
   const acquisition = contract.id === 'OP-002' || contract.id === 'OP-003' && parameters.pass !== undefined;
   if (['OP-003', 'OP-004', 'OP-008', 'OP-009', 'OP-010', 'OP-011', 'OP-013'].includes(contract.id) && !acquisition && profile.tokenKind !== 'session') throw new ToolError('TOKEN_KIND', 'A Standard session is required', 'Explicitly sign in with a session profile', 1);
   if (contract.id === 'OP-002' && (profile.tokenKind !== 'session' || !profile.username || profile.username !== parameters.user)) usage('Login requires a session profile whose username matches user');
@@ -469,12 +483,14 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
   const intentId = !options.execute && !options.reconcile ? randomUUID() : options.confirm?.split('.')[0];
   const digest = `${intentId}.${createHmac('sha256', token).update(canonical({ intentId, origin: profile.origin, identity, username: profile.username ?? null,
     tokenKind: profile.tokenKind, caFile: profile.caFile ?? null, tlsServerName: profile.tlsServerName ?? null,
-    capability, parameters, route: route ?? null, baseline: baselineInput ?? null, encoding: input.encoding ?? 'form', upload: upload ? { sha256: hash(upload), format: input.upload?.format ?? 'multipart' } : null })).digest('hex')}`;
+    capability, parameters, route: route ?? null, ...(clusterBefore ? { clusterBefore } : {}), baseline: baselineInput ?? null, encoding: input.encoding ?? 'form', upload: upload ? { sha256: hash(upload), format: input.upload?.format ?? 'multipart' } : null })).digest('hex')}`;
   const permitted = !mutating || (!readOnly() && profile.writes?.allowWrites === true && profile.writes.operations.includes(capability));
   if (!options.execute && !options.reconcile) return { bytes: Buffer.alloc(0), projection: { preview: { digest, operation: capability,
-    origin: profile.origin, identity, node: parameters.node ?? null, target: parameters.zone ?? parameters.zones ?? parameters.domain ?? parameters.group ?? parameters.user ?? parameters.partialToken ?? parameters.section ?? parameters.log ?? parameters.name ?? null,
+    origin: profile.origin, identity, node: parameters.node ?? null, target: parameters.secondaryNodeId ?? parameters.primaryNodeId ?? parameters.clusterDomain ?? parameters.zone ?? parameters.zones ?? parameters.domain ?? parameters.group ?? parameters.user ?? parameters.partialToken ?? parameters.section ?? parameters.log ?? parameters.name ?? null,
     permitted, upload: upload ? { bytes: upload.length, sha256: hash(upload) } : null,
     ...(route ? { route } : {}),
+    routing: routing(contract.id),
+    ...(clusterBefore ? { cluster: clusterPreview(contract.id, parameters, clusterBefore) } : {}),
     replaces: contract.baselinePath ? Object.keys(input.baseline!) : [],
     ...(contract.baselinePath ? { concurrency: 'A single-writer window is required between the final read and write; the vendor has no atomic conditional setter' } : {}) } } };
   if (!permitted) throw new ToolError('WRITE_DENIED', 'Exact write grant is required and read-only mode overrides grants', 'Enable only the selected operation in the selected profile', 1);
@@ -485,6 +501,11 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
   const postconditionHash = (value: unknown) => createHmac('sha256', token).update(canonical(value)).digest('hex');
   let resyncSerial: number | undefined;
   const postcondition = async (expected: string | undefined) => {
+    // Topology cannot prove that an asynchronous notification or resync was scheduled.
+    if (options.reconcile && ['OP-129', 'OP-130'].includes(contract.id)) return false;
+    if (clusterBefore) return clusterMatches(contract.id, parameters, clusterBefore, options.reconciliation
+      ? await clusterState(options.reconciliation.profile, options.reconciliation.token, undefined)
+      : await clusterState(profile, token, parameters.node));
     if (contract.id === 'OP-030' && resyncSerial !== undefined) {
       const serial = await soaSerial(profile, token, parameters);
       const distance = (serial - resyncSerial + 4294967296) % 4294967296;
@@ -503,7 +524,8 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     try { proven = Boolean(await postcondition(prior.postconditionHash)); } catch { /* A failed read cannot prove an outcome. */ }
     if (!proven) throw new ToolError('OUTCOME_UNKNOWN', `Outcome remains unknown; audit ID ${prior.auditId}`, 'Read the exact selected target and compare its full postcondition; never replay an uncertain write', 1);
     await files.write(path, JSON.stringify({ ...prior, state: 'reconciled' }));
-    return { bytes: Buffer.alloc(0), projection: { status: 'reconciled', auditId: prior.auditId, operation: capability } };
+    return { bytes: Buffer.alloc(0), projection: { status: 'reconciled', auditId: prior.auditId, operation: capability,
+      ...(options.reconciliation ? { verifiedProfile: options.reconciliation.name, verifiedOrigin: options.reconciliation.profile.origin } : {}) } };
   }
   let expected: string | undefined;
   if (contract.id === 'OP-093') {
@@ -548,7 +570,7 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     Object.assign(parameters, baseline.preserved);
   }
   if (mutating) {
-    try { await files.create(path, JSON.stringify({ auditId, digest, operation: capability, state: 'intent', postconditionHash: expected, resyncSerial })); }
+    try { await files.create(path, JSON.stringify({ auditId, digest, operation: capability, state: 'intent', postconditionHash: expected, resyncSerial, clusterBefore })); }
     catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new ToolError('REPLAY_DENIED', 'This confirmed mutation already has a durable intent', 'Inspect its protected journal entry and reconcile the original audit ID; do not replay', 1);
       throw new ToolError('JOURNAL_FAILED', 'Durable intent could not be recorded', 'Repair the protected journal before executing any mutation', 1);
@@ -617,16 +639,18 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
         ...(typeof value.response.warningMessage === 'string' ? { warningMessage: value.response.warningMessage } : {}) };
     }
     if (contract.baselinePath && !await postcondition(expected)) throw new Error('Postcondition is not proven');
+    if (clusterBefore && !await postcondition(undefined)) throw new Error('Selected cluster state is not proven');
     if (contract.id === 'OP-030') {
       let completed = false;
       for (let attempt = 0; attempt < 3 && !completed; attempt++) completed = await postcondition(undefined);
       if (!completed) throw new Error('Transfer completion is not proven');
     }
     const partial = contract.id === 'OP-029' && object(value.response) && object(value.response.failed) && Object.keys(value.response.failed).length > 0;
-    if (mutating) await files.write(path, JSON.stringify({ auditId, digest, operation: capability, state: partial ? 'partial' : 'completed', postconditionHash: expected, resyncSerial }));
+    if (mutating) await files.write(path, JSON.stringify({ auditId, digest, operation: capability, state: partial ? 'partial' : 'completed', postconditionHash: expected, resyncSerial, clusterBefore }));
     return { bytes: response.bytes, projection: { status: partial ? 'partial' : 'ok', operation: capability,
       ...(partial && object(value.response) ? { deleted: value.response.deleted, failed: value.response.failed } : {}), ...(mutating ? { auditId } : {}),
       ...resolution,
+      ...(clusterBefore ? { cluster: clusterPreview(contract.id, parameters, clusterBefore) } : {}),
       ...(contract.id === 'OP-002' ? { username: value.username, stored: true, info: { permissions: object(value.info) ? value.info.permissions : {} } } : {}),
       ...(contract.id === 'OP-005' ? { revoked: true, localRemoved } : {}),
       ...(profile.tokenKind === 'single-use' ? { credential: 'consumed' } : {}) } };

@@ -2,6 +2,7 @@ import { readContracts } from './read-contracts.js';
 import { archiveContract } from './archive-contract.js';
 import { writeContracts, writeFlags, recordFamilies } from './write-contracts.js';
 import { settingsFields, dhcpFields } from './configuration.js';
+import { routing } from './routing.js';
 
 export const readFlags = ['--json', '--help', '--config', '--profile', '--result-file', '--fields', '--full', '--max-bytes', '--max-requests', '--max-pages', '--max-elapsed-ms'];
 
@@ -17,12 +18,12 @@ export const commands = [
   { command: 'config import', description: 'Validate and atomically install a config containing SecretRefs', effect: 'local', arguments: [], flags: ['--json', '--help', '--config', '--input-file'] },
   { command: 'doctor', description: 'Verify credential protection and perform one bounded session read', effect: 'read', arguments: [], flags: ['--json', '--help', '--config', '--profile'] },
   ...readContracts.filter(item => !['OP-001', 'OP-006'].includes(item.id)).map(item => ({
-    command: item.command, description: `Read ${item.command}`, effect: 'read', operation: item.id,
+    command: item.command, description: `Read ${item.command}`, effect: 'read', operation: item.id, routing: routing(item.id),
     arguments: item.parameters, flags: [...readFlags, ...item.parameters.map(parameter => parameter.flag)],
     ...(['OP-084', 'OP-125'].includes(item.id) ? { archive: archiveContract } : {}),
   })),
   ...writeContracts.map(item => ({ command: item.command, description: `Preview or execute ${item.command}`, effect: item.id === 'OP-077' ? 'conditional' : 'write', operation: item.id,
-    arguments: [], flags: writeFlags, input: { envelope: ['parameters', 'baseline', 'upload'], fields: item.fields,
+    arguments: [], flags: [...writeFlags, ...(['OP-119', 'OP-127'].includes(item.id) ? ['--reconcile-profile'] : [])], routing: routing(item.id), input: { envelope: ['parameters', 'baseline', 'upload'], fields: item.fields,
       required: item.required, secrets: item.secrets ?? [], baseline: item.baselinePath ?? null,
       ...(['OP-002', 'OP-003', 'OP-004', 'OP-009', 'OP-099'].includes(item.id) ? { resultPolicy: { classification: 'confidential-fields', ordinaryOutput: 'metadata and approved projection only', localResult: item.id === 'OP-002' ? 'issued Standard session stored privately; optional exact protected result' : 'required protected result file', hostedResult: 'caller and credential revision bound protected custody' } } : {}),
       ...(['OP-022', 'OP-023'].includes(item.id) ? { upload: { file: 'protected absolute path', format: item.id === 'OP-023' ? ['multipart (default)', 'text'] : ['multipart'] } } : {}),
