@@ -64,7 +64,7 @@ export const writeContracts: WriteContract[] = [
   ...[['OP-095', 'enable'], ['OP-096', 'disable'], ['OP-097', 'delete']].map(([id, action]) => ({
     id: id!, command: `dhcp scope ${action}`, path: `/api/dhcp/scopes/${action}`, fields: ['name'], required: ['name'],
   })),
-  { id: 'OP-002', command: 'user login', path: '/api/user/login', fields: words('user pass totp includeInfo'), required: ['user', 'pass'], secrets: ['pass', 'totp'] },
+  { id: 'OP-002', command: 'user login', path: '/api/user/login', fields: words('user pass totp'), required: ['user', 'pass'], secrets: ['pass', 'totp'] },
   { id: 'OP-003', command: 'user create-token', path: '/api/user/createToken', fields: words('user pass totp tokenName'), required: ['tokenName'], secrets: ['pass', 'totp'] },
   { id: 'OP-004', command: 'user create-single-use-token', path: '/api/user/createSingleUseToken', fields: [], required: [] },
   { id: 'OP-005', command: 'user logout', path: '/api/user/logout', fields: [], required: [] },

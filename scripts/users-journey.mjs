@@ -78,7 +78,8 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
     changed.set(id, p);
     if (id === '002') return { body: { status: 'ok', username: 'planner', token: loginToken, info: { permissions: { Administration: { canModify: true } } } } };
     if (id === '003') sessions.set(secret, { type: 'ApiToken', tokenName: p.tokenName });
-    if (['003', '004'].includes(id)) return { body: { status: 'ok', username: 'planner', tokenName: p.tokenName, token: secret } };
+    if (id === '003') return { body: { status: 'ok', username: 'planner', tokenName: p.tokenName, token: secret } };
+    if (id === '004') return { body: { status: 'ok', response: { username: 'planner', token: secret } } };
     if (id === '005') { sessions.delete(token); vendors.tokens.delete('alpha'); }
     if (id === '007') sessions.delete('other-2222');
     if (id === '008') account.password = p.newPass;
@@ -165,9 +166,15 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
       account.password = 'old-password';
       account.totpEnabled = id !== '010';
       fault = undefined;
+      if (id === '002') {
+        const before = vendors.traces.length;
+        for (const login of ['user login', 'auth login']) await failure('USAGE', login, { ...parameters, includeInfo: false });
+        assert.equal(vendors.traces.length, before, 'Unsupported login input must be rejected before dispatch');
+      }
       const result = await execute(`user ${command}`, parameters);
       assert.deepEqual(changed.get(id), Object.fromEntries(Object.entries(parameters).map(([key, value]) => [key, value?.env ? value.env === 'ACCOUNT_TOTP' ? totp : password : String(value)]).concat(id === '002' ? [['includeInfo', 'true']] : [])));
-      if (['003', '004'].includes(id)) assert.equal(JSON.parse(result.bytes).token, secret);
+      if (id === '003') assert.equal(JSON.parse(result.bytes).token, secret);
+      if (id === '004') assert.equal(JSON.parse(result.bytes).response.token, secret);
       if (id === '009') assert.equal(JSON.parse(result.bytes).response.secret, secret);
       if (task === 'B5.CR-010') {
         const preview = await success(`user ${command}`, parameters);

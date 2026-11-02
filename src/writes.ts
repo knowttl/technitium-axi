@@ -283,7 +283,7 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
         if (!Number.isSafeInteger(value) || Number(value) <= 0 || Number(value) > 2147483647) usage('Minutes must be a positive 32-bit integer');
       } else if (contract.id === 'OP-085' && key !== 'node') {
         if (typeof value !== 'boolean') usage('Restore selections require true or false');
-      } else if (['includeInfo', 'totpEnabled'].includes(key)) {
+      } else if (key === 'totpEnabled') {
         if (typeof value !== 'boolean') usage('A boolean is required');
       } else if (key === 'memberOfGroups') {
         if (!Array.isArray(value) || value.some(group => typeof group !== 'string' || !group || /[,|\x00-\x1f]/.test(group))) usage('memberOfGroups requires an array of group names');
@@ -581,8 +581,9 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     const value: unknown = JSON.parse(response.bytes.toString());
     checkStatus(value);
     if (['OP-002', 'OP-003', 'OP-004'].includes(contract.id)) {
-      if (typeof value.token !== 'string' || !value.token || /[\s\x00-\x1f\x7f]/.test(value.token)) throw new Error('Issued credential is invalid');
-      redactor.add(value.token);
+      const credential = contract.id === 'OP-004' ? value.response : value;
+      if (!object(credential) || typeof credential.token !== 'string' || !credential.token || /[\s\x00-\x1f\x7f]/.test(credential.token)) throw new Error('Issued credential is invalid');
+      redactor.add(credential.token);
     }
     if (contract.id === 'OP-002') {
       if (value.username !== profile.username || typeof value.token !== 'string' || !object(value.info) || !object(value.info.permissions)) throw new Error('Issued identity does not match the selected profile');

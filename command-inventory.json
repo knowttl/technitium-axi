@@ -2760,8 +2760,7 @@
         "fields": [
           "user",
           "pass",
-          "totp",
-          "includeInfo"
+          "totp"
         ],
         "required": [
           "user",
