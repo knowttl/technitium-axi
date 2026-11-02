@@ -20,7 +20,7 @@ assert.deepEqual(interfaces, ['lo'], 'Only loopback may exist');
 
 // Published source paths pinned by the package admission contract.
 const modules = ['cli', 'catalogue', 'read-contracts', 'archive-contract', 'reads', 'vendor',
-  'credentials', 'private-file', 'errors'];
+  'credentials', 'private-file', 'errors', 'write-contracts', 'writes'];
 const files = ['package.json', 'README.md', 'LICENSE', 'bin/technitium-axi.js',
   'axi-credential.schema.json', 'command-inventory.json', ...modules.map(name => `dist/${name}.js`)];
 const temporary = mkdtempSync(join(tmpdir(), 'technitium-contract-'));

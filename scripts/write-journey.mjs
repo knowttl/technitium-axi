@@ -49,7 +49,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
   vendors.responders.set('/api/zones/records/add', async (incoming, bytes) => {
     const data = Object.fromEntries(new URLSearchParams(bytes.toString()));
     sent.push(data);
-    if (fault === 'drop') { incoming.destroy(); return {}; }
+    if (fault === 'drop') { incoming.socket.destroy(); return {}; }
     if (fault === 'handler') return { body: { status: 'error', errorMessage: secret } };
     return { body: { status: 'ok', response: { record: data, proxyPassword: secret } } };
   });
@@ -80,7 +80,9 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     }
     await configure(['OP-049']);
     assert.equal(sent.length, 0);
-    await failure('JOURNAL_FAILED', 'zone record add', add, ['--execute', '--confirm', allowed.preview.digest], { TECHNITIUM_AXI_WRITE_LOG: '/proc/technitium-write-test' });
+    const blockedJournal = join(directory, 'journal-parent');
+    await writeFile(blockedJournal, 'regular file', { mode: 0o600 });
+    await failure('JOURNAL_FAILED', 'zone record add', add, ['--execute', '--confirm', allowed.preview.digest], { TECHNITIUM_AXI_WRITE_LOG: join(blockedJournal, 'writes.log') });
     assert.equal(sent.length, 0, 'No dispatch on durable journal failure');
     const result = await success('zone record add', add, ['--execute', '--confirm', allowed.preview.digest]);
     assert.equal(result.operation, 'OP-049');
@@ -136,7 +138,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         const form = new URLSearchParams(bytes.toString());
         assert.deepEqual([...form.keys()].sort(), [...Object.keys(row.target), row.field].sort());
         state = form.get(row.field).split(',');
-        if (drop) { incoming.destroy(); return {}; }
+        if (drop) { incoming.socket.destroy(); return {}; }
         return { body: { status: 'ok' } };
       });
       const input = { parameters: { ...row.target, [row.field]: ['a', 'c'] }, baseline: { [row.field]: ['a'] } };
@@ -239,30 +241,35 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     await configure(['OP-049', 'OP-051', 'OP-052']);
     for (const row of matrix.rows) {
       let records = [];
-      const owner = 'www.example.test';
+      let related = [];
+      const owner = row.updateOnly ? 'example.test' : 'www.example.test';
       const keep = { name: 'keep.example.test', type: 'TXT', ttl: 60, rData: { text: 'keep' } };
       const firstKey = Object.keys(row.data)[0];
-      const siblingData = { ...row.data, [firstKey]: typeof row.data[firstKey] === 'number' ? row.data[firstKey] + 1 : `${row.data[firstKey]}-sibling` };
-      const comparison = { name: row.singleton ? 'other.example.test' : owner, type: row.type, ttl: 60, rData: siblingData };
+      const siblingData = { ...row.data, [firstKey]: row.sibling ?? (typeof row.data[firstKey] === 'number' ? row.data[firstKey] + 1 : `sibling.${row.data[firstKey]}`) };
+      const comparison = { name: row.updateOnly ? 'keep.test' : row.singleton ? 'other.example.test' : owner, type: row.type, ttl: 60, rData: siblingData };
       records = [keep, comparison];
-      const params = { zone: 'example.test', domain: owner, type: row.type, ttl: 60, ...row.data };
+      const params = { zone: 'example.test', domain: owner, type: row.type, ttl: 60, ...row.data, ...row.addOptions };
       const dataKeys = Object.keys(row.data);
       const select = p => records.findIndex(record => record.name === p.domain && record.type === p.type &&
         (row.singleton || dataKeys.every(key => String(record.rData[key]) === p[key])));
       vendors.responders.set('/api/zones/records/add', (_incoming, bytes) => {
         const p = Object.fromEntries(new URLSearchParams(bytes.toString()));
+        const expected = row.singleton && p.overwrite === 'true' ? { ...params, ...row.updated } : params;
+        for (const [key, value] of Object.entries(expected)) assert.equal(p[key], String(value?.env ? secret : Array.isArray(value) ? value.join(',') : value), `${row.type} add ${key}`);
         if (row.singleton && select(p) >= 0 && p.overwrite !== 'true') return { body: { status: 'error' } };
         if (row.singleton && select(p) >= 0) records.splice(select(p), 1);
-        records.push({ name: p.domain, type: p.type, ttl: Number(p.ttl), rData: { ...row.data } });
+        records.push({ name: p.domain, type: p.type, ttl: Number(p.ttl), rData: { ...(row.singleton && p.overwrite === 'true' ? row.updated : row.data) } });
+        if (row.related && p.ptr === 'true' && p.updateSvcbHints === 'true') related = row.related.add;
         return { body: { status: 'ok' } };
       });
       vendors.responders.set('/api/zones/records/update', (_incoming, bytes) => {
         const p = Object.fromEntries(new URLSearchParams(bytes.toString()));
+        for (const [key, value] of Object.entries(row.updateOptions ?? {})) assert.equal(p[key], String(value?.env ? secret : Array.isArray(value) ? value.join(',') : value), `${row.type} update ${key}`);
         assert.deepEqual(Object.fromEntries(Object.entries(row.replacement).map(([key]) => [key, p[key]])), Object.fromEntries(Object.entries(row.replacement).map(([key, value]) => [key, String(value)])));
         const index = select(p);
         assert.ok(index >= 0, 'Exact record selector must preserve siblings');
-        const rData = Object.fromEntries(Object.entries(row.replacement).map(([key, value]) => [key.startsWith('naptrNew') ? key.replace('naptrNew', 'naptr') : key.startsWith('new') ? key === 'newAName' ? 'aname' : key[3].toLowerCase() + key.slice(4) : key, value]));
-        records[index] = { name: p.newDomain ?? p.domain, type: row.type, ttl: Number(p.ttl), rData };
+        records[index] = { name: p.newDomain ?? p.domain, type: row.type, ttl: Number(p.ttl), rData: row.updated };
+        if (row.related && p.ptr === 'true' && p.updateSvcbHints === 'true') related = row.related.update;
         return { body: { status: 'ok' } };
       });
       vendors.responders.set('/api/zones/records/delete', (_incoming, bytes) => {
@@ -273,27 +280,48 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         records.splice(index, 1);
         return { body: { status: 'ok' } };
       });
-      vendors.responders.set('/api/zones/records/get', () => ({ body: { status: 'ok', response: { zone: { name: 'example.test', type: 'Primary' }, records } } }));
-      const readback = async expected => {
+      const publicRecords = values => values.map(record => ({ ...record, rData: Object.fromEntries(Object.entries(record.rData).map(([key, value]) => {
+        const names = { naptrOrder: 'order', naptrPreference: 'preference', naptrFlags: 'flags', naptrServices: 'services', naptrRegexp: 'regexp', naptrReplacement: 'replacement',
+          sshfpAlgorithm: 'algorithm', sshfpFingerprintType: 'fingerprintType', sshfpFingerprint: 'fingerprint', tlsaCertificateUsage: 'certificateUsage',
+          tlsaSelector: 'selector', tlsaMatchingType: 'matchingType', tlsaCertificateAssociationData: 'certificateAssociationData', uriPriority: 'priority', uriWeight: 'weight', recordData: 'data', rdata: 'value' };
+        const enums = { algorithm: { 13: 'ECDSAP256SHA256' }, digestType: { 2: 'SHA256' }, sshfpAlgorithm: { 1: 'RSA', 2: 'DSA' },
+          sshfpFingerprintType: { 2: 'SHA256' }, tlsaCertificateUsage: { 0: 'PKIX-TA', 2: 'DANE-TA', 3: 'DANE-EE' }, tlsaSelector: { 1: 'SPKI' }, tlsaMatchingType: { 1: 'SHA2-256' } };
+        return [names[key] ?? key, key === 'characterStringsBase64' ? [value] : key === 'svcParams' ? Object.fromEntries([value.split('|')])
+          : key === 'rdata' ? value.match(/../g).join(':').toUpperCase() : enums[key] ? enums[key][value] ?? String(value) : value];
+      })) }));
+      vendors.responders.set('/api/zones/records/get', () => ({ body: { status: 'ok', response: { zone: { name: 'example.test', type: 'Primary' }, records: publicRecords([...records, ...related]) } } }));
+      const readback = async (expected, expectedRelated = []) => {
         const result = join(directory, `records-${sequence++}.json`);
         const read = await run(executable, ['zone', 'record', 'get', '--domain', 'example.test', '--zone', 'example.test', '--list-zone', 'true', '--config', config, '--result-file', result, '--json'], { env: { ...env, WRITE_TOKEN: token } });
         assert.equal(read.code, 0, read.stdout + read.stderr);
-        assert.deepEqual(JSON.parse(await readFile(result, 'utf8')).response.records, expected);
+        assert.deepEqual(JSON.parse(await readFile(result, 'utf8')).response.records, publicRecords([...expected, ...expectedRelated]));
       };
-      await execute('zone record add', { parameters: params });
       const first = { name: owner, type: row.type, ttl: 60, rData: row.data };
-      await readback([keep, comparison, first]);
-      const update = { ...params, ...row.replacement, ttl: 0 };
+      if (row.updateOnly) {
+        records.push(first);
+        await failure('USAGE', 'zone record add', { parameters: params });
+      } else await execute('zone record add', { parameters: params });
+      await readback([keep, comparison, first], row.related?.add);
+      if (row.singleton && !row.updateOnly) {
+        const duplicate = { parameters: { ...params, overwrite: false } };
+        await failure('OUTCOME_UNKNOWN', 'zone record add', duplicate, ['--execute', '--confirm', (await success('zone record add', duplicate)).preview.digest]);
+        await readback([keep, comparison, first]);
+        await execute('zone record add', { parameters: { ...params, ...row.updated, overwrite: true } });
+        await readback([keep, comparison, { ...first, rData: row.updated }]);
+      }
+      const update = { ...params, ...row.replacement, ...row.updateOptions, ttl: 0 };
+      delete update.overwrite;
       if (row.singleton) for (const key of dataKeys) if (!Object.hasOwn(row.replacement, key)) delete update[key];
       await execute('zone record update', { parameters: update });
-      const rData = Object.fromEntries(Object.entries(row.replacement).map(([key, value]) => [key.startsWith('naptrNew') ? key.replace('naptrNew', 'naptr') : key.startsWith('new') ? key === 'newAName' ? 'aname' : key[3].toLowerCase() + key.slice(4) : key, value]));
-      const updated = { name: owner, type: row.type, ttl: 0, rData };
-      await readback([keep, comparison, updated]);
-      const remove = { zone: 'example.test', domain: owner, type: row.type, ...(row.singleton ? {} : rData) };
-      if (row.pendingDelete) await failure('PREREQUISITE_PENDING', 'zone record delete', { parameters: remove });
+      const rData = row.updated;
+      const updated = { name: update.newDomain ?? owner, type: row.type, ttl: 0, rData };
+      await readback([keep, comparison, updated], row.related?.update);
+      const remove = { zone: 'example.test', domain: updated.name, type: row.type, ...(row.singleton ? {} : rData) };
+      if (row.updateOnly) await failure('USAGE', 'zone record delete', { parameters: remove });
+      else if (row.pendingDelete) await failure('PREREQUISITE_PENDING', 'zone record delete', { parameters: remove });
       else {
         await execute('zone record delete', { parameters: remove });
-        await readback([keep, comparison]);
+        await readback([keep, comparison], row.related?.update);
       }
       await failure('USAGE', 'zone record add', { parameters: { ...params, unexpected: true } });
     }

@@ -40,7 +40,7 @@ function project(value: unknown, shape: Shape, nullable = false): unknown {
     if (shape === 'nullable') {
       if (value !== null && typeof value !== 'string') invalid();
     } else if (shape === 'string-or-number') {
-      // DNSKEY encodes the protocol as a number; FWD encodes its transport as a string.
+      // Protocol and flags vary between numeric data and enum names across record families.
       if (typeof value !== 'string' && typeof value !== 'number') invalid();
     } else if (typeof value !== shape) invalid();
     return value;

@@ -34,7 +34,7 @@ export async function fakeVendors(temporary, run, env) {
         const responder = responders.get(incoming.url) ?? responders.get(new URL(incoming.url, 'https://fixture.test').pathname);
         if (responder) {
           const response = bearer !== tokens.get(identity) ? { body: { status: 'invalid-token' } } : await responder(incoming, body);
-          if (incoming.destroyed) return;
+          if (incoming.socket.destroyed) return;
           outgoing.writeHead(response.status ?? 200, { 'content-type': response.contentType ?? 'application/json', ...response.headers });
           outgoing.end(response.bytes ?? JSON.stringify(response.body));
           return;
