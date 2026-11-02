@@ -10,6 +10,7 @@ import { decode } from '@toon-format/toon';
 import { fakeVendors } from './vendor-fixture.mjs';
 import { credentialJourney, credentialTasks } from './credential-journey.mjs';
 import { readJourney, readTasks, monitorTasks } from './read-journey.mjs';
+import { writeJourney, writeTasks } from './write-journey.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2);
@@ -27,7 +28,7 @@ for (let i = 0; i < args.length; i++) {
   else if (arg === '--operation' && !operation) operation = args[++i];
   else throw new Error(`Unknown or repeated journey argument: ${arg}`);
 }
-assert.ok(['B1.01', 'B1.02', ...Object.keys(credentialTasks), ...readTasks].includes(task), 'Select a supported --task');
+assert.ok(['B1.01', 'B1.02', ...Object.keys(credentialTasks), ...readTasks, ...writeTasks].includes(task), 'Select a supported --task');
 assert.equal(operation, /^B[12]\.OP-/.test(task) ? task.slice(3) : undefined, 'Operation selection must match the operation task');
 assert.ok(paths?.length && new Set(paths).size === paths.length && paths.every(path => ['native', 'artium'].includes(path)), 'Select --paths native,artium');
 assert.ok(offline, '--offline is required');
@@ -74,7 +75,9 @@ if (!inside) {
   const checks = [];
   const identityTask = Object.hasOwn(credentialTasks, task);
   const readTask = readTasks.includes(task);
-  const expected = (paths.includes('native') ? (readTask ? (task === 'B2.05' ? monitorTasks.length : task === 'B2.01' ? 2 : 1) : identityTask ? credentialTasks[task].length : task === 'B1.02' ? 7 : 5) : 0) + (paths.includes('artium') ? (readTask ? 6 : identityTask ? 5 : 4) : 0);
+  const writeTask = writeTasks.includes(task);
+  assert.ok(!writeTask || !paths.includes('artium'), 'Hosted write admission is a separate release-candidate check; this journey proves the native path only');
+  const expected = (paths.includes('native') ? (writeTask ? 1 : readTask ? (task === 'B2.05' ? monitorTasks.length : task === 'B2.01' ? 2 : 1) : identityTask ? credentialTasks[task].length : task === 'B1.02' ? 7 : 5) : 0) + (paths.includes('artium') ? (readTask ? 6 : identityTask ? 5 : 4) : 0);
   try {
     const home = join(temporary, 'home');
     await mkdir(home, { mode: 0o700 });
@@ -102,7 +105,7 @@ if (!inside) {
     assert.equal(await realpath(executable), join(packageRoot, 'bin', 'technitium-axi.js'));
     const setup = JSON.parse(await readFile(new URL('../tests/fixtures/setup.json', import.meta.url), 'utf8'));
     const invoke = argv => run(executable, argv, { cwd: home, env });
-    if (task === 'B1.02' || identityTask || readTask) {
+    if (task === 'B1.02' || identityTask || readTask || writeTask) {
       vendors = await fakeVendors(temporary, run, env);
       await vendors.check();
     }
@@ -112,7 +115,8 @@ if (!inside) {
     if (paths.includes('native') && readTask) {
       checks.push(...await readJourney({ task, temporary, env, run, executable, vendors }));
     }
-    if (paths.includes('native') && !identityTask && !readTask) {
+    if (paths.includes('native') && writeTask) checks.push(...await writeJourney({ task, temporary, env, run, executable, vendors }));
+    if (paths.includes('native') && !identityTask && !readTask && !writeTask) {
       for (const flag of ['--version', '-v', '-V']) {
         const result = await invoke([flag]);
         assert.deepEqual(result, { code: 0, stdout: `${setup.response.version}\n`, stderr: '' });
@@ -171,11 +175,13 @@ if (!inside) {
       checks.push(...await artiumJourney({ temporary, sha256, env, run, packageRoot,
         origins: vendors?.origins, vendors, task, identityTask, readTask, signal: cancellation.signal }));
     }
-    if (vendors && !identityTask && !readTask) assert.equal(vendors.traces.length, 2, 'Discovery must not contact either fake vendor');
+    if (vendors && !identityTask && !readTask && !writeTask) assert.equal(vendors.traces.length, 2, 'Discovery must not contact either fake vendor');
     assert.ok(checks.length > 0, 'Zero assertions executed');
     assert.equal(checks.length, expected, 'Selected journey did not execute every expected case');
     console.log(JSON.stringify({ task, paths, expected, actual: checks.length, failed: 0,
-      pending: 0, skipped: 0, platformEvidence: { linux: 'native', windows: identityTask ? 'PENDING - native Windows verification deferred' : 'not selected' }, package: { version: pack.version, sha256, integrity: pack.integrity }, checks }));
+      pending: task === 'B3.02' ? 1 : 0, skipped: 0,
+      ...(task === 'B3.02' ? { limitations: ['DNAME deletion and B3.02 full-management coverage remain pending shipped-library mapping and independent review'] } : {}),
+      platformEvidence: { linux: 'native', windows: identityTask ? 'PENDING - native Windows verification deferred' : 'not selected' }, package: { version: pack.version, sha256, integrity: pack.integrity }, checks }));
   } catch (error) {
     console.log(JSON.stringify({ task, paths, expected, actual: checks.length, failed: 1,
       pending: Math.max(0, expected - checks.length - 1), skipped: 0, error: error.message }));

@@ -31,9 +31,10 @@ export async function fakeVendors(temporary, run, env) {
             ...(incoming.headers['if-modified-since'] ? { 'if-modified-since': incoming.headers['if-modified-since'] } : {}) },
           inputHash: createHash('sha256').update(body).digest('hex'),
           bearerHash: bearer ? createHash('sha256').update(bearer).digest('hex') : null, identity });
-        const responder = responders.get(incoming.url);
+        const responder = responders.get(incoming.url) ?? responders.get(new URL(incoming.url, 'https://fixture.test').pathname);
         if (responder) {
-          const response = bearer !== tokens.get(identity) ? { body: { status: 'invalid-token' } } : responder(incoming, body);
+          const response = bearer !== tokens.get(identity) ? { body: { status: 'invalid-token' } } : await responder(incoming, body);
+          if (incoming.socket.destroyed) return;
           outgoing.writeHead(response.status ?? 200, { 'content-type': response.contentType ?? 'application/json', ...response.headers });
           outgoing.end(response.bytes ?? JSON.stringify(response.body));
           return;

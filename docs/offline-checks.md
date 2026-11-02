@@ -1,6 +1,6 @@
 # Offline package journeys
 
-The B1 and B2 package, credential and read checks run the installed npm tarball, never a TypeScript loader.
+The B1, B2 and B3 package, credential, read and write checks run the installed npm tarball, never a TypeScript loader.
 They require Linux with user, PID, mount and network namespaces, iproute2, OpenSSL and a C compiler for process-interruption checks.
 The namespace enables only loopback and contains the CLI, server, adapter and subprocesses.
 Follow the [README setup](../README.md) to fetch the pinned npm dependencies once, then keep all journeys offline.
@@ -82,6 +82,23 @@ Select an individual operation with a matching `--task B2.OP-…` and `--operati
 ```sh
 npm run check:journey -- --task B2.admin-reads --paths native,artium --offline
 npm run check:journey -- --task B2.OP-141 --operation OP-141 --paths native,artium --offline
+```
+
+B3 checks cover write policy and journal (B3.01), record inputs and composite selectors (B3.02), concurrency and unknown outcomes (B3.03), upload materialization (B3.04), operation SecretRefs (B3.05), and credential conformance (B3.CR-013 and B3.CR-014).
+They use loopback fake vendor HTTPS and synthetic credentials, and accept only `--paths native`.
+Hosted write admission is separate release-candidate proof, not established by these journeys or the existing read admission fixture.
+`npm test` includes all seven native B3 tasks.
+B3.02 reports one pending case for the accepted [DNAME deletion deferral](../README.md#writes), rather than claiming full-management coverage.
+The record cases live in [record-inputs.json](../tests/fixtures/record-inputs.json).
+
+```sh
+npm run check:journey -- --task B3.01 --paths native --offline
+npm run check:journey -- --task B3.02 --paths native --offline
+npm run check:journey -- --task B3.03 --paths native --offline
+npm run check:journey -- --task B3.04 --paths native --offline
+npm run check:journey -- --task B3.05 --paths native --offline
+npm run check:journey -- --task B3.CR-013 --paths native --offline
+npm run check:journey -- --task B3.CR-014 --paths native --offline
 ```
 
 Node diagnostics report actual child PID, argv and executable hash without replacing the runner.

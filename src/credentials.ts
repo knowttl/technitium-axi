@@ -14,7 +14,7 @@ export interface Profile {
   username?: string;
   caFile?: string;
   tlsServerName?: string;
-  writes?: { allowWrites: false; operations: [] };
+  writes?: { allowWrites: boolean; operations: string[] };
 }
 interface Config { version: 1; defaultProfile?: string; profiles: Record<string, Profile> }
 const profileName = '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$';

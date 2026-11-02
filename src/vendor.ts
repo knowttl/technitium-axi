@@ -8,7 +8,7 @@ export class Redactor {
   private readonly values = new Set<string>();
   add(value: string): void {
     if (!value) return;
-    for (const form of [value, JSON.stringify(value).slice(1, -1), encodeURIComponent(value), encodeURI(value)]) this.values.add(form);
+    for (const form of [value, JSON.stringify(value).slice(1, -1), encodeURIComponent(value), encodeURI(value), Buffer.from(value).toString('base64')]) this.values.add(form);
   }
   text(value: string): string {
     for (const secret of [...this.values].sort((a, b) => b.length - a.length)) value = value.replaceAll(secret, '[REDACTED]');
@@ -23,7 +23,7 @@ function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-export async function vendorRequest(profile: Profile, path: string, body: string, token: string | undefined,
+export async function vendorRequest(profile: Profile, path: string, body: string | Buffer, token: string | undefined,
   headers: Record<string, string>, limits: { bytes: number; elapsedMs: number }) {
   const origin = new URL(profile.origin);
   const ca = profile.caFile ? await new PrivateFiles().read(profile.caFile, false) : undefined;
