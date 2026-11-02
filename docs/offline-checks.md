@@ -12,6 +12,9 @@ Status and session fixtures follow the vendor top-level JSON response shapes.
 Run the admin matrix alone with `npm run check:journey -- --task B5.admin-accounts --paths native --offline`; its individual plan IDs are defined in [admin-accounts-journey.mjs](../scripts/admin-accounts-journey.mjs).
 Every B5 identity, user and admin account task also accepts its individual plan ID through `check:journey -- --task <id> --paths native --offline`.
 The B5 protected-result journey repeats the restore secrets and custody-denial checks.
+`npm test` also includes `npm run test:cluster`, which selects `B5.03` for the cluster routing and lifecycle matrix, including the protected configuration transfer read.
+Run an individual lifecycle task with `npm run check:journey -- --task B5.OP-119 --paths native --offline`, replacing `119` with an ID from [cluster-journey.mjs](../scripts/cluster-journey.mjs).
+These cluster journeys use synthetic HTTPS boundaries and accept only the native path; hosted write proof remains a separate release-candidate check.
 
 ```sh
 npm test

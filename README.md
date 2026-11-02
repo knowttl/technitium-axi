@@ -125,6 +125,7 @@ Omitted timers remain unchanged.
 
 Successful lifecycle output verifies only the selected node's topology.
 Notify and resync acknowledge scheduled synchronization; they do not prove every zone has synchronized.
+After a lost response, notify and resync cannot be reconciled from topology alone and remain `OUTCOME_UNKNOWN`.
 Graceful remove asks the secondary to leave; delete-secondary removes primary membership without resetting that secondary.
 Forced leave, delete and promotion can leave remote configuration behind, which requires separate reads through explicitly trusted profiles.
 Changed listeners, URLs and certificates never cause automatic credential forwarding to a new origin.
@@ -222,7 +223,7 @@ technitium-axi zone record add --profile automation --input-file /absolute/path/
 ```
 
 A preview resolves credentials, operation SecretRefs and uploads locally.
-Only the [SSO preflight](#writes) sends vendor reads during preview; previews never dispatch mutations.
+Cluster lifecycle and SSO previews perform the preflight reads described above; previews never dispatch mutations.
 It reports permission, target and upload metadata without secret values.
 Each preview issues a fresh invocation ID within its digest, bound to the selected profile, target and input contents.
 Bearer-authenticated writes also bind the selected credential; explicit identity acquisition uses a private local acquisition key.
@@ -231,7 +232,7 @@ A new preview permits a later legitimate operation with identical content.
 
 Journal entries default to `$XDG_STATE_HOME/technitium-axi/writes.log.d/<digest>.json`, or `~/.local/state/technitium-axi/writes.log.d/<digest>.json` when no absolute XDG state directory is set.
 Set `TECHNITIUM_AXI_WRITE_LOG` to an absolute base path to use `<base-path>.d/<digest>.json` instead.
-The journal stores operation identity, state and keyed hashes, without parameter or secret values.
+The journal stores operation identity, state and keyed hashes, plus the preflight topology for cluster lifecycle reconciliation; it never stores secrets.
 Failure to persist an intent prevents dispatch.
 Dispatched mutations never retry automatically; a failed response or unproven postcondition returns `OUTCOME_UNKNOWN` and an audit ID.
 Never replay an uncertain write or create a new preview to bypass its journal entry.
@@ -246,7 +247,8 @@ Update-security-policy baselines accept getter rows or the setter string represe
 These operations verify selected fields after dispatch, including renamed group and scope targets.
 The vendor has no atomic conditional setter, so maintain a single-writer window between the final read and write.
 For these operations, use `--reconcile <audit-id> --confirm '<original-preview.digest>'` with the original input and profile to prove the postcondition without resending the mutation.
-Other operations, except resync as described below, require manual inspection of the exact selected target when their outcome is uncertain.
+For cluster lifecycle reconciliation, see the cluster guidance above.
+Other operations, except zone resync as described below, require manual inspection of the exact selected target when their outcome is uncertain.
 Baseline checks, verification and reconciliation account for vendor member ordering and case, TSIG name sets, catalog names, enum case, IPv6 formatting, ACL network prefixes and merged update-policy rows.
 TSIG names, catalog names and update-policy keys and domains compare case-insensitively after trimming leading and trailing dots; other ASCII characters and numeric labels remain literal, so `key/a` differs from `key/b` and `127.1` differs from `127.0.0.1`.
 Permission replacements use arrays of getter-shaped rows: `userPermissions` rows contain `username`, `canView`, `canModify` and `canDelete`; `groupPermissions` rows use `name` instead of `username`.
