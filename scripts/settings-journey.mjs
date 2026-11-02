@@ -108,6 +108,88 @@ export async function settingsJourney({ task, directory, env, run, executable, v
     await execute('settings set', { parameters: { maxLogFileDays: 0, webServiceHttpUnixSocket: '' }, baseline: { maxLogFileDays: 365, webServiceHttpUnixSocket: 'dns.sock' } });
     assert.equal(state.maxLogFileDays, 0);
     assert.equal(state.webServiceHttpUnixSocket, '');
+    const settingsResponder = vendors.responders.get('/api/settings/set');
+    vendors.responders.set('/api/settings/set', (incoming, bytes) => {
+      const json = incoming.headers['content-type'] === 'application/json';
+      const data = json ? JSON.parse(bytes.toString()) : Object.fromEntries(new URLSearchParams(bytes.toString()));
+      writes++;
+      for (const [key, raw] of Object.entries(data)) {
+        let value = raw;
+        if (['dnsServerLocalEndPoints', 'webServiceLocalAddresses', 'proxyBypass', 'forwarders'].includes(key)) value = json ? raw : raw === '' ? [] : raw.split(',');
+        if (key === 'proxyPort' && !json) value = Number(raw);
+        if (key === 'dnsServerDomain') value = value.replace(/\.+$/, '');
+        if (key === 'dnsServerLocalEndPoints' && value.length === 0) value = ['0.0.0.0:53', '[::]:53'];
+        if (key === 'webServiceLocalAddresses' && value.length === 0) value = ['0.0.0.0', '[::]'];
+        if (key === 'webServiceRealIpHeader' && value === '') value = 'X-Real-IP';
+        if (key === 'webServiceCspFrameAncestorsHeader' && value === '') value = "'none'";
+        if (key === 'forwarderProtocol' && value === 'HttpsJson') value = 'Https';
+        if (key.startsWith('proxy')) {
+          state.proxy ??= {};
+          state.proxy[key.slice(5).toLowerCase()] = value;
+        } else state[key] = value;
+      }
+      for (const prefix of ['webServiceTlsCertificate', 'dnsTlsCertificate']) {
+        state[`${prefix}Password`] = state[`${prefix}Path`] ? '************' : null;
+      }
+      if (state.proxy && !state.proxy.username) {
+        delete state.proxy.username;
+        delete state.proxy.password;
+      }
+      if (drop) { incoming.socket.destroy(); return {}; }
+      return { body: { status: 'ok', response: state } };
+    });
+    const normalizedInput = {
+      parameters: { dnsServerDomain: 'new.example.test.', dnsServerLocalEndPoints: [], webServiceLocalAddresses: [],
+        webServiceRealIpHeader: '', webServiceCspFrameAncestorsHeader: '', forwarderProtocol: 'HttpsJson' },
+      baseline: { dnsServerDomain: 'old.example.test', dnsServerLocalEndPoints: ['192.0.2.1:53'], webServiceLocalAddresses: ['192.0.2.1'],
+        webServiceRealIpHeader: 'Custom-IP', webServiceCspFrameAncestorsHeader: "'self'", forwarderProtocol: 'Tls' },
+    };
+    const normalizedExpected = { dnsServerDomain: 'new.example.test', dnsServerLocalEndPoints: ['0.0.0.0:53', '[::]:53'],
+      webServiceLocalAddresses: ['0.0.0.0', '[::]'], webServiceRealIpHeader: 'X-Real-IP', webServiceCspFrameAncestorsHeader: "'none'", forwarderProtocol: 'Https' };
+    for (const encoding of ['form', 'json']) {
+      for (const prefix of ['webServiceTlsCertificate', 'dnsTlsCertificate']) {
+        for (const password of ['OPERATION_SECRET', 'EMPTY_SECRET']) {
+          state = { ...initial(), [`${prefix}Path`]: null, [`${prefix}Password`]: null };
+          await execute('settings set', { parameters: { [`${prefix}Path`]: 'first.pfx', [`${prefix}Password`]: { env: password } },
+            baseline: { [`${prefix}Path`]: '', [`${prefix}Password`]: { env: 'EMPTY_SECRET' } }, encoding }, { EMPTY_SECRET: '' });
+          assert.equal(state[`${prefix}Path`], 'first.pfx');
+          assert.equal(state[`${prefix}Password`], '************');
+        }
+        state = initial();
+        await execute('settings set', { parameters: { [`${prefix}Password`]: { env: 'EMPTY_SECRET' } },
+          baseline: { [`${prefix}Password`]: { env: 'OPERATION_SECRET' } }, encoding }, { EMPTY_SECRET: '' });
+        assert.equal(state[`${prefix}Path`], prefix === 'webServiceTlsCertificate' ? 'web.pfx' : 'dns.pfx');
+        assert.equal(state[`${prefix}Password`], '************');
+        await execute('settings set', { parameters: { [`${prefix}Path`]: '', [`${prefix}Password`]: { env: 'EMPTY_SECRET' } },
+          baseline: { [`${prefix}Path`]: state[`${prefix}Path`], [`${prefix}Password`]: { env: 'OPERATION_SECRET' } }, encoding }, { EMPTY_SECRET: '' });
+        assert.equal(state[`${prefix}Password`], null);
+      }
+      state = { ...initial(), proxy: null };
+      await execute('settings set', { parameters: { proxyType: 'Http', proxyAddress: 'new.proxy.test', proxyPort: 8080 },
+        baseline: { proxyType: 'None', proxyAddress: '', proxyPort: 0 }, encoding });
+      assert.deepEqual(state.proxy, { type: 'Http', address: 'new.proxy.test', port: 8080, bypass: [] });
+      await execute('settings set', { parameters: { proxyUsername: 'operator' }, baseline: { proxyUsername: '' }, encoding });
+      assert.deepEqual(state.proxy, { type: 'Http', address: 'new.proxy.test', port: 8080, bypass: [], username: 'operator', password: '' });
+      await execute('settings set', { parameters: { proxyPassword: { env: 'OPERATION_SECRET' } },
+        baseline: { proxyPassword: { env: 'EMPTY_SECRET' } }, encoding }, { EMPTY_SECRET: '' });
+      assert.deepEqual(state.proxy, { type: 'Http', address: 'new.proxy.test', port: 8080, bypass: [], username: 'operator', password: secret });
+      state = { ...initial(), ...normalizedInput.baseline };
+      await execute('settings set', { ...normalizedInput, encoding });
+      assert.deepEqual(state, { ...initial(), ...normalizedExpected });
+      state = { ...initial(), ...normalizedInput.baseline };
+      drop = true;
+      const preview = await success('settings set', { ...normalizedInput, encoding });
+      const lost = await failure('OUTCOME_UNKNOWN', 'settings set', { ...normalizedInput, encoding }, ['--execute', '--confirm', preview.preview.digest]);
+      const afterLost = writes;
+      await failure('CONFLICT', 'settings set', { ...normalizedInput, encoding }, ['--execute', '--confirm', preview.preview.digest]);
+      assert.equal(writes, afterLost, 'Normalized uncertain writes are never replayed');
+      drop = false;
+      const auditId = lost.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
+      await success('settings set', { ...normalizedInput, encoding }, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+      assert.equal(writes, afterLost, 'Reconciliation only reads vendor state');
+      assert.deepEqual(state, { ...initial(), ...normalizedExpected });
+    }
+    vendors.responders.set('/api/settings/set', settingsResponder);
     await failure('USAGE', 'settings set', { parameters: { enableBlocking: null }, baseline: { enableBlocking: true } });
     await failure('USAGE', 'settings set', { parameters: { proxyPassword: '[REDACTED]' }, baseline: { proxyPassword: { env: 'OPERATION_SECRET' } } });
     state = initial();

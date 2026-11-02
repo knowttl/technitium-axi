@@ -85,7 +85,8 @@ Write commands use the flags listed in their `--help`, rather than the read proj
 
 `settings set` accepts all fields listed in the inventory's configuration map, including modern fields and the `preferIPv6` and `reverseProxyNetworkACL` compatibility inputs.
 Supply a `baseline` with exactly the selected fields from a fresh protected settings read.
-Omitted fields are preserved; arrays replace collections and `[]` clears them.
+Omitted fields are preserved; arrays replace collections.
+An empty array clears collections except `dnsServerLocalEndPoints` and `webServiceLocalAddresses`, which reset to wildcard listeners.
 To append, include the existing collection plus the new entries and retain the original collection in the baseline.
 The optional input `encoding` selects `form` (default) or `json`; `--json` controls output only.
 Structured QPM rows contain `prefix`, `udpLimit` and `tcpLimit`.
