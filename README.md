@@ -98,6 +98,7 @@ Password changes use `pass` and `newPass` SecretRefs; `totp` is also a SecretRef
 
 `admin sso user create` and `admin sso user set` require an initialized secondary profile.
 Preview and execution read the same selected caller's session with `includeInfo=true` and require exactly `info.permissions.Administration.canModify: true` before dispatch.
+The cluster-state preflight also requires Administration View on the selected secondary.
 The preview names the requested secondary, effective primary and caller.
 The vendor proxy supplies its cluster identity; the tool never acquires that identity.
 Direct primary calls, missing or malformed permissions, and single-use credentials fail before SSO mutation.
@@ -187,7 +188,8 @@ technitium-axi zone record add --profile automation --input-file /absolute/path/
 technitium-axi zone record add --profile automation --input-file /absolute/path/add.json --execute --confirm '<preview.digest>'
 ```
 
-A preview resolves credentials, operation SecretRefs and uploads locally but sends no vendor request.
+A preview resolves credentials, operation SecretRefs and uploads locally.
+Only the [SSO preflight](#writes) sends vendor reads during preview; previews never dispatch mutations.
 It reports permission, target and upload metadata without secret values.
 Each preview issues a fresh invocation ID within its digest, bound to the selected credential, target and input contents.
 An executed mutation creates an exclusive durable intent before dispatch and retains its receipt; if that confirmation reaches journal creation again, it is refused with `REPLAY_DENIED`.
