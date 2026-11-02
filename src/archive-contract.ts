@@ -30,6 +30,7 @@ export const archiveContract = {
 
 export function validateUploadArchive(bytes: Buffer): void {
   const invalid = (): never => { throw new ToolError('UPLOAD_INVALID', 'Upload must be a bounded ZIP with safe relative entry names and no links', 'Select a valid app package or settings backup'); };
+  if (bytes.length < 22) invalid();
   let end = bytes.length - 22;
   const minimum = Math.max(0, end - 65535);
   while (end >= minimum && bytes.readUInt32LE(end) !== 0x06054b50) end--;
