@@ -122,7 +122,6 @@ function baselineValue(key: string, value: unknown): unknown {
   }
   if (['blockListUrls', 'forwarders'].includes(key) && value === null) return [];
   if (key === 'dnsServerDomain' && typeof value === 'string') return value.replace(/\.+$/, '').toLowerCase();
-  if (key === 'defaultResponsiblePerson' && typeof value === 'string') return (/<(.+)>\s*$/.exec(value)?.[1] ?? value).trim();
   if (Array.isArray(value) && value.length === 0) {
     if (key === 'dnsServerLocalEndPoints') value = ['0.0.0.0:53', '[::]:53'];
     if (key === 'webServiceLocalAddresses') value = ['0.0.0.0', '[::]'];
@@ -245,6 +244,11 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
   if (!object(input) || !object(input.parameters) || Object.keys(input).some(key => !['parameters', 'baseline', 'upload', 'encoding'].includes(key))) usage('Input requires parameters and optional baseline or upload');
   if (input.encoding !== undefined && (contract.id !== 'OP-080' || !['form', 'json'].includes(String(input.encoding)))) usage('Only settings set supports form or json encoding');
   const parameters = input.parameters;
+  if (contract.id === 'OP-080') for (const values of [parameters, input.baseline]) {
+    if (!object(values) || !Object.hasOwn(values, 'defaultResponsiblePerson')) continue;
+    const value = values.defaultResponsiblePerson;
+    if (typeof value !== 'string' || value !== '' && !/^[^\s@()<>\[\]",:;\\]+@[^\s@()<>\[\]",:;\\]+$/.test(value)) usage('defaultResponsiblePerson requires a plain local@domain address without display names, comments or angle brackets, or an empty string to clear it');
+  }
   if (contract.id === 'OP-080') for (const [modern, legacy] of [['ipv6Mode', 'preferIPv6'], ['loggingType', 'enableLogging'], ['dnsReverseProxyNetworkACL', 'reverseProxyNetworkACL']]) {
     if (Object.hasOwn(parameters, modern!) && Object.hasOwn(parameters, legacy!)) usage('Choose the modern setting or its compatibility alias, not both');
   }

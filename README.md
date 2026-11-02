@@ -88,6 +88,8 @@ An empty array clears collections except `dnsServerLocalEndPoints` and `webServi
 To append, include the existing collection plus the new entries and retain the original collection in the baseline.
 The optional input `encoding` selects `form` (default) or `json`; `--json` controls output only.
 Use the inventory's configuration map for field types and structured row columns; its `dhcpFields` map describes DHCP fields without enabling DHCP writes.
+`defaultResponsiblePerson` accepts only a plain `local@domain` address in parameters and baselines, preserving its case; an empty string clears the value.
+Display names, comments and angle brackets are rejected locally before any vendor request; full MailAddress syntax is deferred.
 TSIG shared secrets and proxy and certificate passwords require SecretRefs in both changed values and baselines.
 For an absent certificate or proxy password, use a baseline SecretRef resolving to an empty string; an absent proxy username uses an empty string directly.
 Updating a certificate password requires an existing or selected certificate path.

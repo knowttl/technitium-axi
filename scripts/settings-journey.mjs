@@ -110,7 +110,6 @@ export async function settingsJourney({ task, directory, env, run, executable, v
     assert.equal(state.webServiceHttpUnixSocket, '');
     const normalizationCases = [
       ['dnsServerDomain', 'DNS.EXAMPLE.TEST', 'dns.example.test'],
-      ['defaultResponsiblePerson', 'DNS Admin <admin@example.test>', 'admin@example.test'],
       ['dnsOverHttpRealIpHeader', '', 'X-Real-IP'],
       ['eDnsClientSubnetIpv4Override', '192.0.2.129/24', '192.0.2.0/24'],
       ['eDnsClientSubnetIpv6Override', 'FE80:0:0:0:0:0:0:1%3/128', 'fe80::1%3'],
@@ -178,6 +177,21 @@ export async function settingsJourney({ task, directory, env, run, executable, v
     const normalizedExpected = { dnsServerDomain: 'new.example.test', dnsServerLocalEndPoints: ['0.0.0.0:53', '[::]:53'],
       webServiceLocalAddresses: ['0.0.0.0', '[::]'], webServiceRealIpHeader: 'X-Real-IP', webServiceCspFrameAncestorsHeader: "'none'", forwarderProtocol: 'Https' };
     for (const encoding of ['form', 'json']) {
+      state = { ...initial(), defaultResponsiblePerson: 'old@example.test' };
+      const plainAddressInput = { parameters: { defaultResponsiblePerson: 'Admin@Example.TEST' }, baseline: { defaultResponsiblePerson: 'old@example.test' }, encoding };
+      const plainAddressPreview = await success('settings set', plainAddressInput);
+      for (const value of ['DNS Admin <admin@example.test>', 'admin@example.test (DNS Admin)']) {
+        for (const field of ['parameters', 'baseline']) {
+          const input = { ...plainAddressInput, [field]: { defaultResponsiblePerson: value } };
+          const before = vendors.traces.length;
+          const refused = await failure('USAGE', 'settings set', input);
+          assert.match(refused.error.message, /defaultResponsiblePerson requires a plain local@domain address/);
+          await failure('USAGE', 'settings set', input, ['--execute', '--confirm', plainAddressPreview.preview.digest]);
+          assert.equal(vendors.traces.length, before, 'Unsupported mailbox forms fail before vendor requests');
+        }
+      }
+      await success('settings set', plainAddressInput, ['--execute', '--confirm', plainAddressPreview.preview.digest]);
+      assert.equal(state.defaultResponsiblePerson, 'Admin@Example.TEST');
       for (const prefix of ['webServiceTlsCertificate', 'dnsTlsCertificate']) {
         for (const password of ['OPERATION_SECRET', 'EMPTY_SECRET']) {
           state = { ...initial(), [`${prefix}Path`]: null, [`${prefix}Password`]: null };
