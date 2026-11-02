@@ -353,7 +353,8 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
   }
   if (task === 'B3.02') {
     await configure(['OP-049', 'OP-051', 'OP-052']);
-    for (const row of matrix.rows) {
+    const numericTypes = { A: '1', SOA: '6', TXT: '16', DNAME: '39', ANAME: '65280', FWD: '65281', APP: '65282' };
+    for (const row of matrix.rows.flatMap(row => numericTypes[row.type] ? [row, { ...row, inputType: numericTypes[row.type] }] : [row])) {
       let records = [];
       let related = [];
       const owner = row.updateOnly ? 'example.test' : 'www.example.test';
@@ -363,6 +364,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       const comparison = { name: row.updateOnly ? 'keep.test' : row.singleton ? 'other.example.test' : owner, type: row.type, ttl: 60, rData: siblingData };
       records = [keep, comparison];
       const params = { zone: 'example.test', domain: owner, type: row.type, ttl: 60, ...row.data, ...row.addOptions };
+      const recordInput = parameters => ({ parameters: { ...parameters, type: row.inputType ?? row.type } });
       const dataKeys = Object.keys(row.data);
       const select = p => records.findIndex(record => record.name === p.domain && record.type === p.type &&
         (row.singleton || dataKeys.every(key => String(record.rData[key]) === p[key])));
@@ -413,32 +415,46 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       const first = { name: owner, type: row.type, ttl: 60, rData: row.data };
       if (row.updateOnly) {
         records.push(first);
-        await failure('USAGE', 'zone record add', { parameters: params });
-      } else await execute('zone record add', { parameters: params });
+        await failure('USAGE', 'zone record add', recordInput(params));
+      } else await execute('zone record add', recordInput(params));
       await readback([keep, comparison, first], row.related?.add);
       if (row.singleton && !row.updateOnly) {
-        const duplicate = { parameters: { ...params, overwrite: false } };
+        const duplicate = recordInput({ ...params, overwrite: false });
         await failure('OUTCOME_UNKNOWN', 'zone record add', duplicate, ['--execute', '--confirm', (await success('zone record add', duplicate)).preview.digest]);
         await readback([keep, comparison, first]);
-        await execute('zone record add', { parameters: { ...params, ...row.updated, overwrite: true } });
+        await execute('zone record add', recordInput({ ...params, ...row.updated, overwrite: true }));
         await readback([keep, comparison, { ...first, rData: row.updated }]);
       }
       const update = { ...params, ...row.replacement, ...row.updateOptions, ttl: 0 };
       delete update.overwrite;
       if (row.singleton) for (const key of dataKeys) if (!Object.hasOwn(row.replacement, key)) delete update[key];
-      await execute('zone record update', { parameters: update });
+      await execute('zone record update', recordInput(update));
       const rData = row.updated;
       const updated = { name: update.newDomain ?? owner, type: row.type, ttl: 0, rData };
       await readback([keep, comparison, updated], row.related?.update);
       const remove = { zone: 'example.test', domain: updated.name, type: row.type, ...(row.singleton ? {} : rData) };
-      if (row.updateOnly) await failure('USAGE', 'zone record delete', { parameters: remove });
-      else if (row.pendingDelete) await failure('PREREQUISITE_PENDING', 'zone record delete', { parameters: remove });
-      else {
-        await execute('zone record delete', { parameters: remove });
+      if (row.updateOnly) await failure('USAGE', 'zone record delete', recordInput(remove));
+      else if (row.pendingDelete) {
+        const before = vendors.traces.length;
+        await failure('PREREQUISITE_PENDING', 'zone record delete', recordInput(remove));
+        await failure('PREREQUISITE_PENDING', 'zone record delete', { parameters: { ...remove, type: '39', rdata: '00' } }, ['--execute', '--confirm', 'unused']);
+        await failure('PREREQUISITE_PENDING', 'zone record delete', { parameters: { ...remove, type: '039', rdata: '00' } });
+        assert.equal(vendors.traces.length, before, 'Refused DNAME deletions must not dispatch');
+        await readback([keep, comparison, updated]);
+      } else {
+        await execute('zone record delete', recordInput(remove));
         await readback([keep, comparison], row.related?.update);
       }
       await failure('USAGE', 'zone record add', { parameters: { ...params, unexpected: true } });
     }
+    const before = vendors.traces.length;
+    for (const action of ['add', 'update', 'delete']) {
+      for (const type of ['HINFO', '13', 'RRSIG', '46', 'DNSKEY', '48']) {
+        await failure('USAGE', `zone record ${action}`, { parameters: { zone: 'example.test', domain: 'www.example.test', type, rdata: '00' } });
+      }
+    }
+    await failure('USAGE', 'zone record update', { parameters: { zone: 'example.test', domain: 'www.example.test', type: '6', rdata: '00' } });
+    assert.equal(vendors.traces.length, before, 'Unsupported record paths must not dispatch');
     await failure('USAGE', 'zone record add', { parameters: { ...add.parameters, ipAddress: null } });
     await failure('USAGE', 'zone record add', { parameters: { zone: 'example.test', domain: 'www.example.test', type: 'TXT', text: '', characterStringsBase64: '' } });
   }

@@ -6,7 +6,7 @@ import type { Profile } from './credentials.js';
 import { ToolError } from './errors.js';
 import { PrivateFiles } from './private-file.js';
 import { checkStatus, Redactor, vendorRequest } from './vendor.js';
-import { recordFamilies } from './write-contracts.js';
+import { recordFamilies, recordTypeNames } from './write-contracts.js';
 import type { WriteContract } from './write-contracts.js';
 
 const files = new PrivateFiles();
@@ -59,10 +59,13 @@ function validateValue(key: string, value: unknown): void {
 }
 
 function validateRecord(contract: WriteContract, parameters: Record<string, unknown>): void {
-  const type = parameters.type;
-  if (typeof type !== 'string') usage('Record type must be a name or decimal number');
-  const numeric = /^\d+$/.test(type) && Number(type) > 0 && Number(type) <= 65535;
-  const family = recordFamilies[type] ?? (numeric ? recordFamilies.raw : undefined);
+  const suppliedType = parameters.type;
+  if (typeof suppliedType !== 'string') usage('Record type must be a name or decimal number');
+  const numeric = /^\d+$/.test(suppliedType) && Number(suppliedType) > 0 && Number(suppliedType) <= 65535;
+  const knownType = numeric ? recordTypeNames[Number(suppliedType)] : undefined;
+  const type = knownType ?? suppliedType;
+  parameters.type = type;
+  const family = recordFamilies[type] ?? (numeric && !knownType ? recordFamilies.raw : undefined);
   if (!family) usage('Unsupported record type; generated DNSSEC records use lifecycle operations');
   const action = contract.id;
   if (type === 'SOA' && action !== 'OP-051') usage('SOA records use apex update or zone lifecycle operations');
