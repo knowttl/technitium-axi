@@ -181,3 +181,22 @@ npm run check:journey -- --task B1.OP-006 --paths native,artium --offline --oper
 
 Linux atomic-write checks interrupt the actual packaged process at libc temporary-file creation, fsync and replacement boundaries and verify the prior config bytes survive.
 Native Windows ACL and interruption checks are deferred and reported as PENDING in platform evidence; passing Linux journeys do not establish Windows conformance.
+
+The B6 catalogue audit runs with `npm run check:journey -- --task B6.01 --paths native --offline`.
+Its independent [source inventory](../tests/fixtures/source-inventory.json) pins the reviewed vendor revision and reconciles 143 operations, 144 capabilities, 145 API routes and 287 method/path combinations.
+It checks both handler aliases and the 79 obsolete documentation spellings, preserving `/sso/login` and conditional `/sso/callback` as browser authentication routes rather than CLI commands.
+No browser is launched.
+Every operation must appear in packaged discovery, expose matching public help, reconcile its source parameters and reach its canonical vendor route through an existing executable outcome journey.
+Those journeys retain their exact wire, readback and failure assertions, including OP-040 conversion boundaries.
+The report distinguishes parameter declaration reconciliation from certification of every semantic branch.
+Login fixes `includeInfo=true` for credential acquisition; zone creation uses `zone` and rejects the compatibility spelling `domain`; bearer tokens remain profile-bound.
+These dispositions are reported explicitly rather than silently dropping source parameters.
+
+The audit verifies installed bytes against hashes captured from the package inputs before installation.
+It proves refusal after tampering with the shipped inventory, credential schema, executable and package manifest, then restores and rechecks those bytes before executing the package.
+Generated contract freshness is checked before packing can regenerate files.
+Each outcome journey gets its own private home, credential state and loopback HTTPS vendors inside the network namespace.
+The native report does not establish hosted admission, current stable source review, live commissioning or Windows conformance.
+Hosted outcomes remain assigned to the separate release-candidate check.
+The DNAME deletion prerequisite remains an explicitly excluded gap linked to [issue #18](https://github.com/knowttl/technitium-axi/issues/18): shipped library mapping and independent deletion review are unavailable.
+Passing rejection diagnostics do not complete that mutation, and the report keeps `fullManagementComplete` false.
