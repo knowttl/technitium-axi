@@ -1,6 +1,6 @@
 # Offline package journeys
 
-The B1 through B5 package, credential, read and write checks run the installed npm tarball, never a TypeScript loader.
+The B1 through B6 package, credential, read, write and catalogue checks run the installed npm tarball, never a TypeScript loader.
 They require Linux with user, PID, mount and network namespaces, iproute2, OpenSSL and a C compiler for process-interruption checks.
 The namespace enables only loopback and contains the CLI, server, adapter and subprocesses.
 Follow the [README setup](../README.md) to fetch the pinned npm dependencies once, then keep all journeys offline.
@@ -181,3 +181,23 @@ npm run check:journey -- --task B1.OP-006 --paths native,artium --offline --oper
 
 Linux atomic-write checks interrupt the actual packaged process at libc temporary-file creation, fsync and replacement boundaries and verify the prior config bytes survive.
 Native Windows ACL and interruption checks are deferred and reported as PENDING in platform evidence; passing Linux journeys do not establish Windows conformance.
+
+The B6 catalogue audit runs with `npm run check:journey -- --task B6.01 --paths native --offline` and is included in `npm test`.
+It accepts only the native path; selecting `artium` is rejected.
+Its independent [source inventory](../tests/fixtures/source-inventory.json) owns the reviewed vendor revision, operations, capabilities, API routes and accepted methods.
+The audit reconciles those declarations, handler aliases and obsolete documentation spellings; browser authentication routes remain separate from CLI commands.
+No browser is launched.
+Every operation must appear in packaged discovery, expose matching public help, reconcile its source parameters and reach its canonical vendor route through an existing executable outcome journey.
+Those journeys retain their exact wire, readback and failure assertions, including OP-040 conversion boundaries.
+The report distinguishes parameter declaration reconciliation from certification of every semantic branch.
+Source parameters handled at the credential or command boundary have explicit dispositions in [the audit implementation](../scripts/closure-journey.mjs).
+These dispositions are included in the report rather than silently dropping source parameters.
+
+The audit verifies installed bytes against hashes captured from the package inputs before installation.
+It proves refusal after tampering with the shipped inventory, credential schema, executable and package manifest, then restores and rechecks those bytes before executing the package.
+Generated contract freshness is checked before packing can regenerate files.
+Each outcome journey gets its own private home, credential state and loopback HTTPS vendors inside the network namespace.
+The native report does not establish hosted admission, current stable source review, live commissioning or Windows conformance.
+Hosted outcomes remain assigned to the separate release-candidate check.
+The report explicitly excludes the [DNAME deletion deferral](../README.md#writes).
+Passing rejection diagnostics do not complete that mutation, and the report keeps `fullManagementComplete` false.
