@@ -233,7 +233,7 @@ technitium-axi zone record add --profile automation --input-file /absolute/path/
 ```
 
 A preview resolves credentials, operation SecretRefs and uploads locally.
-Cluster lifecycle and SSO previews perform the preflight reads described above; previews never dispatch mutations.
+Cluster lifecycle and SSO user create/set previews perform the preflight reads described above; previews never dispatch mutations.
 It reports permission, target and upload metadata without secret values.
 Each preview issues a fresh invocation ID within its digest, bound to the selected profile, target and input contents.
 Bearer-authenticated writes also bind the selected credential; explicit identity acquisition uses a private local acquisition key.
