@@ -161,7 +161,8 @@ The harness verifies exact executable paths before normalizing their prefixes in
 Public request traces retain method, path, safe header metadata, input hash and synthetic caller identity.
 They omit authorization values and request bodies.
 Save reports outside the repository when retaining local evidence.
-Owned server processes, disposable keys, database, sessions and temporary installations are removed after the run.
+The HTTPS fixture loads a checked-in, test-only localhost key and certificate and writes a temporary CA certificate copy for clients.
+Owned server processes, temporary CA certificate copies, database, sessions and temporary installations are removed after the run.
 
 Credential tasks are B1.03, B1.04 and B1.CR-001, B1.CR-002, B1.CR-003, B1.CR-004, B1.CR-005, B1.CR-008, B1.CR-011 and B1.CR-012.
 Each uses the same selector form as the package tasks.
