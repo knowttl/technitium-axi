@@ -1,10 +1,26 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { mkdtemp, readdir, rm, watch } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
+import { fakeVendors } from '../scripts/vendor-fixture.mjs';
+
+test('HTTPS fixture remains valid across a backward clock adjustment (issue #57)', async () => {
+  const temporary = await mkdtemp(join(tmpdir(), 'technitium-certificate-'));
+  const verificationTime = Math.floor(Date.now() / 1000) - 5;
+  let vendors;
+  try {
+    vendors = await fakeVendors(temporary);
+    const result = spawnSync('openssl', ['verify', '-attime', String(verificationTime),
+      '-CAfile', vendors.caFile, vendors.caFile], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+  } finally {
+    await vendors?.close();
+    await rm(temporary, { recursive: true, force: true });
+  }
+});
 
 const runner = fileURLToPath(new URL('../scripts/journey.mjs', import.meta.url));
 function start(args, env = process.env) {
