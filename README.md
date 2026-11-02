@@ -136,6 +136,10 @@ The upload is read before preview or dispatch, bound into the confirmation by it
 Operation secret fields (including PEM keys, FWD proxy passwords and LDAP bind passwords) accept only `{"env":"VARIABLE"}` or `{"file":"/absolute/path/secret"}` references, not stored references or inline values.
 Resolved operation secrets are limited to 1 MiB and are not trimmed.
 
+DNSSEC write parameters accept integer `iterations` from 0 to 50, `saltLength` from 0 to 32 bytes, `keyTag` from 0 to 65535, and `rolloverDays` or `zskRolloverDays` from 0 to 365, where supported by the operation.
+DNSSEC writes report success when the vendor accepts the request, without waiting for key lifecycle progress or verifying the resulting zone state.
+Inspect `zone dnssec properties get`, `zone record get` and, for delegation data, `zone dnssec view-ds` to check the selected zone afterward.
+
 Record selectors and replacement fields depend on both family and action; use the inventory's `recordFamilies` instead of copying a read projection.
 Known decimal record types are normalized to names before validation; raw `rdata` selectors apply only to genuinely unknown numeric types.
 SOA uses apex update, while generated DNSSEC records use lifecycle operations.
