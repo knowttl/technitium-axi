@@ -213,7 +213,7 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
     assert.equal(reconciled.status, 'reconciled');
     assert.equal(reconciled.auditId, auditId);
     assert.equal(dispatches, 2);
-    for (const [zone, other] of [['127.1', '127.0.0.1'], ['127.0.0.1', '127.1']]) {
+    for (const [zone, other] of [['127.1', '127.0.0.1'], ['127.0.0.1', '127.1'], ['key/a.test', 'key/b.test'], ['key/b.test', 'key/a.test']]) {
       let serial = 10, otherSerial = 100, writes = 0;
       vendors.responders.set('/api/zones/records/get', (_incoming, bytes) => {
         assert.equal(parameters(bytes).zone, zone);
@@ -231,9 +231,11 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
       assert.equal(writes, 1);
     }
     let serial = 10;
-    vendors.responders.set('/api/zones/records/get', () => ok({ records: [record('xn--bcher-kva.test', 'SOA', { serial })] }));
     vendors.responders.set('/api/zones/resync', () => { serial++; return ok(); });
-    await execute('zone resync', { parameters: { zone: 'BÜCHER.test.' } });
+    for (const [zone, name] of [['BÜCHER.test.', 'xn--bcher-kva.test'], ['key/a.BÜCHER.test.', 'key/a.xn--bcher-kva.test'], ['１２７.１', '127.1']]) {
+      vendors.responders.set('/api/zones/records/get', () => ok({ records: [record(name, 'SOA', { serial })] }));
+      await execute('zone resync', { parameters: { zone } });
+    }
     vendors.responders.set('/api/zones/records/get', (_incoming, bytes) => ok({ records: zones.get(parameters(bytes).zone).records }));
   }
   if (id === 'OP-032' || id === 'OP-034') {
@@ -313,14 +315,16 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
   if (id === 'OP-032') {
     const command = 'zone options set';
     const zone = '1';
+    const identifiers = [['key/a', 'key/b'], ['key/b', 'key/a'], ['127.1', '127.0.0.1'], ['127.0.0.1', '127.1']];
     const cases = [
       ['zoneTransferTsigKeyNames', name => [name], name => [name]],
       ['primaryZoneTransferTsigKeyName', name => name, name => name],
       ['catalog', name => name, name => name],
       ['updateSecurityPolicies', name => `${name}|host.1|A`, name => [{ tsigKeyName: name, domain: 'host.1', allowedTypes: ['A'] }]],
-      ['updateSecurityPolicies', name => `key|${name}|A`, name => [{ tsigKeyName: 'key', domain: name, allowedTypes: ['A'] }]],
+      ['updateSecurityPolicies', name => `key|${name}|A`, name => [{ tsigKeyName: 'key', domain: name, allowedTypes: ['A'] }],
+        [['key/a.1', 'key/b.1'], ['key/b.1', 'key/a.1'], ['127.1', '127.0.0.1'], ['127.0.0.1', '127.1']]],
     ];
-    for (const [field, inputValue, responseValue] of cases) for (const [before, after] of [['127.1', '127.0.0.1'], ['127.0.0.1', '127.1']]) {
+    for (const [field, inputValue, responseValue, names = identifiers] of cases) for (const [before, after] of names) {
       let writes = 0;
       let observed = before;
       let drop = false;
@@ -336,7 +340,7 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
         const preview = await success(command, input);
         observed = after;
         await failure('CONFLICT', command, input, ['--execute', '--confirm', preview.preview.digest]);
-        assert.equal(writes, 0, 'Numeric DNS names cannot bypass a stale baseline');
+        assert.equal(writes, 0, 'Distinct identifiers cannot bypass a stale baseline');
         observed = before;
       }
       const input = { parameters: { zone, [field]: inputValue(after) }, baseline: { [field]: responseValue(before) } };
@@ -358,6 +362,25 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
       await success(command, input, ['--confirm', droppedPreview.preview.digest, '--reconcile', droppedAuditId]);
       assert.equal(writes, 2, 'Reconciliation never dispatches another setter');
     }
+    const before = ['KEY/A.', 'key/b', 'KEY?A', 'key#b', 'key%61', 'key@b', 'key:a', 'key\\b', 'bücher'];
+    const after = ['key/a', 'key/b', 'key?a', 'key#b', 'key%61', 'key@b', 'key:a', 'key\\b', 'bücher'];
+    let state = after;
+    let writes = 0;
+    vendors.responders.set('/api/zones/options/get', () => ok({ zoneTransferTsigKeyNames: state }));
+    vendors.responders.set('/api/zones/options/set', (_incoming, bytes) => {
+      assert.deepEqual(parameters(bytes), { zone, zoneTransferTsigKeyNames: before.join(',') });
+      state = after;
+      writes++;
+      return ok();
+    });
+    const input = { parameters: { zone, zoneTransferTsigKeyNames: before }, baseline: { zoneTransferTsigKeyNames: before } };
+    const preview = await success(command, input);
+    state = [...after.slice(0, -1), 'xn--bcher-kva'];
+    await failure('CONFLICT', command, input, ['--execute', '--confirm', preview.preview.digest]);
+    assert.equal(writes, 0);
+    state = after;
+    await success(command, input, ['--execute', '--confirm', preview.preview.digest]);
+    assert.equal(writes, 1);
   }
   assert.deepEqual(zones.get('keep.test'), keep, 'Other zones remain unchanged');
   assert.deepEqual(await records('keep.test'), keep.records);

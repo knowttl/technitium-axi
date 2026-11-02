@@ -2,7 +2,7 @@ import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 import { isIP } from 'node:net';
-import { domainToASCII } from 'node:url';
+import { toASCII } from 'tr46';
 import { readOnly } from './credentials.js';
 import type { Profile } from './credentials.js';
 import { ToolError } from './errors.js';
@@ -23,7 +23,15 @@ function canonical(value: unknown): string {
 const booleans = new Set('overwrite overwriteZone overwriteSoaSerial disabled disable ptr createPtrZone updateSvcbHints autoIpv4Hint autoIpv6Hint dnssecValidation useSerialDateScheme useSoaSerialDateScheme validateZone initializeForwarder overrideCatalogQueryAccess overrideCatalogZoneTransfer overrideCatalogNotify import dnssec ldapIgnoreSslErrors splitText newSplitText'.split(' '));
 const integers = new Set('ttl expiryTtl preference newPreference priority newPriority weight newWeight port newPort naptrOrder naptrPreference naptrNewOrder naptrNewPreference keyTag newKeyTag digestType newDigestType sshfpAlgorithm newSshfpAlgorithm sshfpFingerprintType newSshfpFingerprintType tlsaCertificateUsage newTlsaCertificateUsage tlsaSelector newTlsaSelector tlsaMatchingType newTlsaMatchingType svcPriority newSvcPriority uriPriority newUriPriority uriWeight newUriWeight flags newFlags serial refresh retry expire minimum proxyPort forwarderPriority ldapPort kskKeySize zskKeySize keySize dnsKeyTtl zskRolloverDays rolloverDays iterations saltLength'.split(' '));
 const lists = new Set('zones primaryNameServerAddresses queryAccessNetworkACL zoneTransferNetworkACL zoneTransferTsigKeyNames notifyNameServers notifySecondaryCatalogsNameServers updateNetworkACL blockListUrls forwarders proxyBypass members glue'.split(' '));
-const domainName = (value: string) => domainToASCII(`${value.replace(/^\.+|\.+$/g, '')}.invalid`).slice(0, -8).toLowerCase();
+const literalName = (value: string) => value.replace(/^\.+|\.+$/g, '').toLowerCase();
+
+function domainName(value: string): string {
+  const name = literalName(value);
+  if (!/[^\x00-\x7f]/.test(name)) return name;
+  const ascii = toASCII(name, { checkBidi: true, checkJoiners: true });
+  if (!ascii) usage('Invalid internationalized zone name');
+  return ascii;
+}
 
 function permissionRows(key: string, value: unknown): Record<string, unknown>[] {
   const name = key === 'userPermissions' ? 'username' : 'name';
@@ -76,14 +84,14 @@ function baselineValue(key: string, value: unknown): unknown {
       .sort((a, b) => String(a[name]).localeCompare(String(b[name])));
   }
   if (['members', 'zoneTransferTsigKeyNames'].includes(key) && Array.isArray(value)) {
-    return [...new Set(value.map(item => key === 'members' ? String(item).toLowerCase() : domainName(String(item))))].sort();
+    return [...new Set(value.map(item => key === 'members' ? String(item).toLowerCase() : literalName(String(item))))].sort();
   }
   if (['notifyNameServers', 'notifySecondaryCatalogsNameServers', 'queryAccessNetworkACL', 'zoneTransferNetworkACL', 'updateNetworkACL'].includes(key) && Array.isArray(value)) {
     return value.map(item => key.endsWith('NetworkACL') ? network(String(item)) : address(String(item)));
   }
   if (['blockListUrls', 'forwarders'].includes(key) && value === null) return [];
   if (['catalog', 'primaryZoneTransferTsigKeyName'].includes(key) && value === null) return '';
-  if (['catalog', 'primaryZoneTransferTsigKeyName'].includes(key) && typeof value === 'string') return domainName(value);
+  if (['catalog', 'primaryZoneTransferTsigKeyName'].includes(key) && typeof value === 'string') return literalName(value);
   if (['primaryZoneTransferProtocol', 'queryAccess', 'zoneTransfer', 'notify', 'update'].includes(key) && typeof value === 'string') return value.toLowerCase();
   if (key === 'updateSecurityPolicies') {
     let policies: string[] | undefined;
@@ -98,7 +106,7 @@ function baselineValue(key: string, value: unknown): unknown {
       if (policies.length % 3 !== 0) usage('Update security policies require key, domain and allowed types');
       const rows = new Map<string, string[]>();
       for (let i = 0; i < policies.length; i += 3) {
-        const key = `${domainName(policies[i]!)}|${domainName(policies[i + 1]!)}`;
+        const key = `${literalName(policies[i]!)}|${literalName(policies[i + 1]!)}`;
         rows.set(key, [...rows.get(key) ?? [], ...policies[i + 2]!.split(/[, ]+/).filter(Boolean).map(type => type.toUpperCase())]);
       }
       return [...rows].map(([key, types]) => `${key}|${types.sort().join(',')}`).sort().join('|');

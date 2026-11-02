@@ -21,6 +21,6 @@
     "test:zones": "node --test tests/zone-writes.test.mjs",
     "prepack": "npm run build && npm run check:generated"
   },
-  "dependencies": { "@toon-format/toon": "2.3.1", "ajv": "8.17.1" },
-  "devDependencies": { "@types/node": "24.10.0", "typescript": "5.9.3" }
+  "dependencies": { "@toon-format/toon": "2.3.1", "ajv": "8.17.1", "tr46": "6.0.0" },
+  "devDependencies": { "@types/node": "24.10.0", "@types/tr46": "5.0.1", "typescript": "5.9.3" }
 }
