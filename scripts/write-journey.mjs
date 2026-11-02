@@ -3,6 +3,7 @@ import { chmod, mkdir, readFile, readdir, symlink, writeFile } from 'node:fs/pro
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import matrix from '../tests/fixtures/record-inputs.json' with { type: 'json' };
+import { serverRecords } from './record-shapes.ts';
 import { dnssecJourney, dnssecTasks } from './dnssec-journey.mjs';
 import { listsCacheJourney, listsCacheTasks } from './lists-cache-journey.mjs';
 import { zoneJourney, zoneTasks } from './zone-journey.mjs';
@@ -107,7 +108,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     const data = Object.fromEntries(new URLSearchParams(bytes.toString()));
     sent.push(data);
     if (fault === 'drop') { incoming.socket.destroy(); return {}; }
-    if (fault === 'handler') return { body: { status: 'error', errorMessage: secret } };
+    if (fault === 'handler') return { body: { status: 'error', errorMessage: `Cannot add record for ${token}` } };
     return { body: { status: 'ok', response: { record: data, proxyPassword: secret } } };
   });
   if (task === 'B3.01' || task === 'B3.CR-013') {
@@ -207,6 +208,13 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       if (mode === 'ok') {
         const output = await success('zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
         assert.equal(output.credential, 'consumed');
+      } else if (mode === 'handler') {
+        const output = await failure('UPSTREAM_ERROR', 'zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
+        assert.match(output.error.message, /credential consumed/);
+        assert.match(output.error.message, /Cannot add record for/);
+        assert.ok(!output.error.message.includes(token), 'The vendor refusal text must not reveal the credential');
+        const refused = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${preview.preview.digest}.json`), 'utf8'));
+        assert.equal(refused.state, 'failed', 'An explicit vendor refusal is a failed journal entry, not an intent');
       } else {
         const output = await failure('OUTCOME_UNKNOWN', 'zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
         assert.match(output.error.message, /consumed-or-uncertain/);
@@ -482,21 +490,16 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         records.splice(index, 1);
         return { body: { status: 'ok' } };
       });
-      const publicRecords = values => values.map(record => ({ ...record, rData: Object.fromEntries(Object.entries(record.rData).map(([key, value]) => {
-        const names = { naptrOrder: 'order', naptrPreference: 'preference', naptrFlags: 'flags', naptrServices: 'services', naptrRegexp: 'regexp', naptrReplacement: 'replacement',
-          sshfpAlgorithm: 'algorithm', sshfpFingerprintType: 'fingerprintType', sshfpFingerprint: 'fingerprint', tlsaCertificateUsage: 'certificateUsage',
-          tlsaSelector: 'selector', tlsaMatchingType: 'matchingType', tlsaCertificateAssociationData: 'certificateAssociationData', uriPriority: 'priority', uriWeight: 'weight', recordData: 'data', rdata: 'value' };
-        const enums = { algorithm: { 13: 'ECDSAP256SHA256' }, digestType: { 2: 'SHA256' }, sshfpAlgorithm: { 1: 'RSA', 2: 'DSA' },
-          sshfpFingerprintType: { 2: 'SHA256' }, tlsaCertificateUsage: { 0: 'PKIX-TA', 2: 'DANE-TA', 3: 'DANE-EE' }, tlsaSelector: { 1: 'SPKI' }, tlsaMatchingType: { 1: 'SHA2-256' } };
-        return [names[key] ?? key, key === 'characterStringsBase64' ? [value] : key === 'svcParams' ? Object.fromEntries([value.split('|')])
-          : key === 'rdata' ? value.match(/../g).join(':').toUpperCase() : enums[key] ? enums[key][value] ?? String(value) : value];
-      })) }));
-      vendors.responders.set('/api/zones/records/get', () => ({ body: { status: 'ok', response: { zone: { name: 'example.test', type: 'Primary' }, records: publicRecords([...records, ...related]) } } }));
+      vendors.responders.set('/api/zones/records/get', () => ({ body: { status: 'ok', response: { zone: { name: 'example.test', type: 'Primary' }, records: serverRecords([...records, ...related]) } } }));
       const readback = async (expected, expectedRelated = []) => {
         const result = join(directory, `records-${sequence++}.json`);
         const read = await run(executable, ['zone', 'record', 'get', '--domain', 'example.test', '--zone', 'example.test', '--list-zone', 'true', '--config', config, '--result-file', result, '--json'], { env: { ...env, WRITE_TOKEN: token } });
         assert.equal(read.code, 0, read.stdout + read.stderr);
-        assert.deepEqual(JSON.parse(await readFile(result, 'utf8')).response.records, publicRecords([...expected, ...expectedRelated]));
+        assert.deepEqual(JSON.parse(await readFile(result, 'utf8')).response.records, serverRecords([...expected, ...expectedRelated]));
+        // The tool's own projection must carry every rData field the server reported for this record type.
+        const projected = JSON.parse(read.stdout);
+        assert.deepEqual(projected.response.records.map(({ name, type, ttl, rData }) => ({ name, type, ttl, rData })), serverRecords([...expected, ...expectedRelated]));
+        assert.equal(projected.output.complete, true);
       };
       const first = { name: owner, type: row.type, ttl: 60, rData: row.data };
       if (row.updateOnly) {
@@ -506,7 +509,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       await readback([keep, comparison, first], row.related?.add);
       if (row.singleton && !row.updateOnly) {
         const duplicate = recordInput({ ...params, overwrite: false });
-        await failure('OUTCOME_UNKNOWN', 'zone record add', duplicate, ['--execute', '--confirm', (await success('zone record add', duplicate)).preview.digest]);
+        await failure('UPSTREAM_ERROR', 'zone record add', duplicate, ['--execute', '--confirm', (await success('zone record add', duplicate)).preview.digest]);
         await readback([keep, comparison, first]);
         await execute('zone record add', recordInput({ ...params, ...row.updated, overwrite: true }));
         await readback([keep, comparison, { ...first, rData: row.updated }]);
@@ -520,14 +523,9 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       await readback([keep, comparison, updated], row.related?.update);
       const remove = { zone: 'example.test', domain: updated.name, type: row.type, ...(row.singleton ? {} : rData) };
       if (row.updateOnly) await failure('USAGE', 'zone record delete', recordInput(remove));
-      else if (row.pendingDelete) {
-        const before = vendors.traces.length;
-        await failure('PREREQUISITE_PENDING', 'zone record delete', recordInput(remove));
-        await failure('PREREQUISITE_PENDING', 'zone record delete', { parameters: { ...remove, type: '39', rdata: '00' } }, ['--execute', '--confirm', 'unused']);
-        await failure('PREREQUISITE_PENDING', 'zone record delete', { parameters: { ...remove, type: '039', rdata: '00' } });
-        assert.equal(vendors.traces.length, before, 'Refused DNAME deletions must not dispatch');
-        await readback([keep, comparison, updated]);
-      } else {
+      else {
+        // The server deletes owner-and-type singletons without comparing a value, so a value selector must be refused.
+        if (row.singleton) await failure('USAGE', 'zone record delete', recordInput({ ...remove, ...rData }));
         await execute('zone record delete', recordInput(remove));
         await readback([keep, comparison], row.related?.update);
       }
@@ -542,6 +540,8 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     await failure('USAGE', 'zone record update', { parameters: { zone: 'example.test', domain: 'www.example.test', type: '6', rdata: '00' } });
     assert.equal(vendors.traces.length, before, 'Unsupported record paths must not dispatch');
     await failure('USAGE', 'zone record add', { parameters: { ...add.parameters, ipAddress: null } });
+    const badInteger = await failure('USAGE', 'zone record add', { parameters: { zone: 'example.test', domain: 'www.example.test', type: 'DS', keyTag: 1, algorithm: 13, digestType: 'SHA256', digest: '00' } });
+    assert.match(badInteger.error.message, /^digestType must be an integer/);
     await failure('USAGE', 'zone record add', { parameters: { zone: 'example.test', domain: 'www.example.test', type: 'TXT', text: '', characterStringsBase64: '' } });
   }
   return [`native:${task}:write-behavior`];

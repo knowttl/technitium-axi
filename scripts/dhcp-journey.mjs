@@ -226,7 +226,7 @@ export async function dhcpJourney({ task, directory, env, run, executable, vendo
       const missing = { parameters: { ...parameters, name: 'absent' } };
       expectedWire = Object.fromEntries(Object.entries(missing.parameters).map(([key, value]) => [key, String(value)]));
       const preview = await success(command, missing);
-      await failure('OUTCOME_UNKNOWN', command, missing, ['--execute', '--confirm', preview.preview.digest]);
+      await failure('UPSTREAM_ERROR', command, missing, ['--execute', '--confirm', preview.preview.digest]);
       assert.deepEqual(scopes, expectedScopes);
     }
   }

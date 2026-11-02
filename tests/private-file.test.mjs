@@ -36,6 +36,21 @@ test('rejected destinations preserve existing directory access and target data',
   } finally { await rm(temporary, { recursive: true, force: true }); }
 });
 
+test('relative paths are refused as relative, not as insecure files', async () => {
+  const files = new PrivateFiles();
+  for (const action of [files.read('relative.json'), files.write('relative.json', 'x'), files.create('relative.json', 'x')]) {
+    await assert.rejects(action, { code: 'CONFIG_INSECURE', message: 'Path must be absolute: relative.json', hint: 'Use an absolute path' });
+  }
+});
+
+test('journal directory refusals name the directory and mode 700', async () => {
+  const temporary = await mkdtemp(join(tmpdir(), 'technitium-private-'));
+  try {
+    await chmod(temporary, 0o755);
+    await assert.rejects(new PrivateFiles().create(join(temporary, 'entry.json'), 'x'), { code: 'CONFIG_INSECURE', hint: `Use an owned directory and chmod 700 ${temporary}` });
+  } finally { await rm(temporary, { recursive: true, force: true }); }
+});
+
 for (const secret of [false, true]) {
   test(`Windows refuses existing files with secret=${secret}`, async () => {
     const temporary = await mkdtemp(join(tmpdir(), 'technitium-private-'));

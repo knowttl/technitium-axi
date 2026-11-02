@@ -64,6 +64,9 @@ The packaged `command-inventory.json` is the reference; this table lists the gro
 
 Read commands share `--config`, `--profile`, `--json`, `--result-file`, `--fields`, `--full`, `--max-bytes`, `--max-requests`, `--max-pages` and `--max-elapsed-ms`.
 Operation-specific flags such as `--node`, `--filter-name` and `--page-number` appear in each command's `--help`.
+Boolean read flags need an explicit value, for example `--list-zone true`; `--full` takes none.
+`--fields` selects top-level or row fields only, so a nested field such as a session's `partialToken` needs `--full`.
+`zone record get` and `cache list` project every record data field the contract lists; when the server returns others, `output.complete` is `false` and `output.omittedFields` names them.
 
 ```sh
 technitium-axi zone list --profile automation --full
@@ -91,7 +94,7 @@ Ordinary reads never acquire or refresh credentials.
 
 `user create-token` accepts either the selected Standard bearer or an explicit `user` and `pass` SecretRef, with optional `totp`, and never falls back between them.
 `user create-single-use-token`, `user change-password`, `user 2fa init`, `user 2fa enable`, `user 2fa disable` and `user profile set` require a Standard session.
-Token creation and 2FA initialization require `--result-file` on execution; their confidential response never appears in ordinary output.
+Token creation (including `user create-single-use-token`) and 2FA initialization require `--result-file` on execution; their confidential response never appears in ordinary output.
 Password changes use `pass` and `newPass` SecretRefs; `totp` is also a SecretRef.
 `user session delete` accepts the exact `partialToken` returned by a profile read.
 `admin user set` supports a protected `newPass` and an ordinary boolean `totpEnabled`.
@@ -242,9 +245,13 @@ A new preview permits a later legitimate operation with identical content.
 
 Journal entries default to `$XDG_STATE_HOME/technitium-axi/writes.log.d/<digest>.json`, or `~/.local/state/technitium-axi/writes.log.d/<digest>.json` when no absolute XDG state directory is set.
 Set `TECHNITIUM_AXI_WRITE_LOG` to an absolute base path to use `<base-path>.d/<digest>.json` instead.
+This moves only the journal; stored sessions and the acquisition key stay under the state directory above.
 The journal stores operation identity, state and keyed hashes, plus the preflight topology for cluster lifecycle reconciliation; it never stores secrets.
 Failure to persist an intent prevents dispatch.
-Dispatched mutations never retry automatically; a failed response or unproven postcondition returns `OUTCOME_UNKNOWN` and an audit ID.
+Dispatched mutations never retry automatically.
+An explicit error response from the server to the mutation itself is a refusal: it returns `UPSTREAM_ERROR` with the server's message and the audit ID, and the journal entry becomes `failed`.
+A lost response, a non-JSON response or an unproven postcondition returns `OUTCOME_UNKNOWN` and an audit ID.
+`settings set` and `settings restore` apply several categories per request, so even an error response from them stays `OUTCOME_UNKNOWN`.
 Never replay an uncertain write or create a new preview to bypass its journal entry.
 
 `zone options set`, `zone permission set`, `settings set`, `dhcp scope set`, `admin group set` and `admin permission set` require an additional `baseline` object containing exactly the changed fields, excluding target identifiers.
@@ -289,7 +296,8 @@ Inspect `zone dnssec properties get`, `zone record get` and, for delegation data
 Record selectors and replacement fields depend on both family and action; use the inventory's `recordFamilies` instead of copying a read projection.
 Known decimal record types are normalized to names before validation; raw `rdata` selectors apply only to genuinely unknown numeric types.
 SOA uses apex update, while generated DNSSEC records use lifecycle operations.
-DNAME deletion, including numeric type `"39"`, is refused with `PREREQUISITE_PENDING` until shipped-library mapping is reviewed in [issue #18](https://github.com/knowttl/technitium-axi/issues/18).
+DNAME deletion, including numeric type `"39"`, selects only the owner name and type, because the server removes the DNAME record at that owner without comparing its target.
+A `dname` value is therefore refused as an unused selector; read the record first if the target matters.
 
 Single-use credentials are never retried and are refused for operations requiring baseline reads.
 After dispatch they are reported as consumed, or consumed-or-uncertain on an unknown outcome.

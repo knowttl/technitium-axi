@@ -45,7 +45,7 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
   const rejected = async (command, input) => {
     const before = structuredClone([...zones]);
     const preview = await success(command, input);
-    await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', preview.preview.digest]);
+    await failure('UPSTREAM_ERROR', command, input, ['--execute', '--confirm', preview.preview.digest]);
     assert.deepEqual([...zones], before);
   };
   if (id === 'OP-022') {

@@ -60,11 +60,16 @@ export async function vendorRequest(profile: Profile, path: string, body: string
   });
 }
 
+// Vendor refusal text is shown to the operator: strip control characters and bound the length.
+export function vendorMessage(value: Record<string, unknown>): string | undefined {
+  return typeof value.errorMessage === 'string' ? value.errorMessage.replace(/[\x00-\x1f\x7f]+/g, ' ').trim().slice(0, 300) || undefined : undefined;
+}
+
 export function checkStatus(value: unknown): asserts value is Record<string, unknown> {
   if (!object(value) || typeof value.status !== 'string') responseInvalid();
   if (value.status === 'invalid-token') throw new ToolError('AUTH_REQUIRED', 'The selected credential has expired or is invalid', 'Supply a valid credential for the same profile', 1);
   if (value.status === '2fa-required') throw new ToolError('TWO_FACTOR_REQUIRED', 'The server requires a second authentication factor', 'Supply a previously authenticated credential', 1);
-  if (value.status === 'error') throw new ToolError('UPSTREAM_ERROR', 'Server reported an operation failure', 'Check the selected identity and operation permissions', 1);
+  if (value.status === 'error') throw new ToolError('UPSTREAM_ERROR', `Server reported an operation failure${vendorMessage(value) ? `: ${vendorMessage(value)}` : ''}`, 'Check the selected identity and operation permissions', 1);
   if (value.status !== 'ok') responseInvalid();
 }
 

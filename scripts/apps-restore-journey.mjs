@@ -80,7 +80,7 @@ export async function appsRestoreJourney({ task, directory, env, run, executable
       const parameters = upload ? new URL(incoming.url, 'https://fixture.test').searchParams : new URLSearchParams(bytes.toString());
       assert.deepEqual(Object.fromEntries(parameters), { ...input.parameters, ...(id === '076' ? { config: opaque } : {}) });
       if (upload) checkMultipart(incoming, bytes, packageBytes);
-      if (fault) return { body: { status: 'error', errorMessage: secret } };
+      if (fault) return { body: { status: 'error', errorMessage: `Cannot apply for ${token}` } };
       if (id === '076') configs.TestApp = parameters.get('config');
       else {
         apps = apps.filter(row => row.name !== 'TestApp');
@@ -118,7 +118,7 @@ export async function appsRestoreJourney({ task, directory, env, run, executable
       for (const key of Object.keys(seed)) {
         if (parameters[key] !== 'true') continue;
         state[key] = ['dnsSettings', 'authConfig'].includes(key) || parameters.deleteExistingFiles === 'true' ? structuredClone(seed[key]) : { ...state[key], ...seed[key] };
-        if (fault) return { body: { status: 'error', errorMessage: secret } };
+        if (fault) return { body: { status: 'error', errorMessage: `Cannot apply for ${token}` } };
       }
       expectedResponse = { status: 'ok', response: state.dnsSettings };
       return { body: expectedResponse };
@@ -150,7 +150,8 @@ export async function appsRestoreJourney({ task, directory, env, run, executable
     fault = true;
     const preview = await success(command, input);
     const before = calls;
-    await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', preview.preview.digest]);
+    const refused = await failure('UPSTREAM_ERROR', command, input, ['--execute', '--confirm', preview.preview.digest]);
+    assert.match(refused.error.message, /Cannot apply for/);
     await failure('REPLAY_DENIED', command, input, ['--execute', '--confirm', preview.preview.digest]);
     assert.equal(calls, before + 1);
   }

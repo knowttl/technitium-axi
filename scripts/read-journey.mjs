@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { decode } from '@toon-format/toon';
 import { crc32 } from 'node:zlib';
 import { monitorJourney } from './monitor-journey.ts';
+import { serverRData } from './record-shapes.ts';
 import monitor from '../tests/fixtures/monitor-reads.json' with { type: 'json' };
 
 export const monitorTasks = Object.keys(monitor.operations).map(id => `B2.${id}`);
@@ -185,6 +186,42 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
       vendors.responders.set(row.path, () => ({ body: { status: 'error', errorMessage: token } }));
       await fail([...argumentsFor(row), '--result-file', destination], 'UPSTREAM_ERROR');
       assert.deepEqual(await readFile(destination), bytes, 'Failed read replaced the last valid result');
+    }
+    if (task === 'B2.02') {
+      // Read-back matrix generated from the write fixture rows: every record type must round-trip all of its rData fields.
+      const records = JSON.parse(await readFile(new URL('../tests/fixtures/record-inputs.json', import.meta.url), 'utf8')).rows;
+      const serverData = row => serverRData(row.updated);
+      const get = matrix.operations.find(row => row.operation === 'OP-050');
+      const cache = matrix.operations.find(row => row.operation === 'OP-053');
+      const allowed = matrix.operations.find(row => row.operation === 'OP-056');
+      const answer = (row, mapped) => vendors.responders.set(row.path, () => ({ body: { status: 'ok', response: {
+        ...row.response.response, records: records.map((record, index) => mapped(record, index)) } } }));
+      answer(get, (record, index) => ({ disabled: false, name: `r${index}.alpha.example.test`, type: String(record.type), ttl: 60, rData: serverData(record), dnssecStatus: 'Unknown' }));
+      const getFull = await success([...argumentsFor(get), '--full']);
+      assert.deepEqual(getFull.response.records.map(record => record.rData), records.map(serverData), 'zone record get read-back');
+      assert.equal(getFull.output.complete, true);
+      assert.equal(getFull.output.omittedFields, undefined);
+      for (const row of [cache, allowed]) {
+        answer(row, (record, index) => ({ name: `r${index}.alpha.example.test`, type: String(record.type), ttl: 60, rData: serverData(record) }));
+        const listed = await success([...argumentsFor(row), '--full']);
+        assert.deepEqual(listed.response.records.map(record => record.rData), records.map(serverData), `${row.operation} read-back`);
+        assert.equal(listed.output.complete, true);
+      }
+      answer(cache, (record, index) => ({ name: `n${index}.alpha.example.test`, type: 'A', ttl: '30 (30 sec)', rData: { dataType: 'NameError', data: { authority: 'ns1.example.test' } } }));
+      const negative = await success([...argumentsFor(cache), '--full']);
+      assert.deepEqual(negative.response.records[0].rData, { dataType: 'NameError', data: { authority: 'ns1.example.test' } });
+      answer(get, (record, index) => ({ disabled: false, name: `r${index}.alpha.example.test`, type: 'MX', ttl: 60, rData: { preference: 1, exchange: 'mx.example.test', futureField: 'x' } }));
+      const unlisted = await success([...argumentsFor(get), '--full']);
+      assert.equal(unlisted.output.complete, false);
+      assert.deepEqual(unlisted.output.omittedFields, { 'response.records[].rData': ['futureField'] });
+      const update = matrix.operations.find(row => row.operation === 'OP-014');
+      vendors.responders.set(update.path, () => ({ body: { status: 'ok', response: { updateAvailable: false, updateVersion: null, currentVersion: '15.4',
+        updateTitle: null, updateMessage: null, downloadLink: null, instructionsLink: null, changeLogLink: null, dnsServerEnableCheckForUpdate: true } } }));
+      const checked = await success(argumentsFor(update));
+      assert.equal(checked.response.updateAvailable, false);
+      assert.equal(checked.response.downloadLink, null);
+      vendors.responders.set(update.path, () => ({ body: { status: 'ok', response: { ...update.response.response, downloadLink: 7 } } }));
+      await fail(argumentsFor(update), 'UPSTREAM_INVALID');
     }
     for (const world of matrix.operations.some(row => row.operation === 'OP-125') ? worlds.transferWorlds : []) {
       const bytes = archive(world.entries);

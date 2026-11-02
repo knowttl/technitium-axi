@@ -17,8 +17,17 @@ export class PrivateFiles {
       `Use an owned regular file and chmod 600 ${path}`);
   }
 
+  private insecureDirectory(path: string): never {
+    throw new ToolError('CONFIG_INSECURE', 'Unsafe directory ownership, permissions or redirected path',
+      `Use an owned directory and chmod 700 ${path}`);
+  }
+
+  private requireAbsolute(path: string): void {
+    if (!isAbsolute(path)) throw new ToolError('CONFIG_INSECURE', `Path must be absolute: ${path}`, 'Use an absolute path');
+  }
+
   private async direct(path: string): Promise<void> {
-    if (!isAbsolute(path)) this.insecure(path);
+    this.requireAbsolute(path);
     if ((await lstat(path)).isSymbolicLink() || await realpath(path) !== resolve(path)) this.insecure(path);
   }
 
@@ -27,6 +36,7 @@ export class PrivateFiles {
   }
 
   async readBytes(path: string, secret = true, maxBytes = 16 * 1024 * 1024): Promise<Buffer> {
+    this.requireAbsolute(path);
     const before = await lstat(path);
     this.requireFileProtection();
     await this.direct(path);
@@ -46,12 +56,12 @@ export class PrivateFiles {
 
   async destination(path: string): Promise<void> {
     this.requireFileProtection();
-    if (!isAbsolute(path)) this.insecure(path);
+    this.requireAbsolute(path);
     const directory = dirname(path);
     await mkdir(directory, { recursive: true, mode: 0o700 });
     await this.direct(directory);
     const parent = await lstat(directory);
-    if (!parent.isDirectory() || parent.uid !== process.getuid?.() || (parent.mode & 0o022) !== 0) this.insecure(directory);
+    if (!parent.isDirectory() || parent.uid !== process.getuid?.() || (parent.mode & 0o022) !== 0) this.insecureDirectory(directory);
     try {
       await this.direct(path);
       const before = await lstat(path);
@@ -85,12 +95,12 @@ export class PrivateFiles {
 
   async create(path: string, bytes: string): Promise<void> {
     this.requireFileProtection();
-    if (!isAbsolute(path)) this.insecure(path);
+    this.requireAbsolute(path);
     const directory = dirname(path);
     await mkdir(directory, { recursive: true, mode: 0o700 });
     await this.direct(directory);
     const parentStat = await lstat(directory);
-    if (parentStat.uid !== process.getuid?.() || (parentStat.mode & 0o077) !== 0) this.insecure(directory);
+    if (parentStat.uid !== process.getuid?.() || (parentStat.mode & 0o077) !== 0) this.insecureDirectory(directory);
     const handle = await open(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
     try { await handle.writeFile(bytes); await handle.sync(); } finally { await handle.close(); }
     const parent = await open(directory, constants.O_RDONLY | constants.O_DIRECTORY);

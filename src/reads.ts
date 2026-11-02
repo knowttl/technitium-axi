@@ -36,9 +36,11 @@ export function readInputs(contract: ReadContract, options: Record<string, strin
   return { form, headers };
 }
 
-function project(value: unknown, shape: Shape, nullable = false): unknown {
+// Fields the contract does not list are dropped; `omitted` collects them (indexes folded to []) so the caller can report incompleteness.
+function project(value: unknown, shape: Shape, nullable = false, path = 'response', omitted?: Record<string, Set<string>>): unknown {
   if (typeof shape === 'string') {
     if (shape === 'unknown') return null;
+    if (shape === 'json') return value;
     if (shape === 'nullable') {
       if (value !== null && typeof value !== 'string') invalid();
     } else if (shape === 'string-or-number') {
@@ -56,14 +58,18 @@ function project(value: unknown, shape: Shape, nullable = false): unknown {
         const identity = ['name', 'rowNumber', 'fileName', 'username', 'section', 'scope', 'keyTag'].find(key => Object.hasOwn(itemShape, key));
         if (identity && !Object.hasOwn(item, identity)) return invalid();
       }
-      return project(item, itemShape);
+      return project(item, itemShape, false, `${path}[]`, omitted);
     });
   }
   if (value === null && nullable) return null;
   if (!record(value)) return invalid();
   if (Object.hasOwn(shape, 'canView') && ['canView', 'canModify', 'canDelete'].some(key => !Object.hasOwn(value, key))) invalid();
+  if (omitted) {
+    const dropped = Object.keys(value).filter(key => !Object.hasOwn(shape, key) && !sensitive.test(key));
+    if (dropped.length) omitted[path] = new Set([...omitted[path] ?? [], ...dropped]);
+  }
   return Object.fromEntries(Object.entries(shape).filter(([key]) => !sensitive.test(key) && Object.hasOwn(value, key))
-    .map(([key, field]) => [key, project(value[key], field, key === 'proxy')]));
+    .map(([key, field]) => [key, project(value[key], field, key === 'proxy', `${path}.${key}`, omitted)]));
 }
 
 const listKeys: Record<string, string> = {
@@ -219,7 +225,11 @@ export async function readOperation(profile: Profile, command: string, token: st
       stoppedBy = 'PROVIDER_TOTAL_MISMATCH';
     }
   }
-  let projected = project(payload, contract.response) as Record<string, unknown>;
+  // Record-bearing reads must never claim completeness while record data was dropped.
+  const omitted: Record<string, Set<string>> | undefined = ['OP-050', 'OP-053'].includes(contract.id) ? {} : undefined;
+  let projected = project(payload, contract.response, false, 'response', omitted) as Record<string, unknown>;
+  const omittedFields = Object.fromEntries(Object.entries(omitted ?? {}).map(([path, keys]) => [path, [...keys].sort()]));
+  if (Object.keys(omittedFields).length) complete = false;
   if (fields && !(rowShape && typeof rowShape === 'object')) {
     projected = Object.fromEntries(fields.filter(field => Object.hasOwn(projected, field)).map(field => [field, projected[field]]));
   }
@@ -257,6 +267,7 @@ export async function readOperation(profile: Profile, command: string, token: st
   return { bytes: response.bytes, projection: { status: 'ok', response: projected,
     output: { complete, pages, requests, bytesRead, collections: bounds,
       ...(Object.keys(truncations).length ? { truncations } : {}),
+      ...(Object.keys(omittedFields).length ? { omittedFields } : {}),
       ...(stoppedBy ? { stoppedBy } : {}),
       ...(continuation === undefined ? {} : { nextPage: continuation }) } } };
 }

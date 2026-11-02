@@ -111,7 +111,7 @@ export async function resolveJourney({ directory, env, run, executable, vendors,
     const preview = await success(command, input);
     assert.equal(preview.preview.operation, row.read ? 'OP-077.resolve' : 'OP-077.import');
     assert.equal(vendors.traces.length, before);
-    if (row.denied) await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', preview.preview.digest]);
+    if (row.denied) await failure('UPSTREAM_ERROR', command, input, ['--execute', '--confirm', preview.preview.digest]);
     else {
       const result = await success(command, input, ['--execute', '--confirm', preview.preview.digest]);
       assert.deepEqual(result.response, reply);

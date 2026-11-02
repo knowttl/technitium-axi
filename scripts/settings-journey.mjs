@@ -431,7 +431,7 @@ export async function settingsJourney({ task, directory, env, run, executable, v
     if (id === 'B4.OP-137') assert.deepEqual(logs, []);
     fault = true;
     const preview = await success(command, input);
-    await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', preview.preview.digest]);
+    await failure('UPSTREAM_ERROR', command, input, ['--execute', '--confirm', preview.preview.digest]);
     await failure('REPLAY_DENIED', command, input, ['--execute', '--confirm', preview.preview.digest]);
     assert.equal(calls, 2);
   }

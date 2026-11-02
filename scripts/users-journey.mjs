@@ -220,7 +220,7 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
         assert.ok(!stored.includes(password) && !stored.includes(totp));
         fault = 'error';
         const rejected = await success('user login', parameters);
-        await failure('OUTCOME_UNKNOWN', 'user login', parameters, ['--execute', '--confirm', rejected.preview.digest]);
+        await failure('UPSTREAM_ERROR', 'user login', parameters, ['--execute', '--confirm', rejected.preview.digest]);
         assert.equal(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'credentials.json'), 'utf8'), stored, 'A rejected password cannot replace stored credentials');
       }
       if (id === '005') {
