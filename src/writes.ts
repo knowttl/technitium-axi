@@ -648,6 +648,10 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     const mayApplyPartially = contract.baselinePath !== undefined || clusterBefore !== undefined
       || ['OP-013', 'OP-023', 'OP-060', 'OP-066', 'OP-070', 'OP-071', 'OP-072', 'OP-073', 'OP-074', 'OP-076', 'OP-085', 'OP-104', 'OP-115', 'OP-117', 'OP-142'].includes(contract.id)
       || contract.id === 'OP-029' && parameters.zones !== undefined
+      || contract.id === 'OP-116' && parameters.memberOfGroups !== undefined
+      || contract.id === 'OP-051' && parameters.newDomain !== undefined && parameters.newDomain !== parameters.domain
+      || contract.id === 'OP-022' && parameters.catalog !== undefined
+      || capability === 'OP-077.import'
       || ['OP-049', 'OP-051'].includes(contract.id) && (parameters.ptr === true || parameters.createPtrZone === true);
     if (unsupported || mutating && object(value) && value.status === 'error' && !mayApplyPartially) {
       const reason = unsupported ? 'The server does not provide this operation' : vendorMessage(value as Record<string, unknown>)?.replace(/\.$/, '');

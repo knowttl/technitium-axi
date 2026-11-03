@@ -131,6 +131,10 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
       const previous = users.get(p.user);
       if (action === 'set') users.delete(p.user);
       users.set(p.newUser ?? p.user, { username: p.newUser ?? p.user, displayName: p.displayName, memberOfGroups: p.memberOfGroups.split(','), ssoIdentifier: previous?.ssoIdentifier ?? p.ssoIdentifier });
+      if (action === 'create' && p.memberOfGroups === 'Missing') {
+        users.get(p.user).memberOfGroups = ['Everyone'];
+        return { body: { status: 'error', errorMessage: 'No such group exists: Missing' } };
+      }
       return { body: { status: 'ok' } };
     });
     vendors.responders.set('/api/admin/users/get', (incoming, bytes) => {
@@ -161,6 +165,13 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
     await execute('admin sso user set', { user: 'sso-user', newUser: 'sso-renamed', displayName: 'New', memberOfGroups: ['Keepers'] });
     await readback({ username: 'sso-renamed', displayName: 'New', memberOfGroups: ['Keepers'] });
     assert.equal(users.has('sso-user'), false);
+    const partial = { ...create, user: 'partial-user', memberOfGroups: ['Missing'] };
+    const partialPreview = await success('admin sso user create', partial);
+    await failure('OUTCOME_UNKNOWN', 'admin sso user create', partial, ['--execute', '--confirm', partialPreview.preview.digest]);
+    await readback({ username: 'partial-user', displayName: 'SSO User', memberOfGroups: ['Everyone'] });
+    const receipt = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${partialPreview.preview.digest}.json`), 'utf8'));
+    assert.equal(receipt.state, 'intent');
+    await failure('REPLAY_DENIED', 'admin sso user create', partial, ['--execute', '--confirm', partialPreview.preview.digest]);
     const mutations = () => vendors.traces.filter(trace => trace.path.startsWith('/api/admin/sso/')).length;
     const before = mutations();
     for (permission of [false, undefined, 'true']) for (const [command, parameters] of [

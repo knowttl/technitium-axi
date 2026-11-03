@@ -538,6 +538,30 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       }
       await failure('USAGE', 'zone record add', { parameters: { ...params, unexpected: true } });
     }
+    const original = { name: 'alias.example.test', type: 'CNAME', ttl: 60, rData: { cname: 'target.test' } };
+    let remaining = [original];
+    vendors.responders.set('/api/zones/records/update', (_incoming, bytes) => {
+      const p = Object.fromEntries(new URLSearchParams(bytes.toString()));
+      if (p.newDomain !== p.domain) remaining = [];
+      return { body: { status: 'error', errorMessage: 'Cannot set CNAME record' } };
+    });
+    vendors.responders.set('/api/zones/records/get', () => ({ body: { status: 'ok', response: { zone: { name: 'example.test', type: 'Primary' }, records: serverRecords(remaining) } } }));
+    for (const [newDomain, code, state, expected] of [
+      [original.name, 'UPSTREAM_ERROR', 'failed', [original]],
+      ['example.test', 'OUTCOME_UNKNOWN', 'intent', []],
+    ]) {
+      remaining = [original];
+      const input = { parameters: { zone: 'example.test', domain: original.name, type: 'CNAME', cname: 'target.test', newDomain } };
+      const preview = await success('zone record update', input);
+      await failure(code, 'zone record update', input, ['--execute', '--confirm', preview.preview.digest]);
+      const resultFile = join(directory, `rename-readback-${sequence++}.json`);
+      const read = await run(executable, ['zone', 'record', 'get', '--zone', 'example.test', '--domain', 'example.test', '--list-zone', 'true', '--config', config, '--result-file', resultFile, '--json'], { env: { ...env, WRITE_TOKEN: token } });
+      assert.equal(read.code, 0, read.stdout + read.stderr);
+      assert.deepEqual(JSON.parse(await readFile(resultFile, 'utf8')).response.records, serverRecords(expected));
+      const receipt = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${preview.preview.digest}.json`), 'utf8'));
+      assert.equal(receipt.state, state);
+      await failure('REPLAY_DENIED', 'zone record update', input, ['--execute', '--confirm', preview.preview.digest]);
+    }
     const before = vendors.traces.length;
     for (const action of ['add', 'update', 'delete']) {
       for (const type of ['HINFO', '13', 'RRSIG', '46', 'DNSKEY', '48']) {

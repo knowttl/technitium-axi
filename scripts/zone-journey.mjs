@@ -45,7 +45,6 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
   const rejected = async (command, input) => {
     const before = structuredClone([...zones]);
     const preview = await success(command, input);
-    // Imports may replace records before refusing, so only the other operations are clean refusals.
     const refused = await failure(command === 'zone import' ? 'OUTCOME_UNKNOWN' : 'UPSTREAM_ERROR', command, input, ['--execute', '--confirm', preview.preview.digest]);
     if (command !== 'zone import') assert.match(refused.error.message, /Server refused the operation: Synthetic rejected operation; audit ID [a-f0-9-]+/);
     assert.deepEqual([...zones], before);
@@ -57,6 +56,7 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
       if (zones.has(p.zone)) return denied();
       if (p.zone === 'unreachable.test') return { body: { status: 'error', errorMessage: 'Zone was not created: DNS Server did not receive SOA record for \'unreachable.test\' from any of the primary name servers.' } };
       zones.set(p.zone, { ...seed(p.zone, p.type), ...p });
+      if (p.catalog && zones.get(p.catalog)?.type !== 'Catalog') return denied();
       if (multipart) {
         assert.ok(bytes.includes(Buffer.from('uploaded 60 IN A 192.0.2.80\n')));
         zones.get(p.zone).records.push(record(`uploaded.${p.zone}`, 'A', { ipAddress: '192.0.2.80' }, 60));
@@ -80,6 +80,13 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
     const unreachableRefusal = await failure('UPSTREAM_ERROR', 'zone create', unreachable, ['--execute', '--confirm', (await success('zone create', unreachable)).preview.digest]);
     assert.match(unreachableRefusal.error.message, /did not receive SOA record/);
     assert.ok(!zones.has('unreachable.test'));
+    const catalog = { parameters: { zone: 'catalog-member.test', type: 'Primary', catalog: 'example.test' } };
+    const catalogPreview = await success('zone create', catalog);
+    await failure('OUTCOME_UNKNOWN', 'zone create', catalog, ['--execute', '--confirm', catalogPreview.preview.digest]);
+    assert.equal((await options('catalog-member.test')).type, 'Primary');
+    const receipt = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${catalogPreview.preview.digest}.json`), 'utf8'));
+    assert.equal(receipt.state, 'intent');
+    await failure('REPLAY_DENIED', 'zone create', catalog, ['--execute', '--confirm', catalogPreview.preview.digest]);
     const file = join(directory, 'create.zone');
     await writeFile(file, 'uploaded 60 IN A 192.0.2.80\n', { mode: 0o600 });
     for (const type of ['Primary', 'Forwarder']) {
