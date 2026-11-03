@@ -22,7 +22,7 @@ interface Context {
     traces: { inputHash: string; path: string; method: string }[];
   };
   success: (args: string[], json?: boolean) => Promise<Output>;
-  fail: (args: string[], code: string) => Promise<void>;
+  fail: (args: string[], code: string) => Promise<{ help: string[] }>;
   archive: (names: string[]) => Buffer;
   components: Record<string, string[]>;
 }
@@ -84,7 +84,8 @@ export async function monitorJourney({ row, directory, vendors, success, fail, a
         selected.splice(selected.indexOf('--limit'), 2, ...(limit ? ['--limit', limit] : []));
         await saved(bytes, selected);
       }
-      await fail([...args, '--max-bytes', '10', '--result-file', destination], 'RESPONSE_LIMIT');
+      const limited = await fail([...args, '--max-bytes', '10', '--result-file', destination], 'RESPONSE_LIMIT');
+      if (row.operation === 'OP-135') assert.match(limited.help.join(' '), /--limit/);
       assert.deepEqual(await readFile(destination), bytes);
     }
   } else {
@@ -137,7 +138,9 @@ export async function monitorJourney({ row, directory, vendors, success, fail, a
     }
     if (row.operation === 'OP-138') {
       const entries = Array.from({ length: 13 }, (_, index) => ({ rowNumber: 13 - index, timestamp: `2024-01-01T00:00:${String(13 - index).padStart(2, '0')}Z`,
-        qname: 'www.example.test', qtype: 'A', qclass: 'IN', clientIpAddress: '192.0.2.10', rcode: 'NoError', answer: `192.0.2.${13 - index}` }));
+        qname: 'www.example.test', qtype: 'A', qclass: 'IN', clientIpAddress: '192.0.2.10', rcode: 'NoError',
+        // The vendor reports no answer or round-trip time for some entries, as null or by omitting the field.
+        ...(index % 3 === 0 ? { answer: null } : index % 3 === 1 ? { answer: null, responseRtt: null } : { answer: `192.0.2.${13 - index}`, responseRtt: 1.5 }) }));
       vendors.responders.set(row.path, (_request, body) => {
         const requested = new URLSearchParams(body.toString());
         const page = Number(requested.get('pageNumber'));

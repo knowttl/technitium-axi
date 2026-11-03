@@ -48,10 +48,11 @@ export async function main(args: string[]): Promise<void> {
     }
     const requestedCommand = positional.join(' ');
     const command = requestedCommand === 'auth login' ? 'user login' : requestedCommand === 'auth logout' ? 'user logout' : requestedCommand;
-    const selected = commands.find(item => item.command === requestedCommand);
+    // A stray value after an unknown flag extends the positionals, so match the longest command prefix to keep the command's own flag list in the error.
+    const selected = commands.filter(item => requestedCommand === item.command || requestedCommand.startsWith(`${item.command} `)).sort((a, b) => b.command.length - a.command.length)[0];
     const allowed: readonly string[] = selected ? [...selected.flags, '--version', '-v', '-V'] : help.flags;
     if ([...flags].some(flag => !allowed.includes(flag))) throw new ToolError('USAGE', 'Unknown or prohibited flag', `Valid flags: ${allowed.join(', ')}`);
-    if (command && !selected) throw new ToolError('USAGE', 'Unknown command or unexpected argument', 'Run technitium-axi --help');
+    if (command && selected?.command !== requestedCommand) throw new ToolError('USAGE', 'Unknown command or unexpected argument', 'Run technitium-axi --help');
     if (args.some(arg => ['--version', '-v', '-V'].includes(arg))) {
       console.log((JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }).version);
       return;

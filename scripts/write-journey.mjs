@@ -209,12 +209,11 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         const output = await success('zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
         assert.equal(output.credential, 'consumed');
       } else if (mode === 'handler') {
-        const output = await failure('OUTCOME_UNKNOWN', 'zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
-        assert.match(output.error.message, /credential consumed-or-uncertain/);
-        assert.match(output.error.message, /audit ID [a-f0-9-]+/);
+        const output = await failure('UPSTREAM_ERROR', 'zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
+        assert.match(output.error.message, /Server refused the operation: Cannot add record for .*; audit ID [a-f0-9-]+; credential consumed$/);
         assert.ok(!output.error.message.includes(token), 'The error text must not reveal the credential');
         const receipt = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${preview.preview.digest}.json`), 'utf8'));
-        assert.equal(receipt.state, 'intent', 'A handler error cannot prove that no mutation applied');
+        assert.equal(receipt.state, 'failed', 'An explicit handler refusal is journaled as a refusal');
       } else {
         const output = await failure('OUTCOME_UNKNOWN', 'zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
         assert.match(output.error.message, /consumed-or-uncertain/);
@@ -222,6 +221,14 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       await failure('REPLAY_DENIED', 'zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
     }
     assert.equal(sent.length, 3, 'Each dispatched credential is used exactly once without retry');
+    // The vendor adds the record before the reverse-pointer step, so a refusal of a pointer-bearing add may be partial.
+    await configure(['OP-049']);
+    fault = 'handler';
+    const pointer = { parameters: { ...add.parameters, ptr: true, createPtrZone: true } };
+    const pointerPreview = await success('zone record add', pointer);
+    assert.deepEqual(pointerPreview.preview.sideEffects, ['Adds or updates the matching PTR record for the address', 'Creates the reverse zone when it does not exist']);
+    await failure('USAGE', 'zone record add', pointer, ['--execute']);
+    await failure('OUTCOME_UNKNOWN', 'zone record add', pointer, ['--execute', '--confirm', pointerPreview.preview.digest]);
   }
   if (task === 'B3.03') {
     const replacements = [
@@ -509,7 +516,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       await readback([keep, comparison, first], row.related?.add);
       if (row.singleton && !row.updateOnly) {
         const duplicate = recordInput({ ...params, overwrite: false });
-        await failure('OUTCOME_UNKNOWN', 'zone record add', duplicate, ['--execute', '--confirm', (await success('zone record add', duplicate)).preview.digest]);
+        await failure('UPSTREAM_ERROR', 'zone record add', duplicate, ['--execute', '--confirm', (await success('zone record add', duplicate)).preview.digest]);
         await readback([keep, comparison, first]);
         await execute('zone record add', recordInput({ ...params, ...row.updated, overwrite: true }));
         await readback([keep, comparison, { ...first, rData: row.updated }]);

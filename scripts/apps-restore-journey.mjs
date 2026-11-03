@@ -150,8 +150,8 @@ export async function appsRestoreJourney({ task, directory, env, run, executable
     fault = true;
     const preview = await success(command, input);
     const before = calls;
-    const unknown = await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', preview.preview.digest]);
-    assert.match(unknown.error.message, /audit ID [a-f0-9-]+/);
+    const unknown = await failure('UPSTREAM_ERROR', command, input, ['--execute', '--confirm', preview.preview.digest]);
+    assert.match(unknown.error.message, /Server refused the operation: Cannot apply for .*; audit ID [a-f0-9-]+/);
     await failure('REPLAY_DENIED', command, input, ['--execute', '--confirm', preview.preview.digest]);
     assert.equal(calls, before + 1);
   }

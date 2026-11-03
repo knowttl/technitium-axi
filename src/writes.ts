@@ -311,7 +311,10 @@ export async function writeInput(contract: WriteContract, path?: string): Promis
   if (contract.id === 'OP-022' && ['SecondaryForwarder', 'SecondaryCatalog'].includes(String(parameters.type)) && (!Array.isArray(parameters.primaryNameServerAddresses) || !parameters.primaryNameServerAddresses.length)) usage('Secondary forwarder and catalog creation require primary name server addresses');
   if (contract.id === 'OP-029' && ((parameters.zone === undefined) === (parameters.zones === undefined) || parameters.zone === '' || (Array.isArray(parameters.zones) && parameters.zones.length === 0))) usage('Choose a zone or a nonempty zones list');
   if (input.baseline !== undefined && !object(input.baseline)) usage('Baseline must be an object');
-  if (contract.baselinePath) {
+  // Without a baseline, a DHCP scope set creates the named scope; the vendor setter creates it when it does not exist.
+  if (contract.id === 'OP-092' && input.baseline === undefined) {
+    if (['startingAddress', 'endingAddress', 'subnetMask'].some(key => !Object.hasOwn(parameters, key)) || Object.hasOwn(parameters, 'newName')) usage('Creating a scope requires startingAddress, endingAddress and subnetMask and no newName; to modify an existing scope supply its exact selected baseline');
+  } else if (contract.baselinePath) {
     const fields = Object.keys(parameters).filter(key => !contract.baselineTarget?.includes(key));
     if (!fields.length || !object(input.baseline) || canonical(Object.keys(input.baseline).sort()) !== canonical(fields.sort())) usage('Provide the exact selected baseline for every changed field');
     for (const [key, value] of Object.entries(input.baseline)) {
@@ -337,6 +340,13 @@ function journalPath(digest: string): string {
   const path = process.env.TECHNITIUM_AXI_WRITE_LOG ?? join(base, 'technitium-axi', 'writes.log');
   if (!isAbsolute(path)) usage('TECHNITIUM_AXI_WRITE_LOG must be absolute');
   return join(`${path}.d`, `${digest}.json`);
+}
+
+async function journalEntry(path: string): Promise<Record<string, any>> {
+  try { return JSON.parse(await files.read(path)); } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') throw new ToolError('CONFIRMATION_MISMATCH', 'No executed operation matches the supplied confirmation', 'Supply the exact digest from the original preview and execution', 1);
+    throw error;
+  }
 }
 
 async function baselineRead(contract: WriteContract, profile: Profile, token: string, parameters: Record<string, unknown>, fields: string[]) {
@@ -430,7 +440,7 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
   if (cluster && options.reconcile && (!options.confirm || !/^[a-f0-9-]{36}\.[a-f0-9]{64}$/.test(options.confirm))) usage('Reconciliation requires the exact preview confirmation');
   if (cluster && profile.tokenKind === 'single-use') throw new ToolError('TOKEN_KIND', 'Cluster verification requires multiple authenticated requests', 'Select an API or session profile', 1);
   const clusterBefore: ClusterState | undefined = cluster ? options.reconcile && options.confirm
-    ? (JSON.parse(await files.read(journalPath(options.confirm))) as { clusterBefore: ClusterState }).clusterBefore
+    ? (await journalEntry(journalPath(options.confirm)) as { clusterBefore: ClusterState }).clusterBefore
     : await clusterState(profile, token, parameters.node) : undefined;
   if (contract.id === 'OP-126' && clusterBefore && Number(parameters.configRefreshIntervalSeconds ?? clusterBefore.configRefreshIntervalSeconds) <= Number(parameters.heartbeatRefreshIntervalSeconds ?? clusterBefore.heartbeatRefreshIntervalSeconds)) usage('Config refresh interval must exceed heartbeat refresh interval');
   const acquisition = contract.id === 'OP-002' || contract.id === 'OP-003' && parameters.pass !== undefined;
@@ -451,6 +461,16 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     route = { requested: profile.origin, effective: primary.url, caller: session.username };
   }
   const baselineInput = input.baseline ? { ...input.baseline } : undefined;
+  const creatingScope = contract.id === 'OP-092' && !input.baseline;
+  const baselineFields = input.baseline ? Object.keys(input.baseline) : creatingScope ? Object.keys(parameters).filter(key => key !== 'name') : [];
+  const pointer = ['OP-049', 'OP-051'].includes(contract.id) && parameters.ptr === true;
+  // The vendor performs these steps implicitly, so the preview must name them.
+  const sideEffects = [
+    ...(pointer ? ['Adds or updates the matching PTR record for the address'] : []),
+    ...(pointer && parameters.createPtrZone === true ? ['Creates the reverse zone when it does not exist'] : []),
+    ...(creatingScope ? ['Creates a new DHCP scope'] : []),
+    ...(contract.id === 'OP-092' && (parameters.dnsUpdates === true || typeof parameters.domainName === 'string' && parameters.domainName !== '') ? ['May create the forward and reverse DNS zones for the scope domain name when DNS updates are enabled'] : []),
+  ];
   if (contract.id === 'OP-080') for (const values of [parameters, baselineInput]) {
     if (!Array.isArray(values?.tsigKeys)) continue;
     values!.tsigKeys = await Promise.all(values!.tsigKeys.map(async row => {
@@ -491,9 +511,11 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     ...(route ? { route } : {}),
     routing: routing(contract.id),
     ...(clusterBefore ? { cluster: clusterPreview(contract.id, parameters, clusterBefore) } : {}),
-    replaces: contract.baselinePath ? Object.keys(input.baseline!) : [],
+    replaces: input.baseline ? baselineFields : [],
+    ...(sideEffects.length ? { sideEffects } : {}),
     ...(contract.baselinePath ? { concurrency: 'A single-writer window is required between the final read and write; the vendor has no atomic conditional setter' } : {}) } } };
   if (!permitted) throw new ToolError('WRITE_DENIED', 'Exact write grant is required and read-only mode overrides grants', 'Enable only the selected operation in the selected profile', 1);
+  if (!options.confirm) usage('Missing --confirm; preview the operation and pass its digest');
   if (!intentId || !/^[a-f0-9-]{36}$/.test(intentId) || options.confirm !== digest) throw new ToolError('CONFIRMATION_MISMATCH', 'Preview confirmation no longer matches the selected input', 'Preview again and supply its exact digest', 1);
   if ((contract.baselinePath || ['OP-030', 'OP-093'].includes(contract.id)) && profile.tokenKind === 'single-use') throw new ToolError('TOKEN_KIND', 'This action needs multiple authenticated requests', 'Select an API or session profile for this operation', 1);
   const auditId = randomUUID();
@@ -514,10 +536,10 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     if (!contract.baselinePath || !expected) return false;
     const target = contract.id === 'OP-109' && parameters.newGroup !== undefined ? { ...parameters, group: parameters.newGroup }
       : contract.id === 'OP-092' && parameters.newName !== undefined ? { ...parameters, name: parameters.newName } : parameters;
-    return postconditionHash(await baselineRead(contract, profile, token, target, Object.keys(input.baseline!))) === expected;
+    return postconditionHash(await baselineRead(contract, profile, token, target, baselineFields)) === expected;
   };
   if (options.reconcile) {
-    const prior = JSON.parse(await files.read(path)) as { auditId: string; state: string; postconditionHash?: string; resyncSerial?: number };
+    const prior = await journalEntry(path) as { auditId: string; state: string; postconditionHash?: string; resyncSerial?: number };
     if (prior.auditId !== options.reconcile) usage('Audit ID does not match the confirmed operation');
     resyncSerial = prior.resyncSerial;
     let proven = false;
@@ -538,9 +560,22 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
   if (contract.id === 'OP-030') resyncSerial = await soaSerial(profile, token, parameters);
   let expectedState: Awaited<ReturnType<typeof baselineRead>> | undefined;
   if (contract.baselinePath) {
-    const baseline = await baselineRead(contract, profile, token, parameters, Object.keys(input.baseline!));
-    if (canonical(baseline.selected) !== canonical(selectedValues(baselineInput!, contract.id === 'OP-092'))) throw new ToolError('CONFLICT', 'Selected baseline changed after preview', 'Read the selected values and preview a new explicit replacement', 1);
-    const selected = selectedValues(Object.fromEntries(Object.keys(input.baseline!).map(key => [key, parameters[key]])), contract.id === 'OP-092');
+    let baseline: Awaited<ReturnType<typeof baselineRead>> = { selected: {}, preserved: {} };
+    if (creatingScope) {
+      // The scope setter creates a missing scope but silently modifies an existing one, so creation requires proven absence.
+      const exists = await baselineRead(contract, profile, token, parameters, ['name']).then(() => true, error => {
+        if (error instanceof ToolError && error.code === 'UPSTREAM_ERROR' && /not found/i.test(error.message)) return false;
+        throw error;
+      });
+      if (exists) throw new ToolError('CONFLICT', 'A scope with this name already exists', 'Supply the exact selected baseline to modify it, or choose an unused scope name', 1);
+    } else {
+      baseline = await baselineRead(contract, profile, token, parameters, baselineFields).catch(error => {
+        if (contract.id === 'OP-092' && error instanceof ToolError && error.code === 'UPSTREAM_ERROR' && /not found/i.test(error.message)) throw new ToolError(error.code, error.message, 'To create a scope omit the baseline and supply name, startingAddress, endingAddress and subnetMask', 1);
+        throw error;
+      });
+      if (canonical(baseline.selected) !== canonical(selectedValues(baselineInput!, contract.id === 'OP-092'))) throw new ToolError('CONFLICT', 'Selected baseline changed after preview', 'Read the selected values and preview a new explicit replacement', 1);
+    }
+    const selected = selectedValues(Object.fromEntries(baselineFields.map(key => [key, parameters[key]])), contract.id === 'OP-092');
     if (['OP-034', 'OP-113'].includes(contract.id) && Array.isArray(selected.groupPermissions)) {
       const section = String(parameters.section).toLowerCase();
       const mandatory = ['administrators', ...(contract.id === 'OP-034' || section === 'zones' ? ['dns administrators'] : section === 'dhcpserver' ? ['dhcp administrators'] : [])];
@@ -602,11 +637,18 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
   let refusal: ToolError | undefined;
   try {
     const response = await vendorRequest(profile, requestPath, body, acquisition ? undefined : token, headers, { bytes: 16 * 1024 * 1024, elapsedMs: 10000 });
-    if (response.status !== 200 || response.contentType !== 'application/json') throw new Error('Response unavailable');
-    const value: unknown = JSON.parse(response.bytes.toString());
-    if (mutating && object(value) && value.status === 'error' && contract.id === 'OP-143') {
-      const reason = vendorMessage(value);
-      refusal = new ToolError('UPSTREAM_ERROR', `Server refused the operation${reason ? `: ${reason}` : ''}; audit ID ${auditId}${profile.tokenKind === 'single-use' ? '; credential consumed' : ''}`,
+    // A missing endpoint cannot have applied anything, so it is a definitive refusal for every mutation.
+    const unsupported = mutating && response.status === 404;
+    if (!unsupported && (response.status !== 200 || response.contentType !== 'application/json')) throw new Error('Response unavailable');
+    const value: unknown = unsupported ? undefined : JSON.parse(response.bytes.toString());
+    // An explicit status:error is a clean refusal only when the vendor handler cannot have applied part of the change first.
+    const mayApplyPartially = contract.baselinePath !== undefined || clusterBefore !== undefined
+      || ['OP-013', 'OP-023', 'OP-060', 'OP-066', 'OP-085', 'OP-104', 'OP-115', 'OP-117', 'OP-142'].includes(contract.id)
+      || contract.id === 'OP-029' && parameters.zones !== undefined
+      || ['OP-049', 'OP-051'].includes(contract.id) && (parameters.ptr === true || parameters.createPtrZone === true);
+    if (unsupported || mutating && object(value) && value.status === 'error' && !mayApplyPartially) {
+      const reason = unsupported ? 'The server does not provide this operation' : vendorMessage(value as Record<string, unknown>)?.replace(/\.$/, '');
+      refusal = new ToolError(unsupported ? 'UNSUPPORTED_OPERATION' : 'UPSTREAM_ERROR', `Server refused the operation${reason ? `: ${reason}` : ''}; audit ID ${auditId}${profile.tokenKind === 'single-use' ? '; credential consumed' : ''}`,
         'The server reported an explicit failure; fix the cause and preview again', 1);
       await files.write(path, JSON.stringify({ auditId, digest, operation: capability, state: 'failed', postconditionHash: expected, resyncSerial, clusterBefore }));
       throw refusal;

@@ -85,6 +85,7 @@ export async function listsCacheJourney(context) {
   submitted = parameters;
   denied = true;
   const deniedPreview = await success(command, input);
-  await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', deniedPreview.preview.digest]);
+  // Imports may add some entries before refusing, so they stay uncertain.
+  await failure(command.endsWith('import') ? 'OUTCOME_UNKNOWN' : 'UPSTREAM_ERROR', command, input, ['--execute', '--confirm', deniedPreview.preview.digest]);
   await verify(initial);
 }

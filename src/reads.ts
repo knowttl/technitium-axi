@@ -43,6 +43,8 @@ function project(value: unknown, shape: Shape, nullable = false, path = 'respons
     if (shape === 'json') return value;
     if (shape === 'nullable') {
       if (value !== null && typeof value !== 'string') invalid();
+    } else if (shape === 'nullable-number') {
+      if (value !== null && typeof value !== 'number') invalid();
     } else if (shape === 'string-or-number') {
       // Protocol and flags vary between numeric data and enum names across record families.
       if (typeof value !== 'string' && typeof value !== 'number') invalid();
@@ -108,7 +110,11 @@ export async function readOperation(profile: Profile, command: string, token: st
     for (let attempt = 0; attempt < 2; attempt++) {
       if (++requests > requestCap || Date.now() - started >= elapsedCap) throw new ToolError('READ_LIMIT', 'Read request or elapsed cap reached', 'Resume with narrower filters or a larger bounded cap', 1);
       response = await vendorRequest(profile, contract.path, form.toString(), token, headers,
-        { bytes: byteCap - bytesRead, elapsedMs: elapsedCap - (Date.now() - started) });
+        { bytes: byteCap - bytesRead, elapsedMs: elapsedCap - (Date.now() - started) }).catch(error => {
+        // The byte cap has a maximum, so a very large log file can only be read in part through the vendor limit.
+        if (contract.id === 'OP-135' && error instanceof ToolError && error.code === 'RESPONSE_LIMIT') throw new ToolError(error.code, error.message, 'Raise --max-bytes within its bound, or read part of the file with --limit', error.exitCode);
+        throw error;
+      });
       bytesRead += response.bytes.length;
       if (![429, 502, 503, 504].includes(response.status) || profile.tokenKind === 'single-use' || attempt || requests === requestCap) break;
       // Never ignore server backoff. Retry only immediate transient reads; return longer guidance.
@@ -226,7 +232,7 @@ export async function readOperation(profile: Profile, command: string, token: st
     }
   }
   // Record-bearing reads must never claim completeness while record data was dropped.
-  const omitted: Record<string, Set<string>> | undefined = ['OP-050', 'OP-053'].includes(contract.id) ? {} : undefined;
+  const omitted: Record<string, Set<string>> | undefined = ['OP-038', 'OP-050', 'OP-053'].includes(contract.id) ? {} : undefined;
   let projected = project(payload, contract.response, false, 'response', omitted) as Record<string, unknown>;
   const omittedFields = Object.fromEntries(Object.entries(omitted ?? {}).map(([path, keys]) => [path, [...keys].sort()]));
   if (Object.keys(omittedFields).length) complete = false;

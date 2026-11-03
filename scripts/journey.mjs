@@ -175,6 +175,11 @@ if (!inside) {
         assert.equal(decode(result.stdout).error.code, 'USAGE');
         assert.ok(!`${result.stdout}${result.stderr}`.includes('inline-canary'));
       }
+      for (const argv of [['zone', 'list', '--bogus', '1'], ['zone', 'list', '--bogus']]) {
+        const stray = decode((await invoke(argv)).stdout);
+        assert.equal(stray.error.code, 'USAGE');
+        assert.match(stray.help.join(' '), /--zones-per-page/, 'An unknown flag lists the selected command flags');
+      }
       checks.push('native:usage-errors');
       if (task === 'B1.02') {
         checks.push('native:two-https-boundaries', 'native:kernel-egress-denied');
