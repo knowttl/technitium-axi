@@ -80,7 +80,10 @@ export async function appsRestoreJourney({ task, directory, env, run, executable
       const parameters = upload ? new URL(incoming.url, 'https://fixture.test').searchParams : new URLSearchParams(bytes.toString());
       assert.deepEqual(Object.fromEntries(parameters), { ...input.parameters, ...(id === '076' ? { config: opaque } : {}) });
       if (upload) checkMultipart(incoming, bytes, packageBytes);
-      if (fault) return { body: { status: 'error', errorMessage: `Cannot apply for ${token}` } };
+      if (fault) {
+        if (['071', '073'].includes(id)) apps = apps.filter(row => row.name !== 'TestApp');
+        return { body: { status: 'error', errorMessage: `Cannot apply for ${token}` } };
+      }
       if (id === '076') configs.TestApp = parameters.get('config');
       else {
         apps = apps.filter(row => row.name !== 'TestApp');
@@ -150,8 +153,9 @@ export async function appsRestoreJourney({ task, directory, env, run, executable
     fault = true;
     const preview = await success(command, input);
     const before = calls;
-    const unknown = await failure('UPSTREAM_ERROR', command, input, ['--execute', '--confirm', preview.preview.digest]);
-    assert.match(unknown.error.message, /Server refused the operation: Cannot apply for .*; audit ID [a-f0-9-]+/);
+    const unknown = await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', preview.preview.digest]);
+    assert.match(unknown.error.message, /audit ID [a-f0-9-]+/);
+    if (['071', '073'].includes(id)) assert.deepEqual((await read(['app', 'list'])).response.apps.map(app => app.name), ['KeepApp']);
     await failure('REPLAY_DENIED', command, input, ['--execute', '--confirm', preview.preview.digest]);
     assert.equal(calls, before + 1);
   }

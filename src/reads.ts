@@ -110,11 +110,7 @@ export async function readOperation(profile: Profile, command: string, token: st
     for (let attempt = 0; attempt < 2; attempt++) {
       if (++requests > requestCap || Date.now() - started >= elapsedCap) throw new ToolError('READ_LIMIT', 'Read request or elapsed cap reached', 'Resume with narrower filters or a larger bounded cap', 1);
       response = await vendorRequest(profile, contract.path, form.toString(), token, headers,
-        { bytes: byteCap - bytesRead, elapsedMs: elapsedCap - (Date.now() - started) }).catch(error => {
-        // The byte cap has a maximum, so a very large log file can only be read in part through the vendor limit.
-        if (contract.id === 'OP-135' && error instanceof ToolError && error.code === 'RESPONSE_LIMIT') throw new ToolError(error.code, error.message, 'Raise --max-bytes within its bound, or read part of the file with --limit', error.exitCode);
-        throw error;
-      });
+        { bytes: byteCap - bytesRead, elapsedMs: elapsedCap - (Date.now() - started) });
       bytesRead += response.bytes.length;
       if (![429, 502, 503, 504].includes(response.status) || profile.tokenKind === 'single-use' || attempt || requests === requestCap) break;
       // Never ignore server backoff. Retry only immediate transient reads; return longer guidance.

@@ -134,6 +134,8 @@ export async function dhcpJourney({ task, directory, env, run, executable, vendo
     expectedWire = Object.fromEntries(Object.entries(parameters).map(([key, value]) => [key, key === 'genericOptions' ? '150|c0000214'
       : key === 'staticRoutes' ? '198.51.100.0|255.255.255.0|192.0.2.1' : String(value)]));
     const preview = await success(command, input);
+    if (['088', '089', '093', '095'].includes(id)) assert.deepEqual(preview.preview.sideEffects,
+      ['May create the forward and reverse DNS zones for the scope domain name when DNS updates are enabled']);
     await failure('CONFIRMATION_MISMATCH', command, { ...input, parameters: { ...parameters, name: 'keep' } }, ['--execute', '--confirm', preview.preview.digest]);
     await success(command, input, ['--execute', '--confirm', preview.preview.digest]);
     const selectedName = id === '092' ? 'lab-new' : 'lab';
@@ -220,7 +222,11 @@ export async function dhcpJourney({ task, directory, env, run, executable, vendo
       assert.deepEqual(await read('dhcp scope get', ['--name', 'lab']), details);
       const selected = { hostName: 'workstation', hardwareAddress: '00:11:22:33:44:55', address: '192.0.2.20', comments: 'owned' };
       expectedWire = { name: 'lab', reservedLeases: 'keep|00-11-22-33-44-66|192.0.2.21|keep|workstation|00:11:22:33:44:55|192.0.2.20|owned' };
-      await execute(command, { parameters: { name: 'lab', reservedLeases: [decoy, selected] }, baseline: { reservedLeases: [] } });
+      const reservations = { parameters: { name: 'lab', reservedLeases: [decoy, selected] }, baseline: { reservedLeases: [] } };
+      const reservationsPreview = await success(command, reservations);
+      assert.deepEqual(reservationsPreview.preview.sideEffects,
+        ['May create the forward and reverse DNS zones for the scope domain name when DNS updates are enabled']);
+      await success(command, reservations, ['--execute', '--confirm', reservationsPreview.preview.digest]);
       details.reservedLeases = [{ ...selected, hardwareAddress: mac }, decoy];
       assert.deepEqual(await read('dhcp scope get', ['--name', 'lab']), details);
       // Without a baseline the setter creates the scope, and the preview says so.

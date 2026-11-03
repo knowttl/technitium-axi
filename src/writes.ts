@@ -469,7 +469,10 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     ...(pointer ? ['Adds or updates the matching PTR record for the address'] : []),
     ...(pointer && parameters.createPtrZone === true ? ['Creates the reverse zone when it does not exist'] : []),
     ...(creatingScope ? ['Creates a new DHCP scope'] : []),
-    ...(contract.id === 'OP-092' && (parameters.dnsUpdates === true || typeof parameters.domainName === 'string' && parameters.domainName !== '') ? ['May create the forward and reverse DNS zones for the scope domain name when DNS updates are enabled'] : []),
+    ...(['OP-088', 'OP-089', 'OP-093', 'OP-095'].includes(contract.id)
+      || contract.id === 'OP-092' && (parameters.dnsUpdates === true || typeof parameters.domainName === 'string' && parameters.domainName !== '' || parameters.reservedLeases !== undefined)
+      ? ['May create the forward and reverse DNS zones for the scope domain name when DNS updates are enabled'] : []),
+    ...(capability === 'OP-077.import' ? ['May create a primary DNS zone for the imported records when no suitable zone exists'] : []),
   ];
   if (contract.id === 'OP-080') for (const values of [parameters, baselineInput]) {
     if (!Array.isArray(values?.tsigKeys)) continue;
@@ -643,7 +646,7 @@ export async function writeOperation(contract: WriteContract, input: WriteInput,
     const value: unknown = unsupported ? undefined : JSON.parse(response.bytes.toString());
     // An explicit status:error is a clean refusal only when the vendor handler cannot have applied part of the change first.
     const mayApplyPartially = contract.baselinePath !== undefined || clusterBefore !== undefined
-      || ['OP-013', 'OP-023', 'OP-060', 'OP-066', 'OP-085', 'OP-104', 'OP-115', 'OP-117', 'OP-142'].includes(contract.id)
+      || ['OP-013', 'OP-023', 'OP-060', 'OP-066', 'OP-070', 'OP-071', 'OP-072', 'OP-073', 'OP-074', 'OP-076', 'OP-085', 'OP-104', 'OP-115', 'OP-117', 'OP-142'].includes(contract.id)
       || contract.id === 'OP-029' && parameters.zones !== undefined
       || ['OP-049', 'OP-051'].includes(contract.id) && (parameters.ptr === true || parameters.createPtrZone === true);
     if (unsupported || mutating && object(value) && value.status === 'error' && !mayApplyPartially) {

@@ -110,6 +110,8 @@ export async function resolveJourney({ directory, env, run, executable, vendors,
     const before = vendors.traces.length;
     const preview = await success(command, input);
     assert.equal(preview.preview.operation, row.read ? 'OP-077.resolve' : 'OP-077.import');
+    assert.deepEqual(preview.preview.sideEffects, row.read ? undefined
+      : ['May create a primary DNS zone for the imported records when no suitable zone exists']);
     assert.equal(vendors.traces.length, before);
     if (row.denied) await failure('UPSTREAM_ERROR', command, input, ['--execute', '--confirm', preview.preview.digest]);
     else {
