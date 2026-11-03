@@ -227,7 +227,7 @@ export async function readOperation(profile: Profile, command: string, token: st
       stoppedBy = 'PROVIDER_TOTAL_MISMATCH';
     }
   }
-  // Record-bearing reads must never claim completeness while record data was dropped.
+  // DNSSEC properties and record-bearing reads must disclose omitted fields before claiming completeness.
   const omitted: Record<string, Set<string>> | undefined = ['OP-038', 'OP-050', 'OP-053'].includes(contract.id) ? {} : undefined;
   let projected = project(payload, contract.response, false, 'response', omitted) as Record<string, unknown>;
   const omittedFields = Object.fromEntries(Object.entries(omitted ?? {}).map(([path, keys]) => [path, [...keys].sort()]));

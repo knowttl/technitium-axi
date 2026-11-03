@@ -154,12 +154,12 @@ Restore checks both delete-existing modes, a failure after an earlier category c
 
 B4 settings checks use the field matrix in [configuration-matrix.json](../tests/fixtures/configuration-matrix.json) for form/JSON patches, structured fields, omitted-secret preservation and protected results.
 The transfer checks cover file-only multipart, exact ZIP entry bytes, preview hash changes, size limits and custody denial before dispatch.
-The settings and log action checks exercise success and vendor failure, retaining uncertain journal entries without replay.
+The settings and log action checks exercise success and vendor failure under the [write outcome policy](../README.md#writes), with replay denied.
 Run each task with `npm run check:journey -- --task <id> --paths native --offline`, using `B4.01`, `B4.02`, `B4.03`, `B4.OP-080`, `B4.OP-082`, `B4.OP-083`, `B4.OP-136` or `B4.OP-137`.
 Hosted proof remains a separate release-candidate check.
 
 `B4.dhcp` runs the DHCP write matrix, or select `B4.OP-087`, `088`, `089`, `092`, `093`, `094`, `095`, `096` or `097` with the full `B4.OP-` prefix.
-The native journeys verify lease selectors, conversions, reservation conflicts, scope rename and configuration preservation, scope state and disk deletion through loopback HTTPS.
+The native journeys verify lease selectors, conversions, reservation conflicts, scope creation and rename, configuration preservation, scope state and disk deletion through loopback HTTPS.
 Scope replacement checks include stale baselines and reconciliation after a lost response.
 The worlds are synthetic and do not establish live-server interoperability.
 
