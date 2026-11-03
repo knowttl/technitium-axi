@@ -45,7 +45,8 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
   const rejected = async (command, input) => {
     const before = structuredClone([...zones]);
     const preview = await success(command, input);
-    await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', preview.preview.digest]);
+    const refused = await failure(command === 'zone import' ? 'OUTCOME_UNKNOWN' : 'UPSTREAM_ERROR', command, input, ['--execute', '--confirm', preview.preview.digest]);
+    if (command !== 'zone import') assert.match(refused.error.message, /Server refused the operation: Synthetic rejected operation; audit ID [a-f0-9-]+/);
     assert.deepEqual([...zones], before);
   };
   if (id === 'OP-022') {
@@ -53,7 +54,9 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
       const multipart = incoming.headers['content-type'].startsWith('multipart/form-data;');
       const p = multipart ? Object.fromEntries(new URL(incoming.url, 'https://fixture.test').searchParams) : parameters(bytes);
       if (zones.has(p.zone)) return denied();
+      if (p.zone === 'unreachable.test') return { body: { status: 'error', errorMessage: 'Zone was not created: DNS Server did not receive SOA record for \'unreachable.test\' from any of the primary name servers.' } };
       zones.set(p.zone, { ...seed(p.zone, p.type), ...p });
+      if (p.catalog && zones.get(p.catalog)?.type !== 'Catalog') return denied();
       if (multipart) {
         assert.ok(bytes.includes(Buffer.from('uploaded 60 IN A 192.0.2.80\n')));
         zones.get(p.zone).records.push(record(`uploaded.${p.zone}`, 'A', { ipAddress: '192.0.2.80' }, 60));
@@ -73,6 +76,17 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
       }
     }
     await rejected('zone create', { parameters: { zone: 'example.test', type: 'Primary' } });
+    const unreachable = { parameters: { zone: 'unreachable.test', type: 'Secondary', primaryNameServerAddresses: ['192.0.2.53'] } };
+    const unreachableRefusal = await failure('UPSTREAM_ERROR', 'zone create', unreachable, ['--execute', '--confirm', (await success('zone create', unreachable)).preview.digest]);
+    assert.match(unreachableRefusal.error.message, /did not receive SOA record/);
+    assert.ok(!zones.has('unreachable.test'));
+    const catalog = { parameters: { zone: 'catalog-member.test', type: 'Primary', catalog: 'example.test' } };
+    const catalogPreview = await success('zone create', catalog);
+    await failure('OUTCOME_UNKNOWN', 'zone create', catalog, ['--execute', '--confirm', catalogPreview.preview.digest]);
+    assert.equal((await options('catalog-member.test')).type, 'Primary');
+    const receipt = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${catalogPreview.preview.digest}.json`), 'utf8'));
+    assert.equal(receipt.state, 'intent');
+    await failure('REPLAY_DENIED', 'zone create', catalog, ['--execute', '--confirm', catalogPreview.preview.digest]);
     const file = join(directory, 'create.zone');
     await writeFile(file, 'uploaded 60 IN A 192.0.2.80\n', { mode: 0o600 });
     for (const type of ['Primary', 'Forwarder']) {
@@ -213,6 +227,12 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
     assert.equal(reconciled.status, 'reconciled');
     assert.equal(reconciled.auditId, auditId);
     assert.equal(dispatches, 2);
+    // The server refuses a resync of a zone that is not secondary before anything is scheduled.
+    zones.set('primary.test', seed('primary.test', 'Primary', 1));
+    vendors.responders.set('/api/zones/resync', () => ({ body: { status: 'error', errorMessage: 'Only Secondary, SecondaryForwarder and SecondaryCatalog zones support resync.' } }));
+    const primary = { parameters: { zone: 'primary.test' } };
+    const refusal = await failure('UPSTREAM_ERROR', 'zone resync', primary, ['--execute', '--confirm', (await success('zone resync', primary)).preview.digest]);
+    assert.match(refusal.error.message, /^Server refused the operation: Only Secondary, SecondaryForwarder and SecondaryCatalog zones support resync; audit ID [a-f0-9-]+$/);
     for (const [zone, other] of [['127.1', '127.0.0.1'], ['127.0.0.1', '127.1'], ['key/a.test', 'key/b.test'], ['key/b.test', 'key/a.test']]) {
       let serial = 10, otherSerial = 100, writes = 0;
       vendors.responders.set('/api/zones/records/get', (_incoming, bytes) => {

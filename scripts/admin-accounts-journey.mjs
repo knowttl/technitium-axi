@@ -244,7 +244,7 @@ export async function adminAccountsJourney({ task, temporary, env, run, executab
     if (id === '107') {
       assert.deepEqual(await read('group get', ['--group', 'NewGroup']), { name: 'NewGroup', description: 'New DNS group', members: [] });
       const preview = await success(fullCommand, input);
-      await failure('OUTCOME_UNKNOWN', fullCommand, input, ['--execute', '--confirm', preview.preview.digest]);
+      await failure('UPSTREAM_ERROR', fullCommand, input, ['--execute', '--confirm', preview.preview.digest]);
       assert.equal((await read('group list')).groups.filter(row => row.name === 'NewGroup').length, 1);
     }
     if (id === '109') {
@@ -283,7 +283,8 @@ export async function adminAccountsJourney({ task, temporary, env, run, executab
       reset();
       deny = true;
       const preview = await success(fullCommand, input);
-      await failure('OUTCOME_UNKNOWN', fullCommand, input, ['--execute', '--confirm', preview.preview.digest, ...(id === '099' ? ['--result-file', destination] : [])]);
+      // Permission setters may apply part of a change before refusing, so only single-effect operations are clean refusals.
+      await failure(id === '113' ? 'OUTCOME_UNKNOWN' : 'UPSTREAM_ERROR', fullCommand, input, ['--execute', '--confirm', preview.preview.digest, ...(id === '099' ? ['--result-file', destination] : [])]);
       assert.deepEqual((await read('session list')).sessions.map(row => row.partialToken), ['1111111111111111', '2222222222222222', '3333333333333333']);
       assert.ok((await read('user list')).users.some(row => row.username === 'delete-user'));
       assert.ok((await read('group list')).groups.some(row => row.name === 'DeleteGroup'));

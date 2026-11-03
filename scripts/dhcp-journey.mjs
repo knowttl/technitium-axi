@@ -65,8 +65,13 @@ export async function dhcpJourney({ task, directory, env, run, executable, vendo
       assert.equal(incoming.headers.authorization, `Bearer ${token}`);
       const p = Object.fromEntries(new URLSearchParams(bytes.toString()));
       assert.deepEqual(p, expectedWire, 'Exact vendor form must retain false, zero and row ordering');
-      const scope = scopes.find(row => row.name === p.name);
+      let scope = scopes.find(row => row.name === p.name);
       const denied = () => ({ body: { status: 'error', errorMessage: 'Selected scope or lease was not found' } });
+      // The vendor scope setter creates a scope that does not exist yet.
+      if (!scope && id === '092') {
+        scope = { name: p.name, enabled: true, networkAddress: '203.0.113.0', broadcastAddress: '203.0.113.255', reservedLeases: [], genericOptions: [] };
+        scopes.push(scope);
+      }
       if (!scope) return denied();
       if (action.startsWith('lease ')) {
         const index = leases.findIndex(row => row.scope === p.name && (p.clientIdentifier ? row.clientIdentifier === p.clientIdentifier : row.hardwareAddress === normalizeMac(p.hardwareAddress)));
@@ -129,6 +134,8 @@ export async function dhcpJourney({ task, directory, env, run, executable, vendo
     expectedWire = Object.fromEntries(Object.entries(parameters).map(([key, value]) => [key, key === 'genericOptions' ? '150|c0000214'
       : key === 'staticRoutes' ? '198.51.100.0|255.255.255.0|192.0.2.1' : String(value)]));
     const preview = await success(command, input);
+    if (['088', '089', '093', '095'].includes(id)) assert.deepEqual(preview.preview.sideEffects,
+      ['May create the forward and reverse DNS zones for the scope domain name when DNS updates are enabled']);
     await failure('CONFIRMATION_MISMATCH', command, { ...input, parameters: { ...parameters, name: 'keep' } }, ['--execute', '--confirm', preview.preview.digest]);
     await success(command, input, ['--execute', '--confirm', preview.preview.digest]);
     const selectedName = id === '092' ? 'lab-new' : 'lab';
@@ -215,9 +222,28 @@ export async function dhcpJourney({ task, directory, env, run, executable, vendo
       assert.deepEqual(await read('dhcp scope get', ['--name', 'lab']), details);
       const selected = { hostName: 'workstation', hardwareAddress: '00:11:22:33:44:55', address: '192.0.2.20', comments: 'owned' };
       expectedWire = { name: 'lab', reservedLeases: 'keep|00-11-22-33-44-66|192.0.2.21|keep|workstation|00:11:22:33:44:55|192.0.2.20|owned' };
-      await execute(command, { parameters: { name: 'lab', reservedLeases: [decoy, selected] }, baseline: { reservedLeases: [] } });
+      const reservations = { parameters: { name: 'lab', reservedLeases: [decoy, selected] }, baseline: { reservedLeases: [] } };
+      const reservationsPreview = await success(command, reservations);
+      assert.deepEqual(reservationsPreview.preview.sideEffects,
+        ['May create the forward and reverse DNS zones for the scope domain name when DNS updates are enabled']);
+      await success(command, reservations, ['--execute', '--confirm', reservationsPreview.preview.digest]);
       details.reservedLeases = [{ ...selected, hardwareAddress: mac }, decoy];
       assert.deepEqual(await read('dhcp scope get', ['--name', 'lab']), details);
+      // Without a baseline the setter creates the scope, and the preview says so.
+      const fresh = { parameters: { name: 'fresh', startingAddress: '203.0.113.10', endingAddress: '203.0.113.50', subnetMask: '255.255.255.0', domainName: 'fresh.test', dnsUpdates: true } };
+      expectedWire = Object.fromEntries(Object.entries(fresh.parameters).map(([key, value]) => [key, String(value)]));
+      const freshPreview = await success(command, fresh);
+      assert.deepEqual(freshPreview.preview.replaces, []);
+      assert.deepEqual(freshPreview.preview.sideEffects, ['Creates a new DHCP scope', 'May create the forward and reverse DNS zones for the scope domain name when DNS updates are enabled']);
+      await success(command, fresh, ['--execute', '--confirm', freshPreview.preview.digest]);
+      assert.deepEqual(await read('dhcp scope get', ['--name', 'fresh']), { name: 'fresh', ...fresh.parameters, reservedLeases: [], genericOptions: [] });
+      const duplicate = { parameters: { ...fresh.parameters, name: 'lab' } };
+      await failure('CONFLICT', command, duplicate, ['--execute', '--confirm', (await success(command, duplicate)).preview.digest]);
+      await failure('USAGE', command, { parameters: { name: 'fresh-incomplete', dnsUpdates: true } });
+      const absent = { parameters: { name: 'absent', leaseTimeDays: 1 }, baseline: { leaseTimeDays: 7 } };
+      const absentError = await failure('UPSTREAM_ERROR', command, absent, ['--execute', '--confirm', (await success(command, absent)).preview.digest]);
+      assert.match(absentError.help[0], /omit the baseline/);
+      assert.ok(!scopes.some(row => row.name === 'absent'));
     } else if (id === '093') {
       await failure('CONFLICT', command, { parameters: { name: 'lab', hardwareAddress: '00-11-22-33-44-77', ipAddress: '192.0.2.21' } },
         ['--execute', '--confirm', (await success(command, { parameters: { name: 'lab', hardwareAddress: '00-11-22-33-44-77', ipAddress: '192.0.2.21' } })).preview.digest]);
@@ -226,7 +252,7 @@ export async function dhcpJourney({ task, directory, env, run, executable, vendo
       const missing = { parameters: { ...parameters, name: 'absent' } };
       expectedWire = Object.fromEntries(Object.entries(missing.parameters).map(([key, value]) => [key, String(value)]));
       const preview = await success(command, missing);
-      await failure('OUTCOME_UNKNOWN', command, missing, ['--execute', '--confirm', preview.preview.digest]);
+      await failure('UPSTREAM_ERROR', command, missing, ['--execute', '--confirm', preview.preview.digest]);
       assert.deepEqual(scopes, expectedScopes);
     }
   }

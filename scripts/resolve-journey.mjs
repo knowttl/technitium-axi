@@ -27,6 +27,8 @@ export async function resolveJourney({ directory, env, run, executable, vendors,
     { name: 'existing-deny', before: initial('Primary', false), denied: true, section: true, selected: false },
     { name: 'new-allow', before: initial(), parameters: { domain: 'new.test' }, after: [...initial(), zone('new.test', 'Primary', [newRecord])], section: true, selected: false },
     { name: 'new-deny', before: initial(), parameters: { domain: 'new.test' }, denied: true, section: false, selected: false },
+    { name: 'apex-cname-import', before: initial(), parameters: { domain: 'alias.test', type: 'CNAME' }, denied: true,
+      after: [...initial(), zone('alias.test', 'Primary', [soa('alias.test')])] },
     { name: 'axfr-sync', before: [zone('example.test', 'Primary', [...transferred, a('stale.example.test', '192.0.2.1')]), decoy],
       parameters: { domain: 'example.test', type: 'AXFR', protocol: 'Tcp' }, after: [zone('example.test', 'Primary', transferred), decoy], selected: true },
     ...['missing', 'mismatched'].map(closing => ({ name: `axfr-${closing}-soa`, before: initial(), parameters: { domain: 'example.test', type: 'AXFR', protocol: 'Tcp' }, denied: true, selected: true })),
@@ -102,17 +104,23 @@ export async function resolveJourney({ directory, env, run, executable, vendors,
       assert.equal(incoming.headers['content-type'], 'application/x-www-form-urlencoded');
       assert.deepEqual(Object.fromEntries(new URLSearchParams(bytes.toString())), Object.fromEntries(Object.entries(parameters).map(([key, value]) => [key, String(value)])), row.name);
       calls++;
-      if (row.denied) return { body: { status: 'error', errorMessage: 'Import denied by selected vendor permission or target type' } };
       world = structuredClone(expected);
+      if (row.denied) return { body: { status: 'error', errorMessage: 'Import denied by selected vendor permission or target type' } };
       return { body: { status: 'ok', response: { result: reply, rawResponses: [], ...(row.warning ? { warningMessage: 'DNSSEC validation failed' } : {}) } } };
     });
     await verify(row.before);
     const before = vendors.traces.length;
     const preview = await success(command, input);
     assert.equal(preview.preview.operation, row.read ? 'OP-077.resolve' : 'OP-077.import');
+    assert.deepEqual(preview.preview.sideEffects, row.read ? undefined
+      : ['May create a primary DNS zone for the imported records when no suitable zone exists']);
     assert.equal(vendors.traces.length, before);
-    if (row.denied) await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', preview.preview.digest]);
-    else {
+    if (row.denied) {
+      await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', preview.preview.digest]);
+      const receipt = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${preview.preview.digest}.json`), 'utf8'));
+      assert.equal(receipt.state, 'intent');
+      await failure('REPLAY_DENIED', command, input, ['--execute', '--confirm', preview.preview.digest]);
+    } else {
       const result = await success(command, input, ['--execute', '--confirm', preview.preview.digest]);
       assert.deepEqual(result.response, reply);
       if (row.warning) {

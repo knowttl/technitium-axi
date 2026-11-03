@@ -72,6 +72,7 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
     assert.notEqual(result.code, 0, result.stdout);
     if (invokeHosted && code === 'USAGE') assert.ok(['USAGE', 'INVALID_INPUT'].includes(result.value.error.code), result.stdout);
     else assert.equal(result.value.error.code, code, result.stdout);
+    return result.value;
   };
   const argumentsFor = row => [...row.command.split(' '), ...row.parameters.flatMap(parameter => [parameter.flag, parameter.requested])];
   const respond = row => vendors.responders.set(row.path, () => ({ body: row.response }));
@@ -214,6 +215,17 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
       const unlisted = await success([...argumentsFor(get), '--full']);
       assert.equal(unlisted.output.complete, false);
       assert.deepEqual(unlisted.output.omittedFields, { 'response.records[].rData': ['futureField'] });
+      const dnssec = matrix.operations.find(row => row.operation === 'OP-038');
+      respond(dnssec);
+      const signed = await success([...argumentsFor(dnssec), '--full']);
+      assert.equal(signed.response.nsec3Iterations, 2);
+      assert.equal(signed.response.nsec3SaltLength, 8);
+      assert.equal(signed.response.dnssecPrivateKeys[0].algorithmNumber, 13);
+      assert.equal(signed.output.omittedFields, undefined);
+      vendors.responders.set(dnssec.path, () => ({ body: { status: 'ok', response: { ...dnssec.response.response, futureField: 1 } } }));
+      const future = await success([...argumentsFor(dnssec), '--full']);
+      assert.equal(future.output.complete, false);
+      assert.deepEqual(future.output.omittedFields, { response: ['futureField'] });
       const update = matrix.operations.find(row => row.operation === 'OP-014');
       vendors.responders.set(update.path, () => ({ body: { status: 'ok', response: { updateAvailable: false, updateVersion: null, currentVersion: '15.4',
         updateTitle: null, updateMessage: null, downloadLink: null, instructionsLink: null, changeLogLink: null, dnsServerEnableCheckForUpdate: true } } }));

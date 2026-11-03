@@ -209,12 +209,11 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         const output = await success('zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
         assert.equal(output.credential, 'consumed');
       } else if (mode === 'handler') {
-        const output = await failure('OUTCOME_UNKNOWN', 'zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
-        assert.match(output.error.message, /credential consumed-or-uncertain/);
-        assert.match(output.error.message, /audit ID [a-f0-9-]+/);
+        const output = await failure('UPSTREAM_ERROR', 'zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
+        assert.match(output.error.message, /Server refused the operation: Cannot add record for .*; audit ID [a-f0-9-]+; credential consumed$/);
         assert.ok(!output.error.message.includes(token), 'The error text must not reveal the credential');
         const receipt = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${preview.preview.digest}.json`), 'utf8'));
-        assert.equal(receipt.state, 'intent', 'A handler error cannot prove that no mutation applied');
+        assert.equal(receipt.state, 'failed', 'An explicit handler refusal is journaled as a refusal');
       } else {
         const output = await failure('OUTCOME_UNKNOWN', 'zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
         assert.match(output.error.message, /consumed-or-uncertain/);
@@ -222,6 +221,14 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       await failure('REPLAY_DENIED', 'zone record add', input, ['--execute', '--confirm', preview.preview.digest]);
     }
     assert.equal(sent.length, 3, 'Each dispatched credential is used exactly once without retry');
+    // The vendor adds the record before the reverse-pointer step, so a refusal of a pointer-bearing add may be partial.
+    await configure(['OP-049']);
+    fault = 'handler';
+    const pointer = { parameters: { ...add.parameters, ptr: true, createPtrZone: true } };
+    const pointerPreview = await success('zone record add', pointer);
+    assert.deepEqual(pointerPreview.preview.sideEffects, ['Adds or updates the matching PTR record for the address', 'Creates the reverse zone when it does not exist']);
+    await failure('USAGE', 'zone record add', pointer, ['--execute']);
+    await failure('OUTCOME_UNKNOWN', 'zone record add', pointer, ['--execute', '--confirm', pointerPreview.preview.digest]);
   }
   if (task === 'B3.03') {
     const replacements = [
@@ -509,7 +516,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       await readback([keep, comparison, first], row.related?.add);
       if (row.singleton && !row.updateOnly) {
         const duplicate = recordInput({ ...params, overwrite: false });
-        await failure('OUTCOME_UNKNOWN', 'zone record add', duplicate, ['--execute', '--confirm', (await success('zone record add', duplicate)).preview.digest]);
+        await failure('UPSTREAM_ERROR', 'zone record add', duplicate, ['--execute', '--confirm', (await success('zone record add', duplicate)).preview.digest]);
         await readback([keep, comparison, first]);
         await execute('zone record add', recordInput({ ...params, ...row.updated, overwrite: true }));
         await readback([keep, comparison, { ...first, rData: row.updated }]);
@@ -530,6 +537,30 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         await readback([keep, comparison], row.related?.update);
       }
       await failure('USAGE', 'zone record add', { parameters: { ...params, unexpected: true } });
+    }
+    const original = { name: 'alias.example.test', type: 'CNAME', ttl: 60, rData: { cname: 'target.test' } };
+    let remaining = [original];
+    vendors.responders.set('/api/zones/records/update', (_incoming, bytes) => {
+      const p = Object.fromEntries(new URLSearchParams(bytes.toString()));
+      if (p.newDomain !== p.domain) remaining = [];
+      return { body: { status: 'error', errorMessage: 'Cannot set CNAME record' } };
+    });
+    vendors.responders.set('/api/zones/records/get', () => ({ body: { status: 'ok', response: { zone: { name: 'example.test', type: 'Primary' }, records: serverRecords(remaining) } } }));
+    for (const [newDomain, code, state, expected] of [
+      [original.name, 'UPSTREAM_ERROR', 'failed', [original]],
+      ['example.test', 'OUTCOME_UNKNOWN', 'intent', []],
+    ]) {
+      remaining = [original];
+      const input = { parameters: { zone: 'example.test', domain: original.name, type: 'CNAME', cname: 'target.test', newDomain } };
+      const preview = await success('zone record update', input);
+      await failure(code, 'zone record update', input, ['--execute', '--confirm', preview.preview.digest]);
+      const resultFile = join(directory, `rename-readback-${sequence++}.json`);
+      const read = await run(executable, ['zone', 'record', 'get', '--zone', 'example.test', '--domain', 'example.test', '--list-zone', 'true', '--config', config, '--result-file', resultFile, '--json'], { env: { ...env, WRITE_TOKEN: token } });
+      assert.equal(read.code, 0, read.stdout + read.stderr);
+      assert.deepEqual(JSON.parse(await readFile(resultFile, 'utf8')).response.records, serverRecords(expected));
+      const receipt = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${preview.preview.digest}.json`), 'utf8'));
+      assert.equal(receipt.state, state);
+      await failure('REPLAY_DENIED', 'zone record update', input, ['--execute', '--confirm', preview.preview.digest]);
     }
     const before = vendors.traces.length;
     for (const action of ['add', 'update', 'delete']) {

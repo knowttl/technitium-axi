@@ -43,6 +43,8 @@ function project(value: unknown, shape: Shape, nullable = false, path = 'respons
     if (shape === 'json') return value;
     if (shape === 'nullable') {
       if (value !== null && typeof value !== 'string') invalid();
+    } else if (shape === 'nullable-number') {
+      if (value !== null && typeof value !== 'number') invalid();
     } else if (shape === 'string-or-number') {
       // Protocol and flags vary between numeric data and enum names across record families.
       if (typeof value !== 'string' && typeof value !== 'number') invalid();
@@ -225,8 +227,8 @@ export async function readOperation(profile: Profile, command: string, token: st
       stoppedBy = 'PROVIDER_TOTAL_MISMATCH';
     }
   }
-  // Record-bearing reads must never claim completeness while record data was dropped.
-  const omitted: Record<string, Set<string>> | undefined = ['OP-050', 'OP-053'].includes(contract.id) ? {} : undefined;
+  // DNSSEC properties and record-bearing reads must disclose omitted fields before claiming completeness.
+  const omitted: Record<string, Set<string>> | undefined = ['OP-038', 'OP-050', 'OP-053'].includes(contract.id) ? {} : undefined;
   let projected = project(payload, contract.response, false, 'response', omitted) as Record<string, unknown>;
   const omittedFields = Object.fromEntries(Object.entries(omitted ?? {}).map(([path, keys]) => [path, [...keys].sort()]));
   if (Object.keys(omittedFields).length) complete = false;

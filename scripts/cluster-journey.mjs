@@ -223,6 +223,7 @@ export async function clusterJourney({ task, directory, env, run, executable, ve
       const unknown = await failure('OUTCOME_UNKNOWN', full, input, ['--execute', '--confirm', pending.preview.digest]);
       const auditId = unknown.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
       await failure('OUTCOME_UNKNOWN', full, input, ['--confirm', pending.preview.digest, '--reconcile', auditId]);
+      await failure('CONFIRMATION_MISMATCH', full, input, ['--confirm', `${pending.preview.digest.split('.')[0]}.${'0'.repeat(64)}`, '--reconcile', auditId]);
       await failure('REPLAY_DENIED', full, input, ['--execute', '--confirm', pending.preview.digest]);
       assert.equal(vendors.traces.filter(row => row.path === `/api/admin/cluster/${path}`).length, dispatched + 1);
     }

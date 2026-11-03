@@ -133,7 +133,7 @@ export async function dnssecJourney({ task, directory, env, run, executable, ven
   vendors.responders.set(path, () => ({ body: { status: 'error', errorMessage: 'DNSSEC key or zone is not ready' } }));
   const rejected = { parameters: { zone: 'example.test', ...parameters } };
   const preview = await success(command, rejected);
-  await failure('OUTCOME_UNKNOWN', command, rejected, ['--execute', '--confirm', preview.preview.digest]);
+  await failure('UPSTREAM_ERROR', command, rejected, ['--execute', '--confirm', preview.preview.digest]);
   await verify(unchanged);
   await failure('REPLAY_DENIED', command, rejected, ['--execute', '--confirm', preview.preview.digest]);
 

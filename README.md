@@ -196,6 +196,7 @@ Scope enable, disable and delete take `name`; reservation removal also requires 
 Reservation addition requires `name`, `hardwareAddress` and `ipAddress`, with optional `hostName` and `comments`, and checks for an existing hardware or address reservation before dispatch.
 Use a single-writer window for this check because the vendor does not atomically reject a concurrent duplicate address.
 `dhcp scope set` updates an existing scope using typed fields from the inventory's `dhcpFields` map.
+Without a `baseline` it creates a missing scope and requires `startingAddress`, `endingAddress` and `subnetMask`; it returns `CONFLICT` if the scope already exists.
 When renaming, `baseline.newName` is the current scope name.
 Omitted fields are preserved, arrays replace collections, and empty arrays clear them.
 Structured rows retain the listed column order when encoded for the vendor, including option bytes, static routes, exclusions and reservations.
@@ -236,6 +237,7 @@ technitium-axi zone record add --profile automation --input-file /absolute/path/
 ```
 
 A preview resolves credentials, operation SecretRefs and uploads locally.
+When an operation can also create other objects, such as a PTR record or reverse zone, or DNS zones through DHCP scope DNS updates, the preview lists them in `sideEffects`.
 Cluster lifecycle and SSO user create/set previews perform the preflight reads described above; previews never dispatch mutations.
 It reports permission, target and upload metadata without secret values.
 Each preview issues a fresh invocation ID within its digest, bound to the selected profile, target and input contents.
@@ -249,12 +251,14 @@ This moves only the journal; stored sessions and the acquisition key stay under 
 The journal stores operation identity, state and keyed hashes, plus the preflight topology for cluster lifecycle reconciliation; it never stores secrets.
 Failure to persist an intent prevents dispatch.
 Dispatched mutations never retry automatically.
-An explicit error response is a definitive refusal only for `admin ldap test`, whose handler does not change configuration: it returns `UPSTREAM_ERROR` with the server's message and the audit ID, and the journal entry becomes `failed`.
+An explicit error response is a definitive refusal for every mutation whose handler validates before it changes anything: it returns `UPSTREAM_ERROR` with the server's message and the audit ID, and the journal entry becomes `failed`.
+Examples are a secondary zone whose primary is unreachable, a resync of a non-secondary zone, or a record that does not exist.
+A missing endpoint (HTTP 404) is a definitive `UNSUPPORTED_OPERATION` refusal.
 A lost response, a non-JSON response or an unproven postcondition returns `OUTCOME_UNKNOWN` and an audit ID.
-Other dispatched mutations can fail after changing state, including during persistence, so their error responses stay `OUTCOME_UNKNOWN` with an audit ID; `user logout` reports `revoke-failed` when revocation cannot be confirmed.
+Mutations that can apply part of a change before failing keep `OUTCOME_UNKNOWN` for an error response, with an audit ID: operations with a baseline, DHCP scope creation, cluster operations, bulk zone deletion, imports (including DNS-client imports), restore, app installation, update, uninstall and configuration changes, multi-field account and configuration setters, SSO user creation with group membership, zone creation with catalog membership, record renames, and record changes that also create a PTR record or reverse zone; `user logout` reports `revoke-failed` when revocation cannot be confirmed.
 Never replay an uncertain write or create a new preview to bypass its journal entry.
 
-`zone options set`, `zone permission set`, `settings set`, `dhcp scope set`, `admin group set` and `admin permission set` require an additional `baseline` object containing exactly the changed fields, excluding target identifiers.
+`zone options set`, `zone permission set`, `settings set`, `dhcp scope set` (when modifying), `admin group set` and `admin permission set` require an additional `baseline` object containing exactly the changed fields, excluding target identifiers.
 Read the selected target first and supply its current values; execution re-reads them and returns `CONFLICT` before dispatch if they differ.
 Zone-option and group lists are explicit replacements, including empty arrays; omitted fields remain unchanged.
 See the settings guidance above for collection reset and coupled-field behavior.

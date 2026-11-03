@@ -1337,13 +1337,16 @@
       "type": "Primary",
       "internal": false,
       "disabled": false,
-      "dnssecStatus": "SignedWithNSEC",
+      "dnssecStatus": "SignedWithNSEC3",
+      "nsec3Iterations": 2,
+      "nsec3SaltLength": 8,
       "dnsKeyTtl": 3600,
       "dnssecPrivateKeys": [
         {
           "keyTag": 15048,
           "keyType": "KeySigningKey",
           "algorithm": "ECDSAP256SHA256",
+          "algorithmNumber": 13,
           "state": "Published",
           "stateChangedOn": "2022-12-18T14:39:50.0328321Z",
           "stateReadyBy": "2022-12-18T16:14:50.0328321Z",
