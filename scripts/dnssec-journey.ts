@@ -1,3 +1,4 @@
+import type { SecretWriteContext } from './journey-types.ts';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -5,13 +6,13 @@ import { join } from 'node:path';
 export const dnssecTasks = [35, 36, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 140].map(id => `B3.OP-${String(id).padStart(3, '0')}`);
 
 // Synthetic vendor worlds prove CLI transport and readback, not cryptographic correctness.
-const key = (keyTag, keyType, state = 'Active', rolloverDays = 0) => ({ keyTag, keyType, state, rolloverDays,
+const key = (keyTag: number, keyType: string, state = 'Active', rolloverDays = 0) => ({ keyTag, keyType, state, rolloverDays,
   algorithm: 'ECDSAP256SHA256', isRetiring: false, stateChangedOn: '2026-01-01T00:00:00Z', stateReadyBy: '2026-01-01T00:00:00Z' });
 const ksk = key(15048, 'KeySigningKey');
 const zsk = key(25049, 'ZoneSigningKey', 'Active', 30);
 const a = { name: 'www.example.test', type: 'A', ttl: 300, rData: { ipAddress: '192.0.2.10' } };
-const record = (type, rData, ttl = 3600) => ({ name: 'example.test', type, ttl, rData });
-const dnskey = k => record('DNSKEY', { keyTag: k.keyTag, publicKey: `synthetic-public-${k.keyTag}` });
+const record = (type: string, rData: Record<string, unknown>, ttl = 3600) => ({ name: 'example.test', type, ttl, rData });
+const dnskey = (k: ReturnType<typeof key>) => record('DNSKEY', { keyTag: k.keyTag, publicKey: `synthetic-public-${k.keyTag}` });
 const proof = (nsec3 = false, iterations = 0, saltLength = 0) => nsec3
   ? [record('NSEC3', { hash: 'synthetic-proof' }), record('NSEC3PARAM', { iterations, salt: 'ab'.repeat(saltLength) })]
   : [record('NSEC', { nextDomainName: 'www.example.test' })];
@@ -26,10 +27,10 @@ function world({ signed = true, nsec3 = false, iterations = 0, saltLength = 0, k
 }
 
 export async function dnssecJourney({ task, directory, env, run, executable, vendors, config, token, secret,
-  configure, success, failure }) {
+  configure, success, failure }: Omit<SecretWriteContext, 'execute'>) {
   const id = task.slice(3);
   const properties = 'zone dnssec properties ';
-  const rows = {
+  const rows: Record<string, [string, string, Record<string, unknown>, ReturnType<typeof world>, ReturnType<typeof world>]> = {
     'OP-035': ['zone dnssec sign', '/api/zones/dnssec/sign', { algorithm: 'ECDSA', curve: 'P256' }, world({ signed: false }), world()],
     'OP-036': ['zone dnssec unsign', '/api/zones/dnssec/unsign', {}, world(), world({ signed: false })],
     'OP-039': [properties + 'convert-to-nsec', '/api/zones/dnssec/properties/convertToNSEC', {}, world({ nsec3: true, iterations: 2, saltLength: 8 }), world()],
@@ -44,8 +45,8 @@ export async function dnssecJourney({ task, directory, env, run, executable, ven
     'OP-048': [properties + 'retire-dns-key', '/api/zones/dnssec/properties/retireDnsKey', { keyTag: 25049 }, world({ keys: [ksk, zsk, key(25050, 'ZoneSigningKey')] }), world({ keys: [ksk, { ...zsk, isRetiring: true }, key(25050, 'ZoneSigningKey')] })],
     'OP-140': [properties + 'activate-ksk-dns-key', '/api/zones/dnssec/properties/activateKskDnsKey', { keyTag: 15048 }, world({ keys: [key(15047, 'KeySigningKey'), { ...ksk, state: 'Ready' }, zsk] }), world({ keys: [key(15047, 'KeySigningKey'), ksk, zsk] })],
   };
-  const [command, path, parameters, initial, final] = rows[id];
-  const cases = [{ parameters, initial, final }];
+  const [command, path, parameters, initial, final] = rows[id]!;
+  const cases: { parameters: Record<string, unknown>; initial: ReturnType<typeof world>; final: ReturnType<typeof world> }[] = [{ parameters, initial, final }];
   if (id === 'OP-035') {
     cases.push({ parameters: { algorithm: 'RSA', hashAlgorithm: 'SHA256', kskKeySize: 2048, zskKeySize: 1024, nxProof: 'NSEC3', iterations: 2, saltLength: 8 },
       initial, final: world({ nsec3: true, iterations: 2, saltLength: 8, keys: [ksk, zsk].map(k => ({ ...k, algorithm: 'RSASHA256' })) }) });
@@ -64,7 +65,7 @@ export async function dnssecJourney({ task, directory, env, run, executable, ven
     const refs = id === 'OP-035' ? { pemKskPrivateKey: { env: 'OPERATION_SECRET' }, pemZskPrivateKey: { env: 'OPERATION_SECRET' } }
       : { pemPrivateKey: { env: 'OPERATION_SECRET' } };
     cases.push({ parameters: generated, initial, final: eddsa }, { parameters: { ...generated, ...refs }, initial, final: eddsa });
-    cases.push({ parameters: { ...cases[1].parameters, ...refs }, initial, final: cases[1].final });
+    cases.push({ parameters: { ...cases[1]!.parameters, ...refs }, initial, final: cases[1]!.final });
   }
   if (id === 'OP-040') for (const params of [{}, { iterations: 0, saltLength: 0 }, { iterations: 50, saltLength: 32 }]) {
     cases.push({ parameters: params, initial, final: world({ nsec3: true, ...params }) });
@@ -72,22 +73,22 @@ export async function dnssecJourney({ task, directory, env, run, executable, ven
   if (id === 'OP-042') cases.push({ parameters: { ttl: 0 }, initial, final: world({ ttl: 0 }) });
   if (id === 'OP-044') cases.push({ parameters: { keyTag: 25049, rolloverDays: 0 }, initial, final: world({ keys: [ksk, { ...zsk, rolloverDays: 0 }] }) });
 
-  let current;
+  let current: ReturnType<typeof world>;
   let count = 0;
   const keep = world();
-  const select = bytes => new URLSearchParams(bytes.toString()).get('zone') === 'keep.test' ? keep : current;
+  const select = (bytes: Buffer) => new URLSearchParams(bytes.toString()).get('zone') === 'keep.test' ? keep : current;
   vendors.responders.set('/api/zones/dnssec/properties/get', (_incoming, bytes) => ({ body: { status: 'ok', response: select(bytes).properties } }));
   vendors.responders.set('/api/zones/records/get', (_incoming, bytes) => ({ body: { status: 'ok', response: { zone: { name: 'example.test', type: 'Primary' }, records: select(bytes).records } } }));
   vendors.responders.set('/api/zones/dnssec/viewDS', () => ({ body: { status: 'ok', response: { ...current.properties,
     dsRecords: [{ keyTag: 15048, dnsKeyState: 'Active', dnsKeyStateReadyBy: '2026-01-01T00:00:00Z', algorithm: 'ECDSAP256SHA256', publicKey: 'synthetic-public-15048', digests: [{ digestType: 'SHA256', digest: 'ABCDEF' }] }] } } }));
   let reads = 0;
-  const read = async (command, flags) => {
+  const read = async (command: string, flags: string[]) => {
     const result = join(directory, `dnssec-result-${reads++}.json`);
     const response = await run(executable, [...command.split(' '), ...flags, '--config', config, '--result-file', result, '--json'], { env: { ...env, WRITE_TOKEN: token } });
     assert.equal(response.code, 0, response.stdout + response.stderr);
     return JSON.parse(await readFile(result, 'utf8')).response;
   };
-  const verify = async expected => {
+  const verify = async (expected: ReturnType<typeof world>) => {
     assert.deepEqual(await read(properties + 'get', ['--zone', 'example.test']), expected.properties);
     assert.deepEqual((await read('zone record get', ['--zone', 'example.test', '--domain', 'example.test', '--list-zone', 'true'])).records, expected.records);
     assert.deepEqual(await read(properties + 'get', ['--zone', 'keep.test']), keep.properties);
@@ -100,7 +101,7 @@ export async function dnssecJourney({ task, directory, env, run, executable, ven
     const input = { parameters: { zone: 'example.test', ...(id === 'OP-140' ? {} : { node: 'node.example.test' }), ...row.parameters } };
     vendors.responders.set(path, (incoming, bytes) => {
       assert.equal(incoming.method, 'POST');
-      assert.deepEqual(Object.fromEntries(new URLSearchParams(bytes.toString())), Object.fromEntries(Object.entries(input.parameters).map(([key, value]) => [key, value?.env ? secret : String(value)])));
+      assert.deepEqual(Object.fromEntries(new URLSearchParams(bytes.toString())), Object.fromEntries(Object.entries(input.parameters).map(([key, value]) => [key, (value as { env?: string })?.env ? secret : String(value)])));
       count++;
       current = structuredClone(row.final);
       return { body: { status: 'ok', response: { pemPrivateKey: secret } } };
@@ -137,7 +138,7 @@ export async function dnssecJourney({ task, directory, env, run, executable, ven
   await verify(unchanged);
   await failure('REPLAY_DENIED', command, rejected, ['--execute', '--confirm', preview.preview.digest]);
 
-  const invalid = [{ ...parameters, unexpected: true }];
+  const invalid: Record<string, unknown>[] = [{ ...parameters, unexpected: true }];
   if (['OP-035', 'OP-040', 'OP-041'].includes(id)) for (const [field, values] of Object.entries({ iterations: [-1, 51, 65536, 1.5], saltLength: [-1, 33, 256, 1.5] })) {
     for (const value of values) invalid.push({ ...parameters, [field]: value });
   }
@@ -150,7 +151,7 @@ export async function dnssecJourney({ task, directory, env, run, executable, ven
   await verify(unchanged);
   for (const file of await readdir(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d'))) {
     const journal = await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', file), 'utf8');
-    assert.ok(!journal.includes(secret));
+    assert.ok(!journal.includes(secret!));
     assert.ok(!journal.includes(token));
   }
 }

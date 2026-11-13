@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
-import { fakeVendors } from '../scripts/vendor-fixture.mjs';
+import { fakeVendors } from '../scripts/vendor-fixture.ts';
 
 test('HTTPS fixture remains valid across a backward clock adjustment (issue #57)', async () => {
   const temporary = await mkdtemp(join(tmpdir(), 'technitium-certificate-'));
@@ -22,14 +22,14 @@ test('HTTPS fixture remains valid across a backward clock adjustment (issue #57)
   }
 });
 
-const runner = fileURLToPath(new URL('../scripts/journey.mjs', import.meta.url));
-function start(args, env = process.env) {
+const runner = fileURLToPath(new URL('../scripts/journey.ts', import.meta.url));
+function start(args: string[], env = process.env) {
   const child = spawn(process.execPath, [runner, ...args], { env, stdio: ['ignore', 'pipe', 'pipe'] });
   let stdout = '';
   let stderr = '';
   child.stdout.on('data', bytes => { stdout += bytes; });
   child.stderr.on('data', bytes => { stderr += bytes; });
-  const finished = new Promise((resolve, reject) => {
+  const finished = new Promise<{ code: number | null; signal: NodeJS.Signals | null; stdout: string; stderr: string }>((resolve, reject) => {
     child.once('error', reject);
     child.once('close', (code, signal) => resolve({ code, signal, stdout, stderr }));
   });

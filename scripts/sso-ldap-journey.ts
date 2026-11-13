@@ -1,9 +1,10 @@
+import type { SecretWriteContext } from './journey-types.ts';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
 // Synthetic inputs and wire expectations from the pinned WebServiceAuthApi handlers.
-const cases = [
+const cases: [string, 'sso' | 'ldap', Record<string, unknown>, Record<string, string>][] = [
   ['115', 'sso', {
     ssoClientId: 'new', ssoAllowSignup: false, ssoScopes: ['openid', 'profile', 'email'], ssoClientSecret: { env: 'OPERATION_SECRET' },
   }, { ssoClientId: 'new', ssoAllowSignup: 'false', ssoScopes: 'openid|profile|email' }],
@@ -16,7 +17,7 @@ const cases = [
 ];
 export const ssoLdapTasks = ['B5.sso-ldap', ...['115', '142', '143'].map(id => `B5.OP-${id}`)];
 
-export async function ssoLdapJourney({ task, env, run, executable, vendors, config, token, secret, configure, success, failure, execute }) {
+export async function ssoLdapJourney({ task, env, run, executable, vendors, config, token, secret, configure, success, failure, execute }: Omit<SecretWriteContext, 'directory'>) {
   const initial = {
     sso: { ssoEnabled: true, ssoAuthority: 'https://id.example.test', ssoClientId: 'old', ssoClientSecret: 'old-sso-secret',
       ssoMetadataAddress: null, ssoScopes: ['openid'], ssoAllowSignup: true, ssoAllowSignupOnlyForMappedUsers: true,
@@ -26,30 +27,30 @@ export async function ssoLdapJourney({ task, env, run, executable, vendors, conf
       ldapUserSearchFilter: '(uid={0})', ldapGroupAttribute: 'memberOf', ldapAllowSignup: true, ldapAllowSignupOnlyForMappedUsers: true,
       ldapGroupMap: [{ remoteGroup: 'group-a', localGroup: 'Operators' }] },
   };
-  let state = structuredClone(initial);
+  let state: Record<'sso' | 'ldap', Record<string, unknown>> = structuredClone(initial);
   let drop = false;
-  const ok = response => ({ body: { status: 'ok', ...(response ? { response } : {}) } });
-  const masked = kind => ({ ...state[kind], [kind === 'sso' ? 'ssoClientSecret' : 'ldapBindPassword']: '************' });
-  const read = async kind => {
+  const ok = (response?: unknown) => ({ body: { status: 'ok', ...(response ? { response } : {}) } });
+  const masked = (kind: 'sso' | 'ldap') => ({ ...state[kind], [kind === 'sso' ? 'ssoClientSecret' : 'ldapBindPassword']: '************' });
+  const read = async (kind: 'sso' | 'ldap') => {
     const result = await run(executable, ['admin', kind, 'get', '--config', config, '--json', '--full'], { env: { ...env, WRITE_TOKEN: token } });
     assert.equal(result.code, 0, result.stdout);
     assert.equal(result.stderr, '');
-    assert.ok(!result.stdout.includes(secret), result.stdout);
+    assert.ok(!result.stdout.includes(secret!), result.stdout);
     return JSON.parse(result.stdout).response;
   };
-  for (const kind of ['sso', 'ldap']) vendors.responders.set(`/api/admin/${kind}/get`, () => ok(masked(kind)));
-  for (const [id, kind, , wire] of cases) vendors.responders.set(`/api/admin/${kind}/set`, (incoming, bytes) => {
+  for (const kind of ['sso', 'ldap'] as const) vendors.responders.set(`/api/admin/${kind}/get`, () => ok(masked(kind)));
+  for (const [, kind, , wire] of cases) vendors.responders.set(`/api/admin/${kind}/set`, (incoming, bytes) => {
     assert.equal(incoming.headers.authorization, `Bearer ${token}`);
     assert.equal(incoming.headers['content-type'], 'application/x-www-form-urlencoded');
     const p = Object.fromEntries(new URLSearchParams(bytes.toString()));
     const secretKey = kind === 'sso' ? 'ssoClientSecret' : 'ldapBindPassword';
     assert.deepEqual(p, { ...wire, [secretKey]: secret });
     for (const [key, value] of Object.entries(p)) {
-      if (key === 'ssoScopes') state[kind][key] = value.split('|');
+      if (key === 'ssoScopes') state[kind!][key] = value.split('|');
       else if (key.endsWith('GroupMap')) {
         const parts = value.split('|');
-        state[kind][key] = Array.from({ length: parts.length / 2 }, (_, i) => ({ remoteGroup: parts[i * 2], localGroup: parts[i * 2 + 1] }));
-      } else state[kind][key] = typeof initial[kind][key] === 'boolean' ? value === 'true' : key === 'ldapPort' ? Number(value) : value;
+        state[kind!][key] = Array.from({ length: parts.length / 2 }, (_, i) => ({ remoteGroup: parts[i * 2], localGroup: parts[i * 2 + 1] }));
+      } else state[kind!][key] = typeof (initial[kind!] as Record<string, unknown>)[key] === 'boolean' ? value === 'true' : key === 'ldapPort' ? Number(value) : value;
     }
     if (drop) { incoming.socket.destroy(); return {}; }
     return ok(masked(kind));
@@ -60,10 +61,10 @@ export async function ssoLdapJourney({ task, env, run, executable, vendors, conf
     const input = { parameters };
     await execute(`admin ${kind} set`, input);
     const { [kind === 'sso' ? 'ssoClientSecret' : 'ldapBindPassword']: ref, ...publicFields } = parameters;
-    const expected = { ...initial[kind], ...publicFields };
+    const expected: Record<string, unknown> = { ...initial[kind!], ...publicFields };
     delete expected[kind === 'sso' ? 'ssoClientSecret' : 'ldapBindPassword'];
     assert.deepEqual(await read(kind), expected);
-    assert.equal(state[kind][kind === 'sso' ? 'ssoClientSecret' : 'ldapBindPassword'], secret);
+    assert.equal(state[kind!][kind === 'sso' ? 'ssoClientSecret' : 'ldapBindPassword'], secret);
     assert.deepEqual(state[kind === 'sso' ? 'ldap' : 'sso'], initial[kind === 'sso' ? 'ldap' : 'sso']);
     const before = vendors.traces.length;
     const key = kind === 'sso' ? 'ssoClientSecret' : 'ldapBindPassword';
@@ -83,7 +84,7 @@ export async function ssoLdapJourney({ task, env, run, executable, vendors, conf
   if (['B5.sso-ldap', 'B5.OP-143'].includes(task)) {
     state = structuredClone(initial);
     await configure(['OP-143']);
-    const binds = [];
+    const binds: { server: unknown; username: unknown; password: unknown }[] = [];
     let expectedWire = {};
     vendors.responders.set('/api/admin/ldap/test', (incoming, bytes) => {
       assert.equal(incoming.headers.authorization, `Bearer ${token}`);
@@ -95,7 +96,7 @@ export async function ssoLdapJourney({ task, env, run, executable, vendors, conf
     });
     const override = { ldapServer: 'override.example.test', ldapPort: 636, ldapSslOption: 'LDAPS', ldapIgnoreSslErrors: false,
       ldapBindUsername: 'override-bind', ldapBindPassword: { env: 'OPERATION_SECRET' } };
-    for (const parameters of [{}, override]) {
+    for (const parameters of [{}, override] as { ldapServer?: string; ldapBindUsername?: string }[]) {
       expectedWire = parameters === override ? { ldapServer: 'override.example.test', ldapPort: '636', ldapSslOption: 'LDAPS',
         ldapIgnoreSslErrors: 'false', ldapBindUsername: 'override-bind', ldapBindPassword: secret } : {};
       const before = binds.length;
@@ -110,18 +111,18 @@ export async function ssoLdapJourney({ task, env, run, executable, vendors, conf
     const receipt = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${preview.preview.digest}.json`), 'utf8'));
     assert.equal(receipt.state, 'failed');
     assert.deepEqual(state, initial, 'Connection tests must not save configuration');
-    for (const [grants, extraEnv] of [[[], {}], [['OP-142'], {}], [['OP-143'], { TECHNITIUM_AXI_READ_ONLY: '1' }]]) {
-      await configure(grants);
+    for (const [grants, extraEnv] of [[[], {}], [['OP-142'], {}], [['OP-143'], { TECHNITIUM_AXI_READ_ONLY: '1' }]] satisfies [string[], NodeJS.ProcessEnv][]) {
+      await configure(grants!);
       const input = { parameters: {} };
-      const denied = await success('admin ldap test', input, [], extraEnv);
+      const denied = await success('admin ldap test', input, [], extraEnv!);
       const before = binds.length;
-      await failure('WRITE_DENIED', 'admin ldap test', input, ['--execute', '--confirm', denied.preview.digest], extraEnv);
+      await failure('WRITE_DENIED', 'admin ldap test', input, ['--execute', '--confirm', denied.preview.digest], extraEnv!);
       assert.equal(binds.length, before, 'Denied outbound authentication must not bind');
     }
   }
   const journal = join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d');
   for (const file of await readdir(journal)) {
     const bytes = await readFile(join(journal, file), 'utf8');
-    for (const value of [token, secret]) for (const form of [value, encodeURIComponent(value), JSON.stringify(value).slice(1, -1), Buffer.from(value).toString('base64')]) assert.ok(!bytes.includes(form));
+    for (const value of [token, secret]) for (const form of [value, encodeURIComponent(value!), JSON.stringify(value).slice(1, -1), Buffer.from(value).toString('base64')]) assert.ok(!bytes.includes(form!));
   }
 }

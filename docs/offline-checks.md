@@ -11,16 +11,16 @@ Status and session fixtures follow the vendor top-level JSON response shapes.
 `npm run test:users` covers explicit login, bound session storage and removal, user mutations, protected issuance, admin sessions, accounts, groups and section permissions, and actual SSO caller authorization through a secondary-to-primary HTTPS proxy fixture.
 It also runs `B5.sso-ldap` for partial SSO/LDAP settings updates, protected secrets, lost SSO restart responses and LDAP bind admission.
 The five individual tasks `B5.OP-115`, `B5.OP-116`, `B5.OP-117`, `B5.OP-142` and `B5.OP-143` accept `--paths native --offline`.
-Run the admin matrix alone with `npm run check:journey -- --task B5.admin-accounts --paths native --offline`; its individual plan IDs are defined in [admin-accounts-journey.mjs](../scripts/admin-accounts-journey.mjs).
+Run the admin matrix alone with `npm run check:journey -- --task B5.admin-accounts --paths native --offline`; its individual plan IDs are defined in [admin-accounts-journey.ts](../scripts/admin-accounts-journey.ts).
 Every B5 identity, user and admin account task also accepts its individual plan ID through `check:journey -- --task <id> --paths native --offline`.
 The B5 protected-result journey repeats the restore secrets and custody-denial checks.
 `npm test` also includes `npm run test:cluster`, which selects `B5.03` for the cluster routing and lifecycle matrix, including the protected configuration transfer read.
-Run an individual lifecycle task with `npm run check:journey -- --task B5.OP-119 --paths native --offline`, replacing `119` with an ID from [cluster-journey.mjs](../scripts/cluster-journey.mjs).
+Run an individual lifecycle task with `npm run check:journey -- --task B5.OP-119 --paths native --offline`, replacing `119` with an ID from [cluster-journey.ts](../scripts/cluster-journey.ts).
 These cluster journeys use synthetic HTTPS boundaries and accept only the native path; hosted write proof remains a separate release-candidate check.
 
 ```sh
 npm test
-node --test tests/journey.test.mjs tests/vendor.test.mjs tests/private-file.test.mjs
+node --test tests/journey.test.ts tests/vendor.test.ts tests/private-file.test.ts
 npm run typecheck
 npm run check:generated
 ```
@@ -125,7 +125,7 @@ B2.02 generates a read-back case per record type for `zone record get`, `cache l
 The record cases live in [record-inputs.json](../tests/fixtures/record-inputs.json).
 
 Run the zone lifecycle and record-write suite alone with `npm run test:zones`.
-Its operation selectors are listed in [zone-writes.test.mjs](../tests/zone-writes.test.mjs), using the lifecycle task list from [zone-journey.mjs](../scripts/zone-journey.mjs).
+Its operation selectors are listed in [zone-writes.test.ts](../tests/zone-writes.test.ts), using the lifecycle task list from [zone-journey.ts](../scripts/zone-journey.ts).
 Select a task with `--task B3.OP-022`, for example, without a separate `--operation` flag.
 The record-add, update and delete selectors each run the complete B3.02 record matrix.
 
@@ -191,7 +191,7 @@ No browser is launched.
 Every operation must appear in packaged discovery, expose matching public help, reconcile its source parameters and reach its canonical vendor route through an existing executable outcome journey.
 Those journeys retain their exact wire, readback and failure assertions, including OP-040 conversion boundaries.
 The report distinguishes parameter declaration reconciliation from certification of every semantic branch.
-Source parameters handled at the credential or command boundary have explicit dispositions in [the audit implementation](../scripts/closure-journey.mjs).
+Source parameters handled at the credential or command boundary have explicit dispositions in [the audit implementation](../scripts/closure-journey.ts).
 These dispositions are included in the report rather than silently dropping source parameters.
 
 The audit verifies installed bytes against hashes captured from the package inputs before installation.

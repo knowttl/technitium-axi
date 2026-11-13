@@ -4,21 +4,29 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { createServer, request } from 'node:https';
 import { connect } from 'node:net';
 import { join } from 'node:path';
+import type { IncomingMessage, OutgoingHttpHeaders } from 'node:http';
+import type { AddressInfo } from 'node:net';
 
-export async function fakeVendors(temporary) {
+export interface VendorResponse { status?: number; contentType?: string; headers?: OutgoingHttpHeaders; bytes?: Buffer; body?: unknown }
+interface Trace {
+  elapsedMs: number; method: string; path: string; identity: string;
+  headers: Record<string, string | null>; inputHash: string; bearerHash: string | null;
+}
+
+export async function fakeVendors(temporary: string) {
   const cert = join(temporary, 'vendor-ca.pem');
   // Test-only localhost identity, valid 2020-2120 so clock adjustments cannot cross its issuance time.
   const tls = { key: await readFile(new URL('../tests/fixtures/localhost-key.pem', import.meta.url)),
     cert: await readFile(new URL('../tests/fixtures/localhost-cert.pem', import.meta.url)) };
   await writeFile(cert, tls.cert, { mode: 0o600 });
-  const traces = [];
+  const traces: Trace[] = [];
   const started = performance.now();
-  const tokens = new Map();
-  const clusterTokens = new Map();
-  const tokenKinds = new Map();
-  const faults = new Map();
-  const responders = new Map();
-  const servers = [];
+  const tokens = new Map<string, string>();
+  const clusterTokens = new Map<string, string>();
+  const tokenKinds = new Map<string, string>();
+  const faults = new Map<string, boolean | string>();
+  const responders = new Map<string, (incoming: IncomingMessage, body: Buffer) => VendorResponse | Promise<VendorResponse>>();
+  const servers: ReturnType<typeof createServer>[] = [];
   try {
     for (const identity of ['alpha', 'beta']) {
       const server = createServer(tls, async (incoming, outgoing) => {
@@ -26,12 +34,12 @@ export async function fakeVendors(temporary) {
         for await (const chunk of incoming) chunks.push(chunk);
         const body = Buffer.concat(chunks);
         const bearer = incoming.headers.authorization?.replace(/^Bearer /, '');
-        traces.push({ elapsedMs: Math.round(performance.now() - started), method: incoming.method, path: incoming.url.split('?')[0],
+        traces.push({ elapsedMs: Math.round(performance.now() - started), method: incoming.method!, path: incoming.url!.split('?')[0]!,
           headers: { 'content-type': incoming.headers['content-type'] ?? null,
             ...(incoming.headers['if-modified-since'] ? { 'if-modified-since': incoming.headers['if-modified-since'] } : {}) },
           inputHash: createHash('sha256').update(body).digest('hex'),
           bearerHash: bearer ? createHash('sha256').update(bearer).digest('hex') : null, identity });
-        const responder = responders.get(incoming.url) ?? responders.get(new URL(incoming.url, 'https://fixture.test').pathname);
+        const responder = responders.get(incoming.url!) ?? responders.get(new URL(incoming.url!, 'https://fixture.test').pathname);
         if (responder) {
           const acquisition = incoming.url === '/api/user/login' || incoming.url === '/api/user/createToken' && !bearer;
           const response = !acquisition && bearer !== tokens.get(identity) && !(clusterTokens.has(identity) && bearer === clusterTokens.get(identity)) ? { body: { status: 'invalid-token' } } : await responder(incoming, body);
@@ -49,21 +57,21 @@ export async function fakeVendors(temporary) {
             ? { status: 'invalid-token' }
             : { status: 'ok', username: 'planner',
               ...((tokenKinds.get(identity) ?? 'api') === 'api' ? { tokenName: 'automation-1' } : {}), token,
-              unknownConfidential: token, escaped: encodeURIComponent(token), hasDnssecPrivateKeys: false,
+              unknownConfidential: token, escaped: encodeURIComponent(token!), hasDnssecPrivateKeys: false,
               info: { version: '15.4', permissions: { Administration: { canModify: faults.get(identity) ?? false } } } }));
         } else outgoing.end(JSON.stringify({ status: 'ok', fixtureIdentity: identity }));
       });
       servers.push(server);
-      await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+      await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
     }
     return {
       traces,
       tokens, clusterTokens, tokenKinds, faults, responders, caFile: cert,
-      origins: servers.map(server => `https://127.0.0.1:${server.address().port}`),
+      origins: servers.map(server => `https://127.0.0.1:${(server.address() as AddressInfo).port}`),
       async check() {
         for (const [index, server] of servers.entries()) {
           const response = await new Promise((resolve, reject) => {
-            const call = request({ hostname: '127.0.0.1', port: server.address().port, path: '/harness-probe', ca: tls.cert }, incoming => {
+            const call = request({ hostname: '127.0.0.1', port: (server.address() as AddressInfo).port, path: '/harness-probe', ca: tls.cert }, incoming => {
               let body = '';
               incoming.on('data', chunk => { body += chunk; });
               incoming.once('end', () => resolve(JSON.parse(body)));
@@ -77,11 +85,11 @@ export async function fakeVendors(temporary) {
           { method: 'GET', path: '/harness-probe', identity: 'alpha' },
           { method: 'GET', path: '/harness-probe', identity: 'beta' },
         ]);
-        await new Promise((resolve, reject) => {
+        await new Promise<void>((resolve, reject) => {
           const socket = connect({ host: '192.0.2.1', port: 443 });
           socket.once('connect', () => { socket.destroy(); reject(new Error('Non-loopback egress succeeded')); });
           socket.once('error', error => {
-            try { assert.ok(['ENETUNREACH', 'EHOSTUNREACH'].includes(error.code)); resolve(); }
+            try { assert.ok(['ENETUNREACH', 'EHOSTUNREACH'].includes((error as NodeJS.ErrnoException).code!)); resolve(); }
             catch (failure) { reject(failure); }
           });
         });

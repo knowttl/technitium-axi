@@ -1,28 +1,36 @@
+import type { WriteContext } from './journey-types.ts';
+import type { IncomingMessage } from 'node:http';
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-const a = (name, address) => ({ name, type: 'A', ttl: 300, rData: { ipAddress: address } });
+interface FixtureRecord { name: string; type: string; ttl: number; rData: Record<string, unknown> }
+
+const a = (name: string, address: string): FixtureRecord => ({ name, type: 'A', ttl: 300, rData: { ipAddress: address } });
 const old = a('www.example.test', '192.0.2.10');
 const answer = a('www.example.test', '192.0.2.20');
 const keep = { name: 'keep.example.test', type: 'TXT', ttl: 60, rData: { text: 'keep' } };
-const soa = name => ({ name, type: 'SOA', ttl: 300, rData: { primaryNameServer: 'ns.example.test', responsiblePerson: 'hostmaster.example.test', serial: 43, refresh: 3600, retry: 600, expire: 86400, minimum: 60 } });
-const permissions = (name, modify = true) => ({ section: 'Zones', subItem: name,
+const soa = (name: string): FixtureRecord => ({ name, type: 'SOA', ttl: 300, rData: { primaryNameServer: 'ns.example.test', responsiblePerson: 'hostmaster.example.test', serial: 43, refresh: 3600, retry: 600, expire: 86400, minimum: 60 } });
+const permissions = (name: string, modify = true) => ({ section: 'Zones', subItem: name,
   userPermissions: [{ username: 'planner', canView: true, canModify: modify, canDelete: true }],
   groupPermissions: ['Administrators', 'DNS Administrators'].map(name => ({ name, canView: true, canModify: true, canDelete: true })) });
-const zone = (name, type = 'Primary', records = [old, keep], modify = true) => ({ name, type, records, permissions: permissions(name, modify) });
+const zone = (name: string, type = 'Primary', records: FixtureRecord[] = [old, keep], modify = true) => ({ name, type, records, permissions: permissions(name, modify) });
 const decoy = zone('other.test', 'Primary', [a('other.test', '192.0.2.99')]);
 const initial = (type = 'Primary', modify = true) => [zone('example.test', type, [old, keep], modify), decoy];
 
 // Contract worlds encode the pinned WebServiceApi.ResolveQueryAsync branches.
 // They prove transport, grant separation and observable results, not vendor internals.
-export async function resolveJourney({ directory, env, run, executable, vendors, configure, success, failure }) {
+export async function resolveJourney({ directory, env, run, executable, vendors, configure, success, failure }: WriteContext) {
   const command = 'dns-client resolve';
   const base = { server: '192.0.2.53', domain: 'www.example.test', type: 'A', import: true };
   const newRecord = a('new.test', '192.0.2.20');
   const childRecord = a('child.example.test', '192.0.2.20');
   const transferred = [soa('example.test'), answer, keep, { name: 'example.test', type: 'NS', ttl: 300, rData: { nameServer: 'ns.example.test' } }];
-  const rows = [
+  const rows: {
+    name: string; before: ReturnType<typeof initial>; after?: ReturnType<typeof initial>;
+    parameters?: Record<string, string | boolean>; read?: boolean; omitImport?: boolean;
+    denied?: boolean; selected?: boolean; section?: boolean; warning?: boolean;
+  }[] = [
     { name: 'existing-allow', before: initial(), after: [zone('example.test', 'Primary', [keep, answer]), decoy], section: false, selected: true },
     { name: 'existing-deny', before: initial('Primary', false), denied: true, section: true, selected: false },
     { name: 'new-allow', before: initial(), parameters: { domain: 'new.test' }, after: [...initial(), zone('new.test', 'Primary', [newRecord])], section: true, selected: false },
@@ -51,10 +59,10 @@ export async function resolveJourney({ directory, env, run, executable, vendors,
   vendors.tokens.set('beta', observerToken);
   await writeFile(observer, JSON.stringify({ version: 1, profiles: { 'fixture-observer': { origin: vendors.origins[1], auth: 'token', tokenKind: 'api',
     token: { env: 'OBSERVER_TOKEN' }, caFile: vendors.caFile, tlsServerName: 'localhost' } } }), { mode: 0o600 });
-  let world;
+  let world: ReturnType<typeof initial>;
   let sequence = 0;
-  const selectedZone = bytes => world.find(zone => zone.name === new URLSearchParams(bytes.toString()).get('zone'));
-  const observe = incoming => assert.equal(incoming.headers.authorization, `Bearer ${observerToken}`, 'Readbacks use the observer, never the mutation caller');
+  const selectedZone = (bytes: Buffer) => world.find(zone => zone.name === new URLSearchParams(bytes.toString()).get('zone'))!;
+  const observe = (incoming: IncomingMessage) => assert.equal(incoming.headers.authorization, `Bearer ${observerToken}`, 'Readbacks use the observer, never the mutation caller');
   vendors.responders.set('/api/zones/list', (incoming) => {
     observe(incoming);
     return { body: { status: 'ok', response: { pageNumber: 1, totalPages: 1, totalZones: world.length, zones: world.map(({ name, type }) => ({ name, type, disabled: false })) } } };
@@ -70,13 +78,13 @@ export async function resolveJourney({ directory, env, run, executable, vendors,
     assert.equal(new URLSearchParams(bytes.toString()).get('includeUsersAndGroups'), 'true');
     return { body: { status: 'ok', response: selectedZone(bytes).permissions } };
   });
-  const read = async (command, flags = []) => {
+  const read = async (command: string, flags: string[] = []) => {
     const resultFile = join(directory, `resolve-observed-${sequence++}.json`);
     const result = await run(executable, [...command.split(' '), ...flags, '--config', observer, '--result-file', resultFile, '--json'], { env: { ...env, OBSERVER_TOKEN: observerToken } });
     assert.equal(result.code, 0, result.stdout + result.stderr);
     return JSON.parse(await readFile(resultFile, 'utf8')).response;
   };
-  const verify = async expected => {
+  const verify = async (expected: ReturnType<typeof initial>) => {
     const inventory = await read('zone list', ['--full']);
     assert.deepEqual(inventory.zones, expected.map(({ name, type }) => ({ name, type, disabled: false })));
     for (const zone of expected) {
@@ -87,11 +95,11 @@ export async function resolveJourney({ directory, env, run, executable, vendors,
   for (const row of rows) {
     world = structuredClone(row.before);
     await configure(row.read ? [] : ['OP-077.import']);
-    const parameters = { ...base, ...row.parameters };
+    const parameters: { server: string; domain: string; type: string; import?: boolean; [key: string]: string | boolean | undefined } = { ...base, ...row.parameters };
     if (row.omitImport) delete parameters.import;
     const input = { parameters };
     const expected = row.after ?? row.before;
-    const records = parameters.type === 'AXFR' ? transferred : parameters.type === 'SOA' ? [soa(row.name === 'soa-parent' ? 'example.test' : parameters.domain)] : [a(parameters.domain, '192.0.2.20')];
+    const records: FixtureRecord[] = parameters.type === 'AXFR' ? transferred : parameters.type === 'SOA' ? [soa(row.name === 'soa-parent' ? 'example.test' : parameters.domain)] : [a(parameters.domain, '192.0.2.20')];
     const reply = { Identifier: 1, IsResponse: true, OPCODE: 'StandardQuery', RCODE: 'NoError', QDCOUNT: 1, ANCOUNT: records.length,
       Question: [{ Name: parameters.domain, Type: parameters.type, Class: 'IN' }],
       Answer: records.map(record => ({ Name: record.name, Type: record.type, Class: 'IN', TTL: `${record.ttl} (5 mins)`,

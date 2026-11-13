@@ -1,25 +1,31 @@
 import assert from 'node:assert/strict';
+import type { JourneyContext, CatalogueOutput } from './journey-types.ts';
+import type { ReadContract } from '../src/read-contracts.ts';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import source from '../tests/fixtures/source-inventory.json' with { type: 'json' };
-import { credentialJourney } from './credential-journey.mjs';
-import { readJourney } from './read-journey.mjs';
-import { writeJourney, writeTasks } from './write-journey.mjs';
-import { fakeVendors } from './vendor-fixture.mjs';
+import { credentialJourney } from './credential-journey.ts';
+import { readJourney } from './read-journey.ts';
+import { writeJourney, writeTasks } from './write-journey.ts';
+import { fakeVendors } from './vendor-fixture.ts';
 
-const hash = bytes => createHash('sha256').update(bytes).digest('hex');
-const sorted = values => [...values].sort();
+interface ClosureContext extends Omit<JourneyContext, 'vendors' | 'task'> {
+  packageRoot: string; packagePins: Record<string, string>;
+}
+
+const hash = (bytes: string | Buffer) => createHash('sha256').update(bytes).digest('hex');
+const sorted = (values: string[]) => [...values].sort();
 
 // These inputs are intentionally owned by the credential/command boundary.
-const parameterDispositions = {
+const parameterDispositions: Record<string, string> = {
   token: 'Profile bearer header; never a normal argument',
   'OP-002.includeInfo': 'Fixed true for private Standard-session acquisition and identity verification',
   'OP-022.domain': 'Compatibility spelling rejected; zone is the sole creation target',
 };
 
-function outcomeTask(operation, command, readContract) {
+function outcomeTask(operation: string, command: string, readContract?: ReadContract) {
   if (['OP-001', 'OP-006'].includes(operation)) return `B1.${operation}`;
   if (readContract) return readContract.kind === 'json' ? 'B2.01' : 'B2.02';
   if (command.startsWith('user ')) return 'B5.01';
@@ -36,7 +42,7 @@ function outcomeTask(operation, command, readContract) {
   return task;
 }
 
-export async function closureJourney({ temporary, env, run, executable, packageRoot, packagePins }) {
+export async function closureJourney({ temporary, env, run, executable, packageRoot, packagePins }: ClosureContext) {
   const checks = [];
   // The packed bytes, captured before installation, are the admission authority.
   const admit = async () => {
@@ -55,21 +61,21 @@ export async function closureJourney({ temporary, env, run, executable, packageR
   }
   await admit();
   checks.push('native:package-admission-and-tamper-refusal');
-  const invoke = async args => {
+  const invoke = async (args: string[]) => {
     const result = await run(executable, [...args, '--json'], { env });
     assert.equal(result.code, 0, result.stdout + result.stderr);
     assert.equal(result.stderr, '');
     return JSON.parse(result.stdout);
   };
-  const inventory = await invoke(['inventory']);
+  const inventory = await invoke(['inventory']) as CatalogueOutput;
   assert.deepEqual(inventory, JSON.parse(await readFile(join(packageRoot, 'command-inventory.json'), 'utf8')));
   assert.deepEqual(await invoke(['schema']), JSON.parse(await readFile(join(packageRoot, 'axi-credential.schema.json'), 'utf8')));
-  const { readContracts } = await import(pathToFileURL(join(packageRoot, 'dist/read-contracts.js')));
-  const { writeContracts } = await import(pathToFileURL(join(packageRoot, 'dist/write-contracts.js')));
+  const { readContracts } = await import(pathToFileURL(join(packageRoot, 'dist/read-contracts.js')).href) as typeof import('../src/read-contracts.ts');
+  const { writeContracts } = await import(pathToFileURL(join(packageRoot, 'dist/write-contracts.js')).href) as typeof import('../src/write-contracts.ts');
   const contracts = [...readContracts, ...writeContracts];
   assert.deepEqual(sorted(contracts.map(row => row.id)), sorted(source.operations.map(row => row.id)));
   const commands = inventory.commands.filter(row => row.operation);
-  assert.deepEqual(sorted(commands.map(row => row.operation)), sorted(source.operations.map(row => row.id)));
+  assert.deepEqual(sorted(commands.map(row => row.operation!)), sorted(source.operations.map(row => row.id)));
   assert.equal(commands.length, 143);
   assert.equal(source.operations.flatMap(row => row.capabilities).length, 144);
   assert.equal(source.routes.length, 145);
@@ -80,7 +86,7 @@ export async function closureJourney({ temporary, env, run, executable, packageR
   assert.equal(obsolete.length, 79);
   const routes = new Map(source.routes.map(row => [row.path, row]));
   for (const operation of source.operations) for (const alias of operation.aliases) {
-    assert.equal(routes.get(alias).handler, routes.get(operation.path).handler, `${alias} changed handler identity`);
+    assert.equal(routes.get(alias)!.handler, routes.get(operation.path)!.handler, `${alias} changed handler identity`);
   }
   assert.equal(source.operations.flatMap(row => row.aliases).length, 2);
   assert.ok(obsolete.every(path => !routes.has(path)), 'An obsolete spelling is advertised as a supported source route');
@@ -89,8 +95,8 @@ export async function closureJourney({ temporary, env, run, executable, packageR
   let parameterCount = 0;
   for (const operation of source.operations) {
     const contract = contracts.find(row => row.id === operation.id);
-    const command = commands.find(row => row.operation === operation.id);
-    assert.equal(contract.path, operation.path, `${operation.id} source path differs`);
+    const command = commands.find(row => row.operation === operation.id)!;
+    assert.equal(contract!.path, operation.path, `${operation.id} source path differs`);
     assert.equal(command.command, operation.command, `${operation.id} public command differs`);
     const fields = command.input?.fields ?? command.arguments.map(row => row.name);
     for (const parameter of operation.parameters) {

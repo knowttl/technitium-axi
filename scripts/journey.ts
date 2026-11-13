@@ -1,24 +1,26 @@
 import assert from 'node:assert/strict';
+import type { ChildProcess } from 'node:child_process';
+import type { RunOptions, RunResult, DiscoveryOutput } from './journey-types.ts';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, readFile, realpath, rm } from 'node:fs/promises';
 import { homedir, loadavg, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import Ajv from 'ajv';
+import { Ajv } from 'ajv';
 import { decode } from '@toon-format/toon';
-import { fakeVendors } from './vendor-fixture.mjs';
-import { credentialJourney, credentialTasks } from './credential-journey.mjs';
-import { readJourney, readTasks, monitorTasks } from './read-journey.mjs';
-import { writeJourney, writeTasks } from './write-journey.mjs';
-import { closureJourney } from './closure-journey.mjs';
+import { fakeVendors } from './vendor-fixture.ts';
+import { credentialJourney, credentialTasks } from './credential-journey.ts';
+import { readJourney, readTasks, monitorTasks } from './read-journey.ts';
+import { writeJourney, writeTasks } from './write-journey.ts';
+import { closureJourney } from './closure-journey.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2);
 const inside = args.at(-1) === '--namespace';
 if (inside) args.pop();
-let task;
-let paths;
+let task: string | undefined;
+let paths: string[] | undefined;
 let offline = false;
 let operation;
 for (let i = 0; i < args.length; i++) {
@@ -29,15 +31,15 @@ for (let i = 0; i < args.length; i++) {
   else if (arg === '--operation' && !operation) operation = args[++i];
   else throw new Error(`Unknown or repeated journey argument: ${arg}`);
 }
-assert.ok(['B1.01', 'B1.02', 'B6.01', ...Object.keys(credentialTasks), ...readTasks, ...writeTasks].includes(task), 'Select a supported --task');
-assert.equal(operation, /^B[12]\.OP-/.test(task) ? task.slice(3) : undefined, 'Operation selection must match the operation task');
+assert.ok(['B1.01', 'B1.02', 'B6.01', ...Object.keys(credentialTasks), ...readTasks, ...writeTasks].includes(task!), 'Select a supported --task');
+assert.equal(operation, /^B[12]\.OP-/.test(task!) ? task!.slice(3) : undefined, 'Operation selection must match the operation task');
 assert.ok(paths?.length && new Set(paths).size === paths.length && paths.every(path => ['native', 'artium'].includes(path)), 'Select --paths native,artium');
 assert.ok(offline, '--offline is required');
 
-const children = new Set();
+const children = new Set<ChildProcess>();
 const cancellation = new AbortController();
 for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => cancellation.abort());
-async function run(executable, argv, options = {}) {
+async function run(executable: string, argv: string[], options: RunOptions = {}): Promise<RunResult> {
   const { stdin, forwardStderr, ...spawnOptions } = options;
   const child = spawn(executable, argv, { cwd: root, stdio: [stdin === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
     signal: cancellation.signal, ...spawnOptions });
@@ -45,9 +47,9 @@ async function run(executable, argv, options = {}) {
   children.add(child);
   let stdout = '';
   let stderr = '';
-  let failure;
-  child.stdout.on('data', bytes => { stdout += bytes; });
-  child.stderr.on('data', bytes => { stderr += bytes; if (forwardStderr) process.stderr.write(bytes); });
+  let failure: Error | undefined;
+  child.stdout!.on('data', bytes => { stdout += bytes; });
+  child.stderr!.on('data', bytes => { stderr += bytes; if (forwardStderr) process.stderr.write(bytes); });
   return await new Promise((resolve, reject) => {
     child.once('error', error => { failure = error; });
     child.once('close', (code, signal) => {
@@ -68,17 +70,17 @@ if (!inside) {
 } else {
   // The kernel blocks egress for every descendant, including native subprocesses.
   // A flag alone cannot opt out: verify the namespace has only loopback interfaces.
-  const interfaces = (await readFile('/proc/net/dev', 'utf8')).split('\n').slice(2).filter(line => line.includes(':')).map(line => line.split(':')[0].trim());
+  const interfaces = (await readFile('/proc/net/dev', 'utf8')).split('\n').slice(2).filter(line => line.includes(':')).map(line => line.split(':')[0]!.trim());
   assert.deepEqual(interfaces, ['lo'], 'Journey namespace must contain only loopback');
   const temporary = await mkdtemp(join(tmpdir(), 'technitium-journey-'));
   let vendors;
   const checks = [];
-  const identityTask = Object.hasOwn(credentialTasks, task);
-  const readTask = readTasks.includes(task);
-  const writeTask = writeTasks.includes(task);
+  const identityTask = Object.hasOwn(credentialTasks, task!);
+  const readTask = readTasks.includes(task!);
+  const writeTask = writeTasks.includes(task!);
   const closureTask = task === 'B6.01';
   assert.ok(!(writeTask || closureTask) || !paths.includes('artium'), 'Hosted write admission is a separate release-candidate check; this journey proves the native path only');
-  let expected = (paths.includes('native') ? (writeTask ? 1 : readTask ? (task === 'B2.05' ? monitorTasks.length : task === 'B2.01' ? 2 : 1) : identityTask ? credentialTasks[task].length : task === 'B1.02' ? 7 : 5) : 0) + (paths.includes('artium') ? (readTask ? 6 : identityTask ? 5 : 4) : 0);
+  let expected = (paths.includes('native') ? (writeTask ? 1 : readTask ? (task === 'B2.05' ? monitorTasks.length : task === 'B2.01' ? 2 : 1) : identityTask ? credentialTasks[task!]!.length : task === 'B1.02' ? 7 : 5) : 0) + (paths.includes('artium') ? (readTask ? 6 : identityTask ? 5 : 4) : 0);
   let audit;
   try {
     const home = join(temporary, 'home');
@@ -102,7 +104,7 @@ if (!inside) {
     const pack = JSON.parse(packed.stdout.slice(packed.stdout.indexOf('[\n')))[0];
     const tarball = join(temporary, pack.filename);
     const sha256 = createHash('sha256').update(await readFile(tarball)).digest('hex');
-    const packagePins = closureTask ? Object.fromEntries(await Promise.all(pack.files.map(async ({ path }) =>
+    const packagePins = closureTask ? Object.fromEntries(await Promise.all(pack.files.map(async ({ path }: { path: string }) =>
       [path, createHash('sha256').update(await readFile(join(root, path))).digest('hex')]))) : undefined;
     const prefix = join(temporary, 'installed');
     const installed = await run('npm', ['install', '--prefix', prefix, '--offline', '--ignore-scripts', '--no-package-lock', tarball],
@@ -112,9 +114,9 @@ if (!inside) {
     const packageRoot = join(prefix, 'node_modules', '@knowttl', 'technitium-axi');
     assert.equal(await realpath(executable), join(packageRoot, 'bin', 'technitium-axi.js'));
     const setup = JSON.parse(await readFile(new URL('../tests/fixtures/setup.json', import.meta.url), 'utf8'));
-    const invoke = argv => run(executable, argv, { cwd: home, env });
+    const invoke = (argv: string[]) => run(executable, argv, { cwd: home, env });
     if (closureTask) {
-      const result = await closureJourney({ temporary, env, run, executable, packageRoot, packagePins });
+      const result = await closureJourney({ temporary, env, run, executable, packageRoot, packagePins: packagePins! });
       checks.push(...result.checks);
       expected = result.expected;
       audit = result.audit;
@@ -124,12 +126,12 @@ if (!inside) {
       await vendors.check();
     }
     if (paths.includes('native') && identityTask) {
-      checks.push(...await credentialJourney({ task, temporary, env, run, executable, vendors }));
+      checks.push(...await credentialJourney({ task: task!, temporary, env, run, executable, vendors: vendors! }));
     }
     if (paths.includes('native') && readTask) {
-      checks.push(...await readJourney({ task, temporary, env, run, executable, vendors }));
+      checks.push(...await readJourney({ task: task!, temporary, env, run, executable, vendors: vendors! }));
     }
-    if (paths.includes('native') && writeTask) checks.push(...await writeJourney({ task, temporary, env, run, executable, vendors }));
+    if (paths.includes('native') && writeTask) checks.push(...await writeJourney({ task: task!, temporary, env, run, executable, vendors: vendors! }));
     if (paths.includes('native') && !identityTask && !readTask && !writeTask && !closureTask) {
       for (const flag of ['--version', '-v', '-V']) {
         const result = await invoke([flag]);
@@ -138,7 +140,7 @@ if (!inside) {
       checks.push('native:installed-version');
       const help = await invoke(['--help']);
       assert.equal(help.code, 0, help.stderr);
-      assert.deepEqual(decode(help.stdout).commands.map(command => command.command), setup.response.commands);
+      assert.deepEqual((decode(help.stdout) as unknown as DiscoveryOutput).commands.map(command => command.command), setup.response.commands);
       checks.push('native:offline-help');
       const schema = await invoke(['schema', '--json']);
       assert.equal(schema.code, 0, schema.stderr);
@@ -162,21 +164,21 @@ if (!inside) {
       assert.equal(inventory.code, 0, inventory.stderr);
       const contract = JSON.parse(inventory.stdout);
       assert.deepEqual(contract, JSON.parse(await readFile(join(packageRoot, 'command-inventory.json'), 'utf8')));
-      assert.deepEqual(contract.commands.map(command => command.command), setup.response.commands);
+      assert.deepEqual(contract.commands.map((command: { command: string }) => command.command), setup.response.commands);
       for (const command of contract.commands) {
         const result = await invoke([command.command, '--help']);
         assert.equal(result.code, 0, result.stderr);
-        assert.equal(decode(result.stdout).command, command.command);
+        assert.equal((decode(result.stdout) as unknown as DiscoveryOutput).command, command.command);
       }
       checks.push('native:inventory-discovery');
       for (const argv of [['--bogus'], ['schema', '--bogus'], ['bogus'], ['schema', 'extra'], ['--token=inline-canary']]) {
         const result = await invoke(argv);
         assert.equal(result.code, setup.expected.unknownFlagExit);
-        assert.equal(decode(result.stdout).error.code, 'USAGE');
+        assert.equal((decode(result.stdout) as unknown as DiscoveryOutput).error.code, 'USAGE');
         assert.ok(!`${result.stdout}${result.stderr}`.includes('inline-canary'));
       }
       for (const argv of [['zone', 'list', '--bogus', '1'], ['zone', 'list', '--bogus']]) {
-        const stray = decode((await invoke(argv)).stdout);
+        const stray = (decode((await invoke(argv)).stdout) as unknown as DiscoveryOutput);
         assert.equal(stray.error.code, 'USAGE');
         assert.match(stray.help.join(' '), /--zones-per-page/, 'An unknown flag lists the selected command flags');
       }
@@ -185,14 +187,14 @@ if (!inside) {
         checks.push('native:two-https-boundaries', 'native:kernel-egress-denied');
         const result = await invoke(['inventory']);
         assert.equal(result.code, 0, result.stderr);
-        assert.deepEqual(decode(result.stdout).commands.map(command => command.command), setup.response.commands);
-        assert.equal(vendors.traces.length, 2, 'Discovery must not contact vendor endpoints');
+        assert.deepEqual((decode(result.stdout) as unknown as DiscoveryOutput).commands.map(command => command.command), setup.response.commands);
+        assert.equal(vendors!.traces.length, 2, 'Discovery must not contact vendor endpoints');
       }
     }
     if (paths.includes('artium')) {
-      const { artiumJourney } = await import('./artium-journey.mjs');
+      const { artiumJourney } = await import('./artium-journey.ts');
       checks.push(...await artiumJourney({ temporary, sha256, env, run, packageRoot,
-        origins: vendors?.origins, vendors, task, identityTask, readTask, signal: cancellation.signal }));
+        origins: vendors?.origins, vendors, task: task!, identityTask, readTask, signal: cancellation.signal }));
     }
     if (vendors && !identityTask && !readTask && !writeTask) assert.equal(vendors.traces.length, 2, 'Discovery must not contact either fake vendor');
     assert.ok(checks.length > 0, 'Zero assertions executed');
@@ -203,7 +205,7 @@ if (!inside) {
       platformEvidence: { linux: 'native', windows: identityTask ? 'PENDING - native Windows verification deferred' : 'not selected' }, package: { version: pack.version, sha256, integrity: pack.integrity }, checks }));
   } catch (error) {
     console.log(JSON.stringify({ task, paths, expected, actual: checks.length, failed: 1,
-      pending: Math.max(0, expected - checks.length - 1), skipped: 0, error: error.message,
+      pending: Math.max(0, expected - checks.length - 1), skipped: 0, error: (error as Error).message,
       diagnostics: { load1: loadavg()[0], requests: vendors?.traces.map(({ elapsedMs, method, path, identity }) => ({ elapsedMs, method, path, identity })) ?? [] } }));
     process.exitCode = 1;
   } finally {

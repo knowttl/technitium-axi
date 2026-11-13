@@ -18,7 +18,7 @@ interface Response { body?: unknown; bytes?: Buffer; contentType?: string; statu
 interface Context {
   row: Row; directory: string;
   vendors: {
-    responders: Map<string, (request: IncomingMessage, body: Buffer) => Response>;
+    responders: Map<string, (request: IncomingMessage, body: Buffer) => Response | Promise<Response>>;
     traces: { inputHash: string; path: string; method: string }[];
   };
   success: (args: string[], json?: boolean) => Promise<Output>;

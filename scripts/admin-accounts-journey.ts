@@ -1,11 +1,25 @@
+import type { JourneyContext } from './journey-types.ts';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+interface Permission { username?: string; name?: string; canView: boolean; canModify: boolean; canDelete: boolean }
+interface User {
+  username: string; displayName: string; isSsoUser: boolean; disabled: boolean; totpEnabled: boolean;
+  memberOfGroups: string[]; sessions: Session[];
+}
+interface Session { username: string; partialToken: string; isCurrentSession: boolean; tokenName: string | null; type: string }
+interface Group { name: string; description: string; members: string[] }
+interface Permissions { section: string; userPermissions: Permission[]; groupPermissions: Permission[] }
+interface AdminResponses {
+  'user get': User; 'user list': { users: User[] }; 'group get': Group; 'group list': { groups: Group[] };
+  'session list': { sessions: Session[] }; 'permission get': Permissions;
+}
+
 // Synthetic cases from the pinned vendor Administration API contract.
 const reader = { username: 'reader', canView: true, canModify: false, canDelete: false };
 const admin = { name: 'Administrators', canView: true, canModify: true, canDelete: true };
-const cases = [
+const cases: [string, string, string, Record<string, unknown>, Record<string, unknown>?][] = [
   ['099', 'session create-token', 'sessions/createToken', { user: 'service-user', tokenName: 'automation-2' }],
   ['100', 'session delete', 'sessions/delete', { node: 'selected-node', partialToken: '2222222222222222' }],
   ['102', 'user create', 'users/create', { user: 'new-user', displayName: 'New User', pass: { env: 'ADMIN_PASSWORD' } }],
@@ -18,7 +32,7 @@ const cases = [
 ];
 export const adminAccountsTasks = ['B5.admin-accounts', ...cases.map(([id]) => `B5.OP-${id}`)];
 
-export async function adminAccountsJourney({ task, temporary, env, run, executable, vendors }) {
+export async function adminAccountsJourney({ task, temporary, env, run, executable, vendors }: JourneyContext) {
   const directory = join(temporary, 'admin-accounts');
   await mkdir(directory, { mode: 0o700 });
   const config = join(directory, 'config.json');
@@ -33,7 +47,7 @@ export async function adminAccountsJourney({ task, temporary, env, run, executab
   vendors.tokens.set('alpha', token);
   vendors.tokens.set('beta', token);
   let sequence = 0;
-  const invoke = async (command, input, flags = [], extraEnv = {}) => {
+  const invoke = async (command: string, input?: unknown, flags: string[] = [], extraEnv: NodeJS.ProcessEnv = {}) => {
     const file = join(directory, `input-${sequence++}.json`);
     if (input) await writeFile(file, JSON.stringify(input), { mode: 0o600 });
     const result = await run(executable, [...command.split(' '), '--config', config, '--json', ...(input ? ['--input-file', file] : []), ...flags],
@@ -42,22 +56,22 @@ export async function adminAccountsJourney({ task, temporary, env, run, executab
     for (const secret of [token, issued, password]) for (const form of [secret, JSON.stringify(secret).slice(1, -1), encodeURIComponent(secret), Buffer.from(secret).toString('base64')]) assert.ok(!result.stdout.includes(form), result.stdout);
     return { ...result, value: JSON.parse(result.stdout) };
   };
-  const success = async (...args) => {
+  const success = async (...args: Parameters<typeof invoke>) => {
     const result = await invoke(...args);
     assert.equal(result.code, 0, result.stdout);
     return result.value;
   };
-  const failure = async (code, ...args) => {
+  const failure = async (code: string, ...args: Parameters<typeof invoke>) => {
     const result = await invoke(...args);
     assert.notEqual(result.code, 0, result.stdout);
     assert.equal(result.value.error.code, code, result.stdout);
   };
-  const execute = async (command, input, flags = []) => {
+  const execute = async (command: string, input: unknown, flags: string[] = []) => {
     const preview = await success(command, input);
     return success(command, input, ['--execute', '--confirm', preview.preview.digest, ...flags]);
   };
-  const read = async (command, flags = []) => (await success(`admin ${command}`, undefined, [...flags, '--full'])).response;
-  const authenticate = async (partialToken, allowed, origin = vendors.origins[0]) => {
+  const read = async <C extends keyof AdminResponses>(command: C, flags: string[] = []): Promise<AdminResponses[C]> => (await success(`admin ${command}`, undefined, [...flags, '--full'])).response;
+  const authenticate = async (partialToken: string, allowed: boolean, origin = vendors.origins[0]) => {
     const credential = `${partialToken}-synthetic-session`;
     const identity = origin === vendors.origins[0] ? 'alpha' : 'beta';
     vendors.tokens.set(identity, credential);
@@ -67,15 +81,15 @@ export async function adminAccountsJourney({ task, temporary, env, run, executab
     vendors.tokens.set(identity, token);
     await configure();
   };
-  const user = (username, displayName = username) => ({ ...structuredClone(seeds['OP-103']), username, displayName, isSsoUser: false, disabled: false, totpEnabled: true, memberOfGroups: [], sessions: [] });
-  const session = (username, partialToken, tokenName = null) => ({ ...structuredClone(seeds['OP-098'].sessions[0]), username, partialToken, isCurrentSession: false, tokenName, type: tokenName ? 'ApiToken' : 'Standard' });
-  let users, groups, permissions, sessions, passwords;
+  const user = (username: string, displayName = username): User => ({ ...structuredClone(seeds['OP-103']), username, displayName, isSsoUser: false, disabled: false, totpEnabled: true, memberOfGroups: [], sessions: [] });
+  const session = (username: string, partialToken: string, tokenName: string | null = null): Session => ({ ...structuredClone(seeds['OP-098'].sessions[0]), username, partialToken, isCurrentSession: false, tokenName, type: tokenName ? 'ApiToken' : 'Standard' });
+  let users!: Map<string, User>, groups!: Map<string, Group>, permissions!: Map<string, Permissions>, sessions!: Map<string, Session[]>, passwords!: Map<string, string>;
   let deny = false;
   const reset = () => {
     users = new Map(['planner', 'service-user', 'new-user', 'delete-user', 'keep-user', 'reader'].map(name => [name, user(name)]));
-    users.get('planner').memberOfGroups = ['Operators'];
-    users.get('keep-user').memberOfGroups = ['Keepers'];
-    users.get('delete-user').memberOfGroups = ['DeleteGroup'];
+    users.get('planner')!.memberOfGroups = ['Operators'];
+    users.get('keep-user')!.memberOfGroups = ['Keepers'];
+    users.get('delete-user')!.memberOfGroups = ['DeleteGroup'];
     groups = new Map([
       ['Operators', { name: 'Operators', description: 'old', members: ['planner'] }],
       ['DeleteGroup', { name: 'DeleteGroup', description: 'delete', members: ['delete-user'] }],
@@ -92,28 +106,28 @@ export async function adminAccountsJourney({ task, temporary, env, run, executab
     passwords = new Map();
     deny = false;
   };
-  const ok = response => ({ body: { status: 'ok', response } });
+  const ok = (response: unknown) => ({ body: { status: 'ok', response } });
   const rejected = () => ({ body: { status: 'error', errorMessage: 'Access denied or invalid target.' } });
   for (const [path, select] of [
-    ['users/get', p => users.get(p.user)], ['users/list', () => ({ users: [...users.values()] })],
-    ['groups/get', p => groups.get(p.group)], ['groups/list', () => ({ groups: [...groups.values()] })],
+    ['users/get', p => users.get(p.user!)], ['users/list', () => ({ users: [...users.values()] })],
+    ['groups/get', p => groups.get(p.group!)], ['groups/list', () => ({ groups: [...groups.values()] })],
     ['sessions/list', p => ({ sessions: sessions.get(p.node ?? 'selected-node') })],
-    ['permissions/get', p => permissions.get(p.section)],
-  ]) vendors.responders.set(`/api/admin/${path}`, (_incoming, bytes) => {
-    const response = select(Object.fromEntries(new URLSearchParams(bytes.toString())));
+    ['permissions/get', p => permissions.get(p.section!)],
+  ] satisfies [string, (parameters: Record<string, string>) => unknown][]) vendors.responders.set(`/api/admin/${path}`, (_incoming, bytes) => {
+    const response = select!(Object.fromEntries(new URLSearchParams(bytes.toString())));
     return response ? ok(response) : rejected();
   });
   vendors.responders.set('/api/user/login', (_incoming, bytes) => {
     const p = Object.fromEntries(new URLSearchParams(bytes.toString()));
-    return passwords.get(p.user) === p.pass ? { body: { status: 'ok', username: p.user, token: issued, info: { permissions: {} } } } : rejected();
+    return passwords.get(p.user!) === p.pass ? { body: { status: 'ok', username: p.user, token: issued, info: { permissions: {} } } } : rejected();
   });
   vendors.responders.set('/api/user/session/get', incoming => {
-    const credential = incoming.headers.authorization.slice(7);
-    const node = incoming.socket.localPort === Number(new URL(vendors.origins[0]).port) ? 'selected-node' : 'other-node';
-    const selected = sessions.get(node).find(row => credential.startsWith(row.partialToken));
+    const credential = incoming.headers.authorization!.slice(7);
+    const node = incoming.socket.localPort === Number(new URL(vendors.origins[0]!).port) ? 'selected-node' : 'other-node';
+    const selected = sessions.get(node)!.find(row => credential.startsWith(row.partialToken));
     return selected ? { body: { status: 'ok', username: selected.username, token: credential, ...(selected.tokenName ? { tokenName: selected.tokenName } : {}), info: { version: '15.4', permissions: {} } } } : { body: { status: 'invalid-token' } };
   });
-  const parsePermissions = (text, name) => {
+  const parsePermissions = (text: string, name: 'name' | 'username'): Permission[] => {
     if (!text) return [];
     const parts = text.split('|');
     return Array.from({ length: parts.length / 4 }, (_, i) => ({ [name]: parts[i * 4], canView: parts[i * 4 + 1] === 'true', canModify: parts[i * 4 + 2] === 'true', canDelete: parts[i * 4 + 3] === 'true' }));
@@ -123,64 +137,64 @@ export async function adminAccountsJourney({ task, temporary, env, run, executab
     assert.equal(incoming.headers['content-type'], 'application/x-www-form-urlencoded');
     const p = Object.fromEntries(new URLSearchParams(bytes.toString()));
     assert.ok(!Object.hasOwn(p, 'token'));
-    if (deny || id === '113' && incoming.socket.localPort === Number(new URL(vendors.origins[1]).port)) return rejected();
+    if (deny || id === '113' && incoming.socket.localPort === Number(new URL(vendors.origins[1]!).port)) return rejected();
     if (id === '099') {
-      sessions.get('selected-node').push(session(p.user, issued.slice(0, 16), p.tokenName));
+      sessions.get('selected-node')!.push(session(p.user!, issued.slice(0, 16), p.tokenName!));
       return ok({ username: p.user, tokenName: p.tokenName, token: issued });
     }
     if (id === '100') {
-      if (p.partialToken.length !== 16) return rejected();
-      sessions.set(p.node, sessions.get(p.node).filter(row => row.partialToken !== p.partialToken));
+      if (p.partialToken!.length !== 16) return rejected();
+      sessions.set(p.node!, sessions.get(p.node!)!.filter(row => row.partialToken !== p.partialToken));
     }
     if (id === '102') {
-      if (users.has(p.user)) return rejected();
-      users.set(p.user, { ...user(p.user, p.displayName), totpEnabled: false });
-      passwords.set(p.user, p.pass);
+      if (users.has(p.user!)) return rejected();
+      users.set(p.user!, { ...user(p.user!, p.displayName), totpEnabled: false });
+      passwords.set(p.user!, p.pass!);
     }
     if (id === '104') {
-      const previous = users.get(p.user);
-      users.delete(p.user);
-      users.set(p.newUser, { ...previous, username: p.newUser, displayName: p.displayName, disabled: p.disabled === 'true', totpEnabled: p.totpEnabled === 'true', memberOfGroups: p.memberOfGroups.split(',') });
+      const previous = users.get(p.user!)!;
+      users.delete(p.user!);
+      users.set(p.newUser!, { ...previous, username: p.newUser!, displayName: p.displayName!, disabled: p.disabled === 'true', totpEnabled: p.totpEnabled === 'true', memberOfGroups: p.memberOfGroups!.split(',') });
       for (const group of groups.values()) {
         group.members = group.members.filter(name => name !== p.user);
-        if (p.memberOfGroups.split(',').includes(group.name)) group.members.push(p.newUser);
+        if (p.memberOfGroups!.split(',').includes(group.name)) group.members.push(p.newUser!);
         group.members.sort();
       }
-      passwords.set(p.newUser, p.newPass);
+      passwords.set(p.newUser!, p.newPass!);
     }
     if (id === '105') {
       if (p.user === 'planner') return rejected();
-      users.delete(p.user);
+      users.delete(p.user!);
       for (const [node, rows] of sessions) sessions.set(node, rows.filter(row => row.username !== p.user));
       for (const group of groups.values()) group.members = group.members.filter(name => name !== p.user);
     }
     if (id === '107') {
-      if (groups.has(p.group)) return rejected();
-      groups.set(p.group, { name: p.group, description: p.description, members: [] });
+      if (groups.has(p.group!)) return rejected();
+      groups.set(p.group!, { name: p.group!, description: p.description!, members: [] });
     }
     if (id === '109') {
-      const members = p.members.split(',').map(name => name.toLowerCase());
+      const members = p.members!.split(',').map(name => name.toLowerCase());
       // Vendor Dictionary.Add rejects repeated canonical usernames before synchronizing members.
       if (new Set(members).size !== members.length) return rejected();
-      const previous = groups.get(p.group);
-      groups.delete(p.group);
-      groups.set(p.newGroup ?? p.group, { ...previous, name: p.newGroup ?? p.group, description: p.description ?? previous.description, members: members.sort() });
+      const previous = groups.get(p.group!)!;
+      groups.delete(p.group!);
+      groups.set(p.newGroup! ?? p.group, { ...previous, name: (p.newGroup ?? p.group)!, description: p.description ?? previous!.description, members: members.sort() });
       for (const value of users.values()) {
         value.memberOfGroups = value.memberOfGroups.filter(name => name !== p.group);
-        if (members.includes(value.username)) value.memberOfGroups.push(p.newGroup ?? p.group);
+        if (members.includes(value.username)) value.memberOfGroups.push(p.newGroup! ?? p.group);
         value.memberOfGroups.sort();
       }
     }
     if (id === '110') {
       if (p.group === 'Administrators') return rejected();
-      groups.delete(p.group);
+      groups.delete(p.group!);
       for (const value of users.values()) value.memberOfGroups = value.memberOfGroups.filter(name => name !== p.group);
       for (const value of permissions.values()) value.groupPermissions = value.groupPermissions.filter(row => row.name !== p.group);
     }
     if (id === '113') {
-      const value = permissions.get(p.section);
-      if (p.userPermissions !== undefined) value.userPermissions = parsePermissions(p.userPermissions, 'username');
-      if (p.groupPermissions !== undefined) value.groupPermissions = [...parsePermissions(p.groupPermissions, 'name').filter(row => row.name !== 'Administrators'), admin];
+      const value = permissions.get(p.section!);
+      if (p.userPermissions !== undefined) value!.userPermissions = parsePermissions(p.userPermissions, 'username');
+      if (p.groupPermissions !== undefined) value!.groupPermissions = [...parsePermissions(p.groupPermissions, 'name').filter(row => row.name !== 'Administrators'), admin];
     }
     return ok({});
   });
@@ -188,8 +202,8 @@ export async function adminAccountsJourney({ task, temporary, env, run, executab
     reset();
     if (id === '102') users.delete('new-user');
     if (id === '104') {
-      users.get('new-user').memberOfGroups = ['Operators'];
-      groups.get('Operators').members.push('new-user');
+      users.get('new-user')!.memberOfGroups = ['Operators'];
+      groups.get('Operators')!.members.push('new-user');
     }
     const input = { parameters, ...(baseline ? { baseline } : {}) };
     const fullCommand = `admin ${command}`;
@@ -253,7 +267,7 @@ export async function adminAccountsJourney({ task, temporary, env, run, executab
       assert.deepEqual((await read('user get', ['--user', 'planner'])).memberOfGroups, ['Operators2']);
       reset();
       const preview = await success(fullCommand, input);
-      groups.get('Operators').members.push('keep-user');
+      groups.get('Operators')!.members.push('keep-user');
       const before = vendors.traces.filter(row => row.path === '/api/admin/groups/set').length;
       await failure('CONFLICT', fullCommand, input, ['--execute', '--confirm', preview.preview.digest]);
       assert.equal(vendors.traces.filter(row => row.path === '/api/admin/groups/set').length, before);
