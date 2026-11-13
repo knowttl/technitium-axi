@@ -1,12 +1,13 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { readContracts } from '../dist/read-contracts.js';
+import type { ReadParameter } from '../src/read-contracts.ts';
 
 const seeds = JSON.parse(await readFile(new URL('../tests/fixtures/read-seeds.json', import.meta.url), 'utf8')).responses;
 const monitor = JSON.parse(await readFile(new URL('../tests/fixtures/monitor-reads.json', import.meta.url), 'utf8')).operations;
 const adminCases = JSON.parse(await readFile(new URL('../tests/fixtures/admin-read-cases.json', import.meta.url), 'utf8')).operations;
-const ordinary = value => Array.isArray(value) ? value.map(ordinary) : value && typeof value === 'object'
+const ordinary = (value: unknown): unknown => Array.isArray(value) ? value.map(ordinary) : value && typeof value === 'object'
   ? Object.fromEntries(Object.entries(value).filter(([key]) => !/password|secret|^token$/i.test(key)).map(([key, field]) => [key, ordinary(field)])) : value;
-const input = parameter => parameter.values?.[0] ?? (parameter.type === 'boolean' ? 'true'
+const input = (parameter: ReadParameter) => parameter.values?.[0] ?? (parameter.type === 'boolean' ? 'true'
   : parameter.name === 'pageNumber' ? '1' : parameter.type === 'integer' ? '2' : parameter.type === 'http-date' ? 'Mon, 01 Jan 2024 00:00:00 GMT'
     : parameter.type === 'date' ? '2024-01-01T00:00:00Z' : parameter.type === 'zone-list' ? 'alpha.example.test,beta.example.test'
       : ['zone', 'domain', 'node', 'qname'].includes(parameter.name) ? 'alpha.example.test' : `Synthetic${parameter.name}`);

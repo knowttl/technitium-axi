@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import type { JourneyContext, RunResult, CatalogueOutput } from './journey-types.ts';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -7,14 +8,29 @@ import { crc32 } from 'node:zlib';
 import { monitorJourney } from './monitor-journey.ts';
 import { serverRData } from './record-shapes.ts';
 import monitor from '../tests/fixtures/monitor-reads.json' with { type: 'json' };
+import type { VendorResponse } from './vendor-fixture.ts';
+
+interface ReadContext extends Omit<JourneyContext, 'executable'> {
+  executable?: string; selectedToken?: string;
+  configureHosted?: (tokenKind: string) => Promise<void>;
+  invokeHosted?: (args: string[], json: boolean) => Promise<RunResult & { value: unknown }>;
+}
+
+type MatrixRow = Omit<Parameters<typeof monitorJourney>[0]['row'], 'parameters'> & {
+  text?: string;
+  parameters: { name: string; flag: string; requested: string; location: string; invalid: string | null; required: boolean }[];
+  scenarios?: { response?: Record<string, unknown>; patch?: Record<string, unknown>; omit?: string[]; httpStatus?: number; omitInputs?: string[]; inputs?: Record<string, string>; error?: string; expected?: Record<string, unknown>; name: string }[];
+};
+interface RecordInput { type: string; updated: Record<string, unknown> }
+type Inventory = CatalogueOutput;
 
 export const monitorTasks = Object.keys(monitor.operations).map(id => `B2.${id}`);
 const adminCases = JSON.parse(await readFile(new URL('../tests/fixtures/admin-read-cases.json', import.meta.url), 'utf8'));
 export const readTasks = ['B2.01', 'B2.02', 'B2.03', 'B2.04', 'B2.05', 'B2.admin-reads', ...monitorTasks, ...Object.keys(adminCases.operations).map(id => `B2.${id}`)];
-const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+const hash = (bytes: string | Buffer) => createHash('sha256').update(bytes).digest('hex');
 
 // Stored ZIP records keep independently reviewed entry names and payload bytes visible.
-export function archive(names) {
+export function archive(names: string[]) {
   const local = [];
   const central = [];
   let offset = 0;
@@ -39,12 +55,12 @@ export function archive(names) {
   return Buffer.concat([...local, directory, end]);
 }
 
-export async function readJourney({ task, temporary, env, run, executable, vendors, invokeHosted, selectedToken, configureHosted }) {
-  const matrix = JSON.parse(await readFile(new URL('../tests/fixtures/read-matrix.json', import.meta.url), 'utf8'));
+export async function readJourney({ task, temporary, env, run, executable, vendors, invokeHosted, selectedToken, configureHosted }: ReadContext): Promise<string[]> {
+  const matrix = JSON.parse(await readFile(new URL('../tests/fixtures/read-matrix.json', import.meta.url), 'utf8')) as { operations: MatrixRow[] };
   const selected = task.startsWith('B2.OP-') ? task.slice(3) : undefined;
   const adminTask = task === 'B2.admin-reads' || (selected !== undefined && Object.hasOwn(adminCases.operations, selected));
   if (adminTask) matrix.operations = matrix.operations.filter(row => selected ? row.operation === selected : Object.hasOwn(adminCases.operations, row.operation));
-  const worlds = JSON.parse(await readFile(new URL('../tests/fixtures/archive-worlds.json', import.meta.url), 'utf8'));
+  const worlds = JSON.parse(await readFile(new URL('../tests/fixtures/archive-worlds.json', import.meta.url), 'utf8')) as typeof import('../tests/fixtures/archive-worlds.json');
   const directory = join(temporary, invokeHosted ? 'hosted-reads' : 'reads');
   await mkdir(directory, { mode: 0o700 });
   const config = join(directory, 'config.json');
@@ -52,52 +68,52 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
   vendors.tokens.set('alpha', token);
   const profile = { origin: vendors.origins[0], auth: 'token', tokenKind: 'api', token: { env: 'READ_TOKEN' },
     caFile: vendors.caFile, tlsServerName: 'localhost' };
-  const configure = async tokenKind => configureHosted ? configureHosted(tokenKind)
+  const configure = async (tokenKind: string) => configureHosted ? configureHosted(tokenKind)
     : writeFile(config, JSON.stringify({ version: 1, profiles: { alpha: { ...profile, tokenKind } } }), { mode: 0o600 });
   await configure('api');
-  const invoke = async (args, json = true) => {
+  const invoke = async (args: string[], json = true) => {
     if (invokeHosted) return await invokeHosted(args, json);
-    const result = await run(executable, [...args, ...(json ? ['--json'] : []), ...(args[0] === 'inventory' ? [] : ['--config', config])], { env: { ...env, READ_TOKEN: token } });
+    const result = await run(executable!, [...args, ...(json ? ['--json'] : []), ...(args[0] === 'inventory' ? [] : ['--config', config])], { env: { ...env, READ_TOKEN: token } });
     assert.equal(result.stderr, '');
     assert.ok(!result.stdout.includes(token));
     return { ...result, value: json ? JSON.parse(result.stdout) : decode(result.stdout) };
   };
-  const success = async (...args) => {
+  const success = async (...args: Parameters<typeof invoke>) => {
     const result = await invoke(...args);
     assert.equal(result.code, 0, `${args[0].join(' ')}: ${result.stdout}`);
     return result.value;
   };
-  const fail = async (args, code) => {
+  const fail = async (args: string[], code: string) => {
     const result = await invoke(args);
     assert.notEqual(result.code, 0, result.stdout);
     if (invokeHosted && code === 'USAGE') assert.ok(['USAGE', 'INVALID_INPUT'].includes(result.value.error.code), result.stdout);
     else assert.equal(result.value.error.code, code, result.stdout);
     return result.value;
   };
-  const argumentsFor = row => [...row.command.split(' '), ...row.parameters.flatMap(parameter => [parameter.flag, parameter.requested])];
-  const respond = row => vendors.responders.set(row.path, () => ({ body: row.response }));
+  const argumentsFor = (row: MatrixRow) => [...row.command.split(' '), ...row.parameters.flatMap(parameter => [parameter.flag, parameter.requested])];
+  const respond = (row: MatrixRow) => vendors.responders.set(row.path, () => ({ body: row.response }));
   const checks = [];
   if (task === 'B2.05') {
-    for (const selected of monitorTasks) checks.push(...await monitorJourney({ row: matrix.operations.find(row => row.operation === selected.slice(3)),
+    for (const selected of monitorTasks) checks.push(...await monitorJourney({ row: matrix.operations.find(row => row.operation === selected.slice(3))!,
       directory, vendors, success, fail, archive, components: worlds.backupComponents }));
     return checks;
   }
-  if (monitorTasks.includes(task)) return await monitorJourney({ row: matrix.operations.find(row => row.operation === selected),
+  if (monitorTasks.includes(task)) return await monitorJourney({ row: matrix.operations.find(row => row.operation === selected)!,
     directory, vendors, success, fail, archive, components: worlds.backupComponents });
   if (task === 'B2.01' || adminTask) {
     if (task === 'B2.01') {
       const codec = JSON.parse(await readFile(new URL('../package.json', import.meta.resolve('@toon-format/toon')), 'utf8'));
       assert.equal(codec.version, '2.3.1', 'The journey decoder must match the Artium TOON contract');
       const profileRow = matrix.operations.find(row => row.operation === 'OP-012');
-      respond(profileRow);
-      const profileOutput = await success([...argumentsFor(profileRow), '--full'], false);
-      assert.deepEqual(profileOutput.response, profileRow.ordinaryResponse);
+      respond(profileRow!);
+      const profileOutput = await success([...argumentsFor(profileRow!), '--full'], false);
+      assert.deepEqual(profileOutput.response, profileRow!.ordinaryResponse);
       assert.deepEqual(profileOutput.output.collections, {
         memberOfGroups: { returned: 1, available: 1, complete: true },
         sessions: { returned: 2, available: 2, complete: true },
       });
       checks.push('packaged-toon-2.3.1-collections-compatibility');
-      const inventory = await success(['inventory']);
+      const inventory = await success(['inventory']) as Inventory;
       assert.deepEqual(inventory.commands.filter(command => command.operation && command.effect === 'read').map(command => command.operation).sort(),
         ['OP-001', 'OP-006', ...matrix.operations.map(row => row.operation)].sort());
       const writes = inventory.commands.filter(command => command.operation && command.effect !== 'read');
@@ -105,8 +121,8 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
         ['OP-002', 'OP-003', 'OP-004', 'OP-005', 'OP-007', 'OP-008', 'OP-009', 'OP-010', 'OP-011', 'OP-013', 'OP-019', 'OP-022', 'OP-023', 'OP-025', 'OP-026', 'OP-027', 'OP-028', 'OP-029', 'OP-030', 'OP-032', 'OP-034', 'OP-035', 'OP-036', 'OP-039', 'OP-040', 'OP-041', 'OP-042', 'OP-043', 'OP-044', 'OP-045', 'OP-046', 'OP-047', 'OP-048', 'OP-049', 'OP-051', 'OP-052', 'OP-054', 'OP-055', 'OP-057', 'OP-058', 'OP-059', 'OP-060', 'OP-063', 'OP-064', 'OP-065', 'OP-066', 'OP-070', 'OP-071', 'OP-072', 'OP-073', 'OP-074', 'OP-076', 'OP-077', 'OP-080', 'OP-082', 'OP-083', 'OP-085', 'OP-087', 'OP-088', 'OP-089', 'OP-092', 'OP-093', 'OP-094', 'OP-095', 'OP-096', 'OP-097', 'OP-099', 'OP-100', 'OP-102', 'OP-104', 'OP-105', 'OP-107', 'OP-109', 'OP-110', 'OP-113', 'OP-115', 'OP-116', 'OP-117', 'OP-119', 'OP-120', 'OP-121', 'OP-122', 'OP-123', 'OP-124', 'OP-126', 'OP-127', 'OP-128', 'OP-129', 'OP-130', 'OP-131', 'OP-132', 'OP-133', 'OP-136', 'OP-137', 'OP-140', 'OP-142', 'OP-143']);
       for (const command of writes) {
         assert.equal(command.effect, command.operation === 'OP-077' ? 'conditional' : 'write');
-        assert.deepEqual(command.flags, ['--json', '--help', '--config', '--profile', '--input-file', '--execute', '--confirm', '--result-file', '--reconcile', ...(['OP-119', 'OP-127'].includes(command.operation) ? ['--reconcile-profile'] : [])]);
-        assert.deepEqual(command.input.envelope, ['parameters', 'baseline', 'upload']);
+        assert.deepEqual(command.flags, ['--json', '--help', '--config', '--profile', '--input-file', '--execute', '--confirm', '--result-file', '--reconcile', ...(['OP-119', 'OP-127'].includes(command.operation!) ? ['--reconcile-profile'] : [])]);
+        assert.deepEqual(command.input!.envelope, ['parameters', 'baseline', 'upload']);
       }
     }
     for (const row of matrix.operations.filter(row => row.kind === 'json')) {
@@ -117,10 +133,10 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
       if (row.operation === 'OP-075') assert.equal(actual.sha256, hash(JSON.stringify(row.response)));
       else assert.deepEqual(actual.response, row.ordinaryResponse, `${row.operation} approved output differs`);
       const trace = vendors.traces.at(-1);
-      assert.equal(trace.path, row.path);
-      assert.equal(trace.method, 'POST');
-      assert.equal(trace.inputHash, hash(expectedForm.toString()));
-      assert.equal(trace.bearerHash, hash(token));
+      assert.equal(trace!.path, row.path);
+      assert.equal(trace!.method, 'POST');
+      assert.equal(trace!.inputHash, hash(expectedForm.toString()));
+      assert.equal(trace!.bearerHash, hash(token));
       if (row.operation !== 'OP-012') {
         const toon = await success(args, false);
         assert.deepEqual({ ...toon, result: undefined }, { ...actual, result: undefined });
@@ -130,8 +146,8 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
       if (invalid || required) {
         const parameter = invalid ?? required;
         const failing = [...args];
-        const index = failing.indexOf(parameter.flag);
-        failing.splice(index, 2, ...(invalid ? [parameter.flag, parameter.invalid] : []));
+        const index = failing.indexOf(parameter!.flag);
+        failing.splice(index, 2, ...(invalid ? [parameter!.flag, parameter!.invalid!] : []));
         const count = vendors.traces.length;
         await fail(failing, 'USAGE');
         assert.equal(vendors.traces.length, count, 'Invalid read input reached the vendor');
@@ -163,10 +179,10 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
     }
     if (task === 'B2.01') {
       const options = matrix.operations.find(row => row.operation === 'OP-031');
-      vendors.responders.set(options.path, () => ({ body: { status: 'ok', response: { ...options.response.response, catalog: 'catalog1' } } }));
-      assert.equal((await success(argumentsFor(options))).response.catalog, 'catalog1');
-      vendors.responders.set(options.path, () => ({ body: { status: 'ok', response: { ...options.response.response, catalog: 7 } } }));
-      await fail(argumentsFor(options), 'UPSTREAM_INVALID');
+      vendors.responders.set(options!.path, () => ({ body: { status: 'ok', response: { ...options!.response.response, catalog: 'catalog1' } } }));
+      assert.equal((await success(argumentsFor(options!))).response.catalog, 'catalog1');
+      vendors.responders.set(options!.path, () => ({ body: { status: 'ok', response: { ...options!.response.response, catalog: 7 } } }));
+      await fail(argumentsFor(options!), 'UPSTREAM_INVALID');
     }
     if (!adminTask) checks.push('read-contracts-and-wire-matrix');
   }
@@ -179,7 +195,7 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
       vendors.responders.set(row.path, () => ({ bytes, contentType, ...(row.operation === 'OP-125' ? { headers: { 'last-modified': worlds.baseline } } : {}) }));
       const destination = join(directory, `${row.operation}.result`);
       const value = await success([...argumentsFor(row), '--result-file', destination]);
-      assert.equal(vendors.traces.at(-1).inputHash, hash(new URLSearchParams(row.parameters.filter(parameter => parameter.location === 'form').map(parameter => [parameter.name, parameter.requested])).toString()));
+      assert.equal(vendors.traces.at(-1)!.inputHash, hash(new URLSearchParams(row.parameters.filter(parameter => parameter.location === 'form').map(parameter => [parameter.name, parameter.requested])).toString()));
       assert.deepEqual(await readFile(destination), bytes);
       assert.equal(value.result.sha256, hash(bytes));
       assert.equal((await stat(destination)).mode & 0o777, 0o600);
@@ -190,69 +206,69 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
     }
     if (task === 'B2.02') {
       // Read-back matrix generated from the write fixture rows: every record type must round-trip all of its rData fields.
-      const records = JSON.parse(await readFile(new URL('../tests/fixtures/record-inputs.json', import.meta.url), 'utf8')).rows;
-      const serverData = row => serverRData(row.updated);
+      const records = JSON.parse(await readFile(new URL('../tests/fixtures/record-inputs.json', import.meta.url), 'utf8')).rows as RecordInput[];
+      const serverData = (row: RecordInput) => serverRData(row.updated);
       const get = matrix.operations.find(row => row.operation === 'OP-050');
       const cache = matrix.operations.find(row => row.operation === 'OP-053');
       const allowed = matrix.operations.find(row => row.operation === 'OP-056');
-      const answer = (row, mapped) => vendors.responders.set(row.path, () => ({ body: { status: 'ok', response: {
+      const answer = (row: MatrixRow, mapped: (record: RecordInput, index: number) => unknown) => vendors.responders.set(row.path, () => ({ body: { status: 'ok', response: {
         ...row.response.response, records: records.map((record, index) => mapped(record, index)) } } }));
-      answer(get, (record, index) => ({ disabled: false, name: `r${index}.alpha.example.test`, type: String(record.type), ttl: 60, rData: serverData(record), dnssecStatus: 'Unknown' }));
-      const getFull = await success([...argumentsFor(get), '--full']);
-      assert.deepEqual(getFull.response.records.map(record => record.rData), records.map(serverData), 'zone record get read-back');
+      answer(get!, (record, index) => ({ disabled: false, name: `r${index}.alpha.example.test`, type: String(record.type), ttl: 60, rData: serverData(record), dnssecStatus: 'Unknown' }));
+      const getFull = await success([...argumentsFor(get!), '--full']);
+      assert.deepEqual(getFull.response.records.map((record: { rData: unknown }) => record.rData), records.map(serverData), 'zone record get read-back');
       assert.equal(getFull.output.complete, true);
       assert.equal(getFull.output.omittedFields, undefined);
       for (const row of [cache, allowed]) {
-        answer(row, (record, index) => ({ name: `r${index}.alpha.example.test`, type: String(record.type), ttl: 60, rData: serverData(record) }));
-        const listed = await success([...argumentsFor(row), '--full']);
-        assert.deepEqual(listed.response.records.map(record => record.rData), records.map(serverData), `${row.operation} read-back`);
+        answer(row!, (record, index) => ({ name: `r${index}.alpha.example.test`, type: String(record.type), ttl: 60, rData: serverData(record) }));
+        const listed = await success([...argumentsFor(row!), '--full']);
+        assert.deepEqual(listed.response.records.map((record: { rData: unknown }) => record.rData), records.map(serverData), `${row!.operation} read-back`);
         assert.equal(listed.output.complete, true);
       }
-      answer(cache, (record, index) => ({ name: `n${index}.alpha.example.test`, type: 'A', ttl: '30 (30 sec)', rData: { dataType: 'DnsSpecialCacheRecordData', data: 'NXDOMAIN' } }));
-      const negative = await success([...argumentsFor(cache), '--full']);
+      answer(cache!, (_record, index) => ({ name: `n${index}.alpha.example.test`, type: 'A', ttl: '30 (30 sec)', rData: { dataType: 'DnsSpecialCacheRecordData', data: 'NXDOMAIN' } }));
+      const negative = await success([...argumentsFor(cache!), '--full']);
       assert.deepEqual(negative.response.records[0].rData, { dataType: 'DnsSpecialCacheRecordData', data: 'NXDOMAIN' });
-      answer(get, (record, index) => ({ disabled: false, name: `r${index}.alpha.example.test`, type: 'MX', ttl: 60, rData: { preference: 1, exchange: 'mx.example.test', futureField: 'x' } }));
-      const unlisted = await success([...argumentsFor(get), '--full']);
+      answer(get!, (_record, index) => ({ disabled: false, name: `r${index}.alpha.example.test`, type: 'MX', ttl: 60, rData: { preference: 1, exchange: 'mx.example.test', futureField: 'x' } }));
+      const unlisted = await success([...argumentsFor(get!), '--full']);
       assert.equal(unlisted.output.complete, false);
       assert.deepEqual(unlisted.output.omittedFields, { 'response.records[].rData': ['futureField'] });
       const dnssec = matrix.operations.find(row => row.operation === 'OP-038');
-      respond(dnssec);
-      const signed = await success([...argumentsFor(dnssec), '--full']);
+      respond(dnssec!);
+      const signed = await success([...argumentsFor(dnssec!), '--full']);
       assert.equal(signed.response.nsec3Iterations, 2);
       assert.equal(signed.response.nsec3SaltLength, 8);
       assert.equal(signed.response.dnssecPrivateKeys[0].algorithmNumber, 13);
       assert.equal(signed.output.omittedFields, undefined);
-      vendors.responders.set(dnssec.path, () => ({ body: { status: 'ok', response: { ...dnssec.response.response, futureField: 1 } } }));
-      const future = await success([...argumentsFor(dnssec), '--full']);
+      vendors.responders.set(dnssec!.path, () => ({ body: { status: 'ok', response: { ...dnssec!.response.response, futureField: 1 } } }));
+      const future = await success([...argumentsFor(dnssec!), '--full']);
       assert.equal(future.output.complete, false);
       assert.deepEqual(future.output.omittedFields, { response: ['futureField'] });
       const update = matrix.operations.find(row => row.operation === 'OP-014');
-      vendors.responders.set(update.path, () => ({ body: { status: 'ok', response: { updateAvailable: false, updateVersion: null, currentVersion: '15.4',
+      vendors.responders.set(update!.path, () => ({ body: { status: 'ok', response: { updateAvailable: false, updateVersion: null, currentVersion: '15.4',
         updateTitle: null, updateMessage: null, downloadLink: null, instructionsLink: null, changeLogLink: null, dnsServerEnableCheckForUpdate: true } } }));
-      const checked = await success(argumentsFor(update));
+      const checked = await success(argumentsFor(update!));
       assert.equal(checked.response.updateAvailable, false);
       assert.equal(checked.response.downloadLink, null);
-      vendors.responders.set(update.path, () => ({ body: { status: 'ok', response: { ...update.response.response, downloadLink: 7 } } }));
-      await fail(argumentsFor(update), 'UPSTREAM_INVALID');
+      vendors.responders.set(update!.path, () => ({ body: { status: 'ok', response: { ...update!.response.response, downloadLink: 7 } } }));
+      await fail(argumentsFor(update!), 'UPSTREAM_INVALID');
     }
     for (const world of matrix.operations.some(row => row.operation === 'OP-125') ? worlds.transferWorlds : []) {
       const bytes = archive(world.entries);
       const row = matrix.operations.find(row => row.operation === 'OP-125');
-      vendors.responders.set(row.path, () => ({ bytes, contentType: 'application/zip', headers: { 'last-modified': worlds.baseline } }));
+      vendors.responders.set(row!.path, () => ({ bytes, contentType: 'application/zip', headers: { 'last-modified': worlds.baseline } }));
       const destination = join(directory, `${world.name}.zip`);
-      const value = await success([...row.command.split(' '), '--include-zones', world.includeZones,
+      const value = await success([...row!.command.split(' '), '--include-zones', world.includeZones,
         '--if-modified-since', worlds.baseline, '--result-file', destination]);
       assert.deepEqual(await readFile(destination), bytes);
       assert.equal(value.result.sha256, hash(bytes));
-      assert.equal(vendors.traces.at(-1).headers['if-modified-since'], worlds.baseline);
-      assert.equal(vendors.traces.at(-1).inputHash, hash(new URLSearchParams({ includeZones: world.includeZones }).toString()));
+      assert.equal(vendors.traces.at(-1)!.headers['if-modified-since'], worlds.baseline);
+      assert.equal(vendors.traces.at(-1)!.inputHash, hash(new URLSearchParams({ includeZones: world.includeZones }).toString()));
     }
     if (!adminTask) checks.push('exact-protected-formats-and-json-error-refusal');
   }
   if (task === 'B2.03' || (adminTask && (!selected || selected === 'OP-020'))) {
     const row = matrix.operations.find(row => row.operation === 'OP-020');
     const zones = Array.from({ length: 203 }, (_, index) => ({ name: `z${index}.example.test`, type: 'Primary', disabled: false }));
-    vendors.responders.set(row.path, (_request, body) => {
+    vendors.responders.set(row!.path, (_request, body) => {
       const page = Number(new URLSearchParams(body.toString()).get('pageNumber'));
       return { body: { status: 'ok', response: { zones: zones.slice((page - 1) * 100, page * 100), pageNumber: page, totalPages: 3, totalZones: 203 } } };
     });
@@ -270,7 +286,7 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
     assert.deepEqual((await success(['zone', 'list', '--fields', 'name'])).response.zones[0], { name: 'z0.example.test' });
     const empty = { pageNumber: 0, totalPages: 0, totalZones: 0, zones: [] };
     for (const args of [['zone', 'list'], ['zone', 'list', '--full'], ['zone', 'list', '--page-number', '2']]) {
-      vendors.responders.set(row.path, () => ({ body: { status: 'ok', response: empty } }));
+      vendors.responders.set(row!.path, () => ({ body: { status: 'ok', response: empty } }));
       const result = await success(args);
       assert.deepEqual(result.response, empty);
       assert.equal(result.output.complete, true);
@@ -280,7 +296,7 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
     for (const ending of [empty, { ...empty, totalPages: 1 }, { ...empty, totalZones: 1 }, { ...empty, zones: [zones[0]] },
       { ...empty, pageNumber: 3 }]) {
       for (const subsequent of [false, true]) {
-        vendors.responders.set(row.path, (_request, body) => {
+        vendors.responders.set(row!.path, (_request, body) => {
           const page = Number(new URLSearchParams(body.toString()).get('pageNumber'));
           return { body: { status: 'ok', response: subsequent && page === 1
             ? { zones: [zones[0]], pageNumber: 1, totalPages: 2, totalZones: 2 } : ending } };
@@ -295,12 +311,12 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
       }
     }
     let attempts = 0;
-    vendors.responders.set(row.path, () => ++attempts === 1 ? { status: 503, body: {} } : { body: row.response });
-    assert.equal((await success(argumentsFor(row))).response.zones.length, row.response.response.zones.length);
+    vendors.responders.set(row!.path, () => ++attempts === 1 ? { status: 503, body: {} } : { body: row!.response });
+    assert.equal((await success(argumentsFor(row!))).response.zones.length, (row!.response.response.zones as unknown[]).length);
     assert.equal(attempts, 2);
     await configure('single-use');
     attempts = 0;
-    await fail(argumentsFor(row), 'UPSTREAM_HTTP');
+    await fail(argumentsFor(row!), 'UPSTREAM_HTTP');
     assert.equal(attempts, 1);
     await configure('api');
     for (const [response, code] of [
@@ -313,19 +329,19 @@ export async function readJourney({ task, temporary, env, run, executable, vendo
       [{ bytes: Buffer.from('{') }, 'UPSTREAM_INVALID'],
       [{ body: { status: 'ok', response: {} } }, 'UPSTREAM_INVALID'],
       [{ body: { status: 'ok', response: { zones: 'wrong' } } }, 'UPSTREAM_INVALID'],
-    ]) {
-      vendors.responders.set(row.path, () => response);
-      await fail(argumentsFor(row), code);
+    ] satisfies [VendorResponse, string][]) {
+      vendors.responders.set(row!.path, () => response!);
+      await fail(argumentsFor(row!), code!);
     }
-    respond(row);
-    await fail([...argumentsFor(row), '--max-bytes', '10'], 'RESPONSE_LIMIT');
+    respond(row!);
+    await fail([...argumentsFor(row!), '--max-bytes', '10'], 'RESPONSE_LIMIT');
     if (!adminTask) checks.push('paging-caps-retries-and-structured-errors');
   }
   if (task === 'B2.04') {
     const before = vendors.traces.length;
-    const inventory = await success(['inventory']);
-    const backup = inventory.commands.find(command => command.operation === 'OP-084').archive;
-    const transfer = inventory.commands.find(command => command.operation === 'OP-125').archive;
+    const inventory = await success(['inventory']) as Inventory;
+    const backup = inventory.commands.find(command => command.operation === 'OP-084')!.archive!;
+    const transfer = inventory.commands.find(command => command.operation === 'OP-125')!.archive!;
     assert.deepEqual(backup, transfer);
     assert.deepEqual(Object.keys(backup.backup).sort(), Object.keys(worlds.backupComponents).sort());
     assert.deepEqual(backup.backup.zones, ['zones/*.zone']);

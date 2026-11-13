@@ -1,16 +1,26 @@
+import type { WriteContext, WriteInput } from './journey-types.ts';
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+interface FixtureRecord { name: string; type: string; ttl: number; rData: Record<string, unknown> }
+interface Permission { username?: string; name?: string; canView: boolean; canModify: boolean; canDelete: boolean }
+interface Zone extends Record<string, unknown> {
+  name: string; type: string; disabled: boolean; records: FixtureRecord[];
+  notifyNameServers: string[]; updateNetworkACL: string[]; queryAccessNetworkACL: string[];
+  zoneTransferTsigKeyNames: string[]; primaryZoneTransferProtocol: string;
+  userPermissions: Permission[]; groupPermissions: Permission[]; catalog?: string;
+}
+
 export const zoneTasks = [22, 23, 25, 26, 27, 28, 29, 30, 32, 34].map(id => `B3.OP-${String(id).padStart(3, '0')}`);
 
 // Synthetic vendor worlds based on the reviewed zones handlers, not live observations.
-export async function zoneJourney({ task, directory, env, run, executable, vendors, config, token, configure, success, failure, execute }) {
+export async function zoneJourney({ task, directory, env, run, executable, vendors, config, token, configure, success, failure, execute }: WriteContext) {
   const id = task.slice(3);
   await configure([id]);
-  const record = (name, type, rData, ttl = 300) => ({ name, type, ttl, rData });
+  const record = (name: string, type: string, rData: Record<string, unknown>, ttl = 300): FixtureRecord => ({ name, type, ttl, rData });
   const mandatory = ['Administrators', 'DNS Administrators'].map(name => ({ name, canView: true, canModify: true, canDelete: true }));
-  const seed = (name, type = 'Primary', serial = 42) => ({ name, type, disabled: false, records: [
+  const seed = (name: string, type = 'Primary', serial = 42): Zone => ({ name, type, disabled: false, records: [
     record(name, 'SOA', { serial }), record(`api.${name}`, 'A', { ipAddress: '192.0.2.10' }),
     record(`keep.${name}`, 'TXT', { text: 'stay' }),
   ], notifyNameServers: ['192.0.2.1'], updateNetworkACL: ['192.0.2.0/24'], queryAccessNetworkACL: ['192.0.2.0/24'],
@@ -19,30 +29,30 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
   const zones = new Map([['example.test', seed('example.test')], ['source.test', seed('source.test')], ['keep.test', seed('keep.test', 'Primary', 9)]]);
   const keep = structuredClone(zones.get('keep.test'));
   let reads = 0;
-  const read = async (command, flags) => {
+  const read = async (command: string, flags: string[]) => {
     const destination = join(directory, `readback-${reads++}.json`);
     const result = await run(executable, [...command.split(' '), ...flags, '--config', config, '--result-file', destination, '--json'], { env: { ...env, WRITE_TOKEN: token } });
     assert.equal(result.code, 0, result.stdout + result.stderr);
     return JSON.parse(await readFile(destination, 'utf8')).response;
   };
-  const options = zone => read('zone options get', ['--zone', zone]);
-  const records = async zone => (await read('zone record get', ['--zone', zone, '--domain', zone, '--list-zone', 'true'])).records;
-  const parameters = bytes => Object.fromEntries(new URLSearchParams(bytes.toString()));
-  const ok = response => ({ body: { status: 'ok', ...(response ? { response } : {}) } });
+  const options = (zone: string) => read('zone options get', ['--zone', zone]);
+  const records = async (zone: string): Promise<FixtureRecord[]> => (await read('zone record get', ['--zone', zone, '--domain', zone, '--list-zone', 'true'])).records;
+  const parameters = (bytes: Buffer) => Object.fromEntries(new URLSearchParams(bytes.toString()));
+  const ok = (response?: unknown) => ({ body: { status: 'ok', ...(response ? { response } : {}) } });
   const denied = () => ({ body: { status: 'error', errorMessage: 'Synthetic rejected operation' } });
   vendors.responders.set('/api/zones/options/get', (_incoming, bytes) => {
-    const zone = zones.get(parameters(bytes).zone);
+    const zone = zones.get(parameters(bytes).zone!);
     return zone ? ok(Object.fromEntries(Object.entries(zone).filter(([key]) => !['records', 'userPermissions', 'groupPermissions'].includes(key)))) : denied();
   });
-  let transfer;
+  let transfer: (() => void) | undefined;
   vendors.responders.set('/api/zones/records/get', (_incoming, bytes) => {
     const p = parameters(bytes);
     assert.equal(p.listZone, 'true');
     if (transfer) transfer();
-    const zone = zones.get(p.zone);
+    const zone = zones.get(p.zone!);
     return zone ? ok({ zone: { name: zone.name, type: zone.type }, records: zone.records }) : denied();
   });
-  const rejected = async (command, input) => {
+  const rejected = async (command: string, input: WriteInput) => {
     const before = structuredClone([...zones]);
     const preview = await success(command, input);
     const refused = await failure(command === 'zone import' ? 'OUTCOME_UNKNOWN' : 'UPSTREAM_ERROR', command, input, ['--execute', '--confirm', preview.preview.digest]);
@@ -51,28 +61,28 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
   };
   if (id === 'OP-022') {
     vendors.responders.set('/api/zones/create', (incoming, bytes) => {
-      const multipart = incoming.headers['content-type'].startsWith('multipart/form-data;');
-      const p = multipart ? Object.fromEntries(new URL(incoming.url, 'https://fixture.test').searchParams) : parameters(bytes);
-      if (zones.has(p.zone)) return denied();
+      const multipart = incoming.headers['content-type']!.startsWith('multipart/form-data;');
+      const p = multipart ? Object.fromEntries(new URL(incoming.url!, 'https://fixture.test').searchParams) : parameters(bytes);
+      if (zones.has(p.zone!)) return denied();
       if (p.zone === 'unreachable.test') return { body: { status: 'error', errorMessage: 'Zone was not created: DNS Server did not receive SOA record for \'unreachable.test\' from any of the primary name servers.' } };
-      zones.set(p.zone, { ...seed(p.zone, p.type), ...p });
+      zones.set(p.zone!, { ...seed(p.zone!, p.type), ...p });
       if (p.catalog && zones.get(p.catalog)?.type !== 'Catalog') return denied();
       if (multipart) {
         assert.ok(bytes.includes(Buffer.from('uploaded 60 IN A 192.0.2.80\n')));
-        zones.get(p.zone).records.push(record(`uploaded.${p.zone}`, 'A', { ipAddress: '192.0.2.80' }, 60));
+        zones.get(p.zone!)!.records.push(record(`uploaded.${p.zone}`, 'A', { ipAddress: '192.0.2.80' }, 60));
       }
       return ok({ domain: p.zone });
     });
     for (const type of ['Primary', 'Secondary', 'Stub', 'Forwarder', 'SecondaryForwarder', 'Catalog', 'SecondaryCatalog']) {
       const zone = `${type.toLowerCase()}.test`;
-      const p = { zone, type, ...(type.startsWith('Secondary') || type === 'Stub' ? { primaryNameServerAddresses: ['192.0.2.53'] } : {}),
+      const p: Record<string, unknown> = { zone, type, ...(type.startsWith('Secondary') || type === 'Stub' ? { primaryNameServerAddresses: ['192.0.2.53'] } : {}),
         ...(type.startsWith('Secondary') ? { zoneTransferProtocol: 'Tcp', tsigKeyName: 'key' } : {}),
         ...(type === 'Forwarder' ? { protocol: 'Udp', forwarder: '192.0.2.53', dnssecValidation: true } : {}) };
       await execute('zone create', { parameters: p });
       assert.equal((await options(zone)).type, type);
-      assert.equal((await records(zone))[0].rData.serial, 42);
+      assert.equal((await records(zone))[0]!.rData.serial, 42);
       for (const key of ['primaryNameServerAddresses', 'zoneTransferProtocol', 'tsigKeyName', 'protocol', 'forwarder', 'dnssecValidation']) {
-        if (Object.hasOwn(p, key)) assert.equal(zones.get(zone)[key], String(p[key]));
+        if (Object.hasOwn(p, key)) assert.equal(zones.get(zone)![key], String(p[key]));
       }
     }
     await rejected('zone create', { parameters: { zone: 'example.test', type: 'Primary' } });
@@ -102,19 +112,19 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
     await writeFile(file, text, { mode: 0o600 });
     vendors.responders.set('/api/zones/import', (incoming, bytes) => {
       const contentType = incoming.headers['content-type'];
-      const p = contentType === 'application/x-www-form-urlencoded' ? parameters(bytes) : Object.fromEntries(new URL(incoming.url, 'https://fixture.test').searchParams);
+      const p = contentType === 'application/x-www-form-urlencoded' ? parameters(bytes) : Object.fromEntries(new URL(incoming.url!, 'https://fixture.test').searchParams);
       if (contentType === 'application/x-www-form-urlencoded') assert.equal(p.records, text);
       else if (contentType === 'text/plain') assert.deepEqual(bytes, Buffer.from(text));
       else {
-        const boundary = contentType.split('boundary=')[1];
+        const boundary = contentType!.split('boundary=')[1];
         assert.deepEqual(bytes, Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="zone.txt"\r\nContent-Type: text/plain\r\n\r\n${text}\r\n--${boundary}--\r\n`));
       }
-      const zone = zones.get(p.zone);
+      const zone = zones.get(p.zone!);
       if (!zone) return denied();
       if (p.overwriteZone === 'true') zone.records = zone.records.filter(row => row.type === 'SOA');
       if (p.overwrite !== 'false') zone.records = zone.records.filter(row => row.type !== 'A');
       zone.records.push(record('api.example.test', 'A', { ipAddress: '192.0.2.20' }));
-      if (p.overwriteSoaSerial === 'true') zone.records[0].rData.serial = 42;
+      if (p.overwriteSoaSerial === 'true') zone.records[0]!.rData.serial = 42;
       return ok();
     });
     for (const transport of ['form', 'text', 'multipart']) for (const flags of [{}, { overwrite: false }, { overwrite: true }, { overwriteZone: true }, { overwriteSoaSerial: true }]) {
@@ -128,7 +138,7 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
         record('api.example.test', 'A', { ipAddress: '192.0.2.20' }),
       ]);
       assert.equal(actual.some(row => row.type === 'TXT'), !flags.overwriteZone);
-      assert.equal(actual[0].rData.serial, flags.overwriteSoaSerial ? 42 : 99);
+      assert.equal(actual[0]!.rData.serial, flags.overwriteSoaSerial ? 42 : 99);
     }
     await rejected('zone import', { parameters: { zone: 'missing.test', records: text } });
     const raw = { parameters: { zone: 'example.test' }, upload: { file, format: 'text' } };
@@ -139,11 +149,11 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
   if (id === 'OP-025') {
     vendors.responders.set('/api/zones/clone', (_incoming, bytes) => {
       const p = parameters(bytes);
-      if (zones.has(p.zone) || !zones.has(p.sourceZone)) return denied();
-      const zone = structuredClone(zones.get(p.sourceZone));
-      zone.name = p.zone;
-      zone.records = zone.records.map(row => ({ ...row, name: row.name.replace(p.sourceZone, p.zone) }));
-      zones.set(p.zone, zone);
+      if (zones.has(p.zone!) || !zones.has(p.sourceZone!)) return denied();
+      const zone = structuredClone(zones.get(p.sourceZone!));
+      zone!.name = p.zone!;
+      zone!.records = zone!.records.map(row => ({ ...row, name: row.name.replace(p.sourceZone!, p.zone!) }));
+      zones.set(p.zone!, zone!);
       return ok();
     });
     const before = await records('source.test');
@@ -156,14 +166,14 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
   if (['OP-026', 'OP-027', 'OP-028'].includes(id)) {
     const action = { 'OP-026': 'convert', 'OP-027': 'enable', 'OP-028': 'disable' }[id];
     const zone = zones.get('example.test');
-    zone.type = 'Secondary';
-    zone.disabled = action === 'enable';
+    zone!.type = 'Secondary';
+    zone!.disabled = action === 'enable';
     const before = await records('example.test');
     vendors.responders.set(`/api/zones/${action}`, (_incoming, bytes) => {
       const p = parameters(bytes);
-      const selected = zones.get(p.zone);
+      const selected = zones.get(p.zone!);
       if (!selected || (action === 'convert' && p.type !== 'Primary')) return denied();
-      if (action === 'convert') selected.type = p.type;
+      if (action === 'convert') selected.type = p.type!;
       else selected.disabled = action === 'disable';
       return ok();
     });
@@ -179,13 +189,13 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
     vendors.responders.set('/api/zones/delete', (_incoming, bytes) => {
       const p = parameters(bytes);
       if (p.zone) return zones.delete(p.zone) ? ok() : denied();
-      const deleted = [], failed = {};
-      for (const zone of p.zones.split(',')) if (zones.delete(zone)) deleted.push(zone); else failed[zone] = 'No such zone';
+      const deleted = [], failed: Record<string, string> = {};
+      for (const zone of p.zones!.split(',')) if (zones.delete(zone)) deleted.push(zone); else failed[zone] = 'No such zone';
       return ok({ deleted, failed });
     });
     vendors.responders.set('/api/zones/list', () => ok({ pageNumber: 1, totalPages: 1, totalZones: zones.size, zones: [...zones.values()].map(({ name, type, disabled }) => ({ name, type, disabled })) }));
     await execute('zone delete', { parameters: { zone: 'example.test' } });
-    assert.deepEqual((await read('zone list', ['--full'])).zones.map(row => row.name).sort(), ['keep.test', 'source.test']);
+    assert.deepEqual((await read('zone list', ['--full'])).zones.map((row: { name: string }) => row.name).sort(), ['keep.test', 'source.test']);
     zones.set('example.test', seed('example.test'));
     const batch = { parameters: { zones: ['example.test', 'missing.test'] } };
     const preview = await success('zone delete', batch);
@@ -208,8 +218,8 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
     });
     transfer = () => {
       if (!pending && waiting && --waiting === 0) {
-        zones.get('example.test').records[0].rData.serial++;
-        zones.get('example.test').records[1].rData.ipAddress = '192.0.2.20';
+        (zones.get('example.test')!.records[0]!.rData.serial as number)++;
+        zones.get('example.test')!.records[1]!.rData.ipAddress = '192.0.2.20';
       }
     };
     const input = { parameters: { zone: 'example.test' } };
@@ -220,10 +230,10 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
     const unknown = await failure('OUTCOME_UNKNOWN', 'zone resync', input, ['--execute', '--confirm', preview.preview.digest]);
     assert.match(unknown.error.message, /audit ID/);
     await failure('REPLAY_DENIED', 'zone resync', input, ['--execute', '--confirm', preview.preview.digest]);
-    const auditId = unknown.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
-    await failure('OUTCOME_UNKNOWN', 'zone resync', input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
-    zones.get('example.test').records[0].rData.serial = 3;
-    const reconciled = await success('zone resync', input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+    const auditId = unknown.error.message.match(/audit ID ([a-f0-9-]+)/)![1];
+    await failure('OUTCOME_UNKNOWN', 'zone resync', input, ['--confirm', preview.preview.digest, '--reconcile', auditId!]);
+    zones.get('example.test')!.records[0]!.rData.serial = 3;
+    const reconciled = await success('zone resync', input, ['--confirm', preview.preview.digest, '--reconcile', auditId!]);
     assert.equal(reconciled.status, 'reconciled');
     assert.equal(reconciled.auditId, auditId);
     assert.equal(dispatches, 2);
@@ -237,67 +247,67 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
       let serial = 10, otherSerial = 100, writes = 0;
       vendors.responders.set('/api/zones/records/get', (_incoming, bytes) => {
         assert.equal(parameters(bytes).zone, zone);
-        return ok({ records: [record(other, 'SOA', { serial: otherSerial }), record(`${zone}.`, 'SOA', { serial })] });
+        return ok({ records: [record(other!, 'SOA', { serial: otherSerial }), record(`${zone}.`, 'SOA', { serial })] });
       });
       vendors.responders.set('/api/zones/resync', () => { writes++; return ok(); });
       const input = { parameters: { zone } };
       const preview = await success('zone resync', input);
       const unknown = await failure('OUTCOME_UNKNOWN', 'zone resync', input, ['--execute', '--confirm', preview.preview.digest]);
-      const auditId = unknown.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
+      const auditId = unknown.error.message.match(/audit ID ([a-f0-9-]+)/)![1];
       otherSerial++;
-      await failure('OUTCOME_UNKNOWN', 'zone resync', input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+      await failure('OUTCOME_UNKNOWN', 'zone resync', input, ['--confirm', preview.preview.digest, '--reconcile', auditId!]);
       serial++;
-      await success('zone resync', input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+      await success('zone resync', input, ['--confirm', preview.preview.digest, '--reconcile', auditId!]);
       assert.equal(writes, 1);
     }
     let serial = 10;
     vendors.responders.set('/api/zones/resync', () => { serial++; return ok(); });
     for (const [zone, name] of [['BÜCHER.test.', 'xn--bcher-kva.test'], ['key/a.BÜCHER.test.', 'key/a.xn--bcher-kva.test'], ['１２７.１', '127.1']]) {
-      vendors.responders.set('/api/zones/records/get', () => ok({ records: [record(name, 'SOA', { serial })] }));
+      vendors.responders.set('/api/zones/records/get', () => ok({ records: [record(name!, 'SOA', { serial })] }));
       await execute('zone resync', { parameters: { zone } });
     }
-    vendors.responders.set('/api/zones/records/get', (_incoming, bytes) => ok({ records: zones.get(parameters(bytes).zone).records }));
+    vendors.responders.set('/api/zones/records/get', (_incoming, bytes) => ok({ records: zones.get(parameters(bytes).zone!)!.records }));
   }
   if (id === 'OP-032' || id === 'OP-034') {
     const permission = id === 'OP-034';
     const command = permission ? 'zone permission set' : 'zone options set';
     const path = permission ? 'permissions' : 'options';
     const zone = zones.get('example.test');
-    const baseline = permission ? { userPermissions: structuredClone(zone.userPermissions), groupPermissions: structuredClone(zone.groupPermissions) }
+    const baseline = permission ? { userPermissions: structuredClone(zone!.userPermissions), groupPermissions: structuredClone(zone!.groupPermissions) }
       : { notifyNameServers: ['192.0.2.1'], disabled: false, updateNetworkACL: ['192.0.2.0/24'], primaryZoneTransferProtocol: 'Tls' };
     const values = permission ? { userPermissions: [{ username: 'reader', canView: true, canModify: true, canDelete: false }], groupPermissions: [{ name: 'Operators', canView: false, canModify: false, canDelete: false }] }
       : { notifyNameServers: ['192.0.2.2'], disabled: false, updateNetworkACL: [], primaryZoneTransferProtocol: 'Tcp' };
-    const expectedValues = permission ? { ...values, groupPermissions: [...mandatory, ...values.groupPermissions] } : values;
-    if (permission) vendors.responders.set('/api/zones/permissions/get', () => ok({ section: 'Zones', subItem: zone.name, userPermissions: zone.userPermissions, groupPermissions: zone.groupPermissions }));
+    const expectedValues = permission ? { ...values, groupPermissions: [...mandatory, ...values.groupPermissions!] } : values;
+    if (permission) vendors.responders.set('/api/zones/permissions/get', () => ok({ section: 'Zones', subItem: zone!.name, userPermissions: zone!.userPermissions, groupPermissions: zone!.groupPermissions }));
     let writes = 0;
     vendors.responders.set(`/api/zones/${path}/set`, (_incoming, bytes) => {
       const p = parameters(bytes);
       assert.deepEqual(Object.keys(p).sort(), ['zone', ...Object.keys(values)].sort());
       for (const [key, value] of Object.entries(values)) {
-        const expected = permission ? value.flatMap(row => [row[key === 'userPermissions' ? 'username' : 'name'], row.canView, row.canModify, row.canDelete]).join('|') : Array.isArray(value) ? value.join(',') : String(value);
+        const expected = permission ? (value as Permission[]).flatMap(row => [row[key === 'userPermissions' ? 'username' : 'name'], row.canView, row.canModify, row.canDelete]).join('|') : Array.isArray(value) ? value.join(',') : String(value);
         assert.equal(p[key], expected);
-        zone[key] = structuredClone(value);
+        zone![key] = structuredClone(value);
       }
-      if (permission) zone.groupPermissions = structuredClone(expectedValues.groupPermissions);
+      if (permission) zone!.groupPermissions = structuredClone(expectedValues.groupPermissions!);
       writes++;
       return ok();
     });
     const input = { parameters: { zone: 'example.test', ...values }, baseline };
     const preview = await success(command, input);
     const field = permission ? 'userPermissions' : 'notifyNameServers';
-    zone[field].push(permission ? { username: 'other', canView: true, canModify: false, canDelete: false } : '192.0.2.3');
+    (zone![field] as (string | Permission)[]).push(permission ? { username: 'other', canView: true, canModify: false, canDelete: false } : '192.0.2.3');
     await failure('CONFLICT', command, input, ['--execute', '--confirm', preview.preview.digest]);
     assert.equal(writes, 0);
-    zone[field] = structuredClone(baseline[field]);
+    (zone as Record<string, unknown>)[field] = structuredClone(baseline[field]);
     await success(command, input, ['--execute', '--confirm', preview.preview.digest]);
     const actual = permission ? await read('zone permission get', ['--zone', 'example.test']) : await options('example.test');
     for (const [key, value] of Object.entries(expectedValues)) assert.deepEqual(actual[key], value);
-    assert.deepEqual(zone.queryAccessNetworkACL, ['192.0.2.0/24']);
-    assert.deepEqual(zone.zoneTransferTsigKeyNames, ['key']);
+    assert.deepEqual(zone!.queryAccessNetworkACL, ['192.0.2.0/24']);
+    assert.deepEqual(zone!.zoneTransferTsigKeyNames, ['key']);
     if (permission) {
       vendors.responders.set('/api/zones/permissions/set', (_incoming, bytes) => {
         assert.deepEqual(parameters(bytes), { zone: 'example.test', userPermissions: '' });
-        zone.userPermissions = [];
+        zone!.userPermissions = [];
         return ok();
       });
       await execute(command, { parameters: { zone: 'example.test', userPermissions: [] }, baseline: { userPermissions: values.userPermissions } });
@@ -308,51 +318,51 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
         let drop = false;
         vendors.responders.set('/api/zones/permissions/set', (incoming, bytes) => {
           assert.deepEqual(parameters(bytes), { zone: 'example.test', groupPermissions: replacement.flatMap(row => [row.name, row.canView, row.canModify, row.canDelete]).join('|') });
-          zone.groupPermissions = structuredClone(mandatory);
+          zone!.groupPermissions = structuredClone(mandatory);
           writes++;
           if (drop) { incoming.socket.destroy(); return {}; }
           return ok();
         });
-        const input = { parameters: { zone: 'example.test', groupPermissions: replacement }, baseline: { groupPermissions: structuredClone(zone.groupPermissions) } };
+        const input = { parameters: { zone: 'example.test', groupPermissions: replacement }, baseline: { groupPermissions: structuredClone(zone!.groupPermissions) } };
         await execute(command, input);
         assert.deepEqual((await read('zone permission get', ['--zone', 'example.test'])).groupPermissions, mandatory);
-        assert.deepEqual(zone.userPermissions, []);
+        assert.deepEqual(zone!.userPermissions, []);
         input.baseline.groupPermissions = structuredClone(mandatory);
         const preview = await success(command, input);
         drop = true;
         const unknown = await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', preview.preview.digest]);
-        const auditId = unknown.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
-        const count = writes;
-        const reconciled = await success(command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+        const auditId = unknown.error.message.match(/audit ID ([a-f0-9-]+)/)![1];
+        const count: number = writes;
+        const reconciled = await success(command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId!]);
         assert.equal(reconciled.status, 'reconciled');
         assert.equal(writes, count);
-        zone.groupPermissions[0].canDelete = false;
-        await failure('OUTCOME_UNKNOWN', command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
-        zone.groupPermissions = structuredClone(mandatory);
+        zone!.groupPermissions[0]!.canDelete = false;
+        await failure('OUTCOME_UNKNOWN', command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId!]);
+        zone!.groupPermissions = structuredClone(mandatory);
       }
     }
   }
   if (id === 'OP-032') {
     const command = 'zone options set';
     const target = zones.get('example.test');
-    target.catalog = '';
+    target!.catalog = '';
     vendors.responders.set('/api/zones/options/set', (_incoming, bytes) => {
       const p = parameters(bytes);
-      target.disabled = p.disabled === 'true';
+      target!.disabled = p.disabled === 'true';
       return { body: { status: 'error', errorMessage: `No such Catalog zone was found: ${p.catalog}` } };
     });
-    const partial = { parameters: { zone: target.name, disabled: true, catalog: 'missing.test' }, baseline: { disabled: false, catalog: '' } };
+    const partial = { parameters: { zone: target!.name, disabled: true, catalog: 'missing.test' }, baseline: { disabled: false, catalog: '' } };
     const partialPreview = await success(command, partial);
     const partialError = await failure('OUTCOME_UNKNOWN', command, partial, ['--execute', '--confirm', partialPreview.preview.digest]);
     assert.match(partialError.error.message, /audit ID [a-f0-9-]+/);
-    const partialReadback = await options(target.name);
+    const partialReadback = await options(target!.name);
     assert.equal(partialReadback.disabled, true);
     assert.equal(partialReadback.catalog, '');
     const receipt = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${partialPreview.preview.digest}.json`), 'utf8'));
     assert.equal(receipt.state, 'intent');
     const zone = '1';
-    const identifiers = [['key/a', 'key/b'], ['key/b', 'key/a'], ['127.1', '127.0.0.1'], ['127.0.0.1', '127.1']];
-    const cases = [
+    const identifiers: [string, string][] = [['key/a', 'key/b'], ['key/b', 'key/a'], ['127.1', '127.0.0.1'], ['127.0.0.1', '127.1']];
+    const cases: [string, (name: string) => unknown, (name: string) => unknown, [string, string][]?][] = [
       ['zoneTransferTsigKeyNames', name => [name], name => [name]],
       ['primaryZoneTransferTsigKeyName', name => name, name => name],
       ['catalog', name => name, name => name],
@@ -364,38 +374,38 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
       let writes = 0;
       let observed = before;
       let drop = false;
-      vendors.responders.set('/api/zones/options/get', () => ok({ [field]: responseValue(observed) }));
+      vendors.responders.set('/api/zones/options/get', () => ok({ [field]: responseValue!(observed!) }));
       vendors.responders.set('/api/zones/options/set', (incoming, bytes) => {
-        assert.deepEqual(parameters(bytes), { zone, [field]: String(inputValue(after)) });
+        assert.deepEqual(parameters(bytes), { zone, [field]: String(inputValue!(after!)) });
         writes++;
         if (drop) { incoming.socket.destroy(); return {}; }
         return ok();
       });
-      for (const baseline of [inputValue(before), responseValue(before)]) {
-        const input = { parameters: { zone, [field]: inputValue(after) }, baseline: { [field]: baseline } };
+      for (const baseline of [inputValue!(before!), responseValue!(before!)]) {
+        const input = { parameters: { zone, [field]: inputValue!(after!) }, baseline: { [field]: baseline } };
         const preview = await success(command, input);
         observed = after;
         await failure('CONFLICT', command, input, ['--execute', '--confirm', preview.preview.digest]);
         assert.equal(writes, 0, 'Distinct identifiers cannot bypass a stale baseline');
         observed = before;
       }
-      const input = { parameters: { zone, [field]: inputValue(after) }, baseline: { [field]: responseValue(before) } };
+      const input = { parameters: { zone, [field]: inputValue!(after!) }, baseline: { [field]: responseValue!(before!) } };
       const preview = await success(command, input);
       const unknown = await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', preview.preview.digest]);
-      const auditId = unknown.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
-      await failure('OUTCOME_UNKNOWN', command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+      const auditId = unknown.error.message.match(/audit ID ([a-f0-9-]+)/)![1];
+      await failure('OUTCOME_UNKNOWN', command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId!]);
       observed = after;
-      const reconciled = await success(command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
+      const reconciled = await success(command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId!]);
       assert.equal(reconciled.status, 'reconciled');
       assert.equal(writes, 1);
       observed = before;
       drop = true;
       const droppedPreview = await success(command, input);
       const dropped = await failure('OUTCOME_UNKNOWN', command, input, ['--execute', '--confirm', droppedPreview.preview.digest]);
-      const droppedAuditId = dropped.error.message.match(/audit ID ([a-f0-9-]+)/)[1];
-      await failure('OUTCOME_UNKNOWN', command, input, ['--confirm', droppedPreview.preview.digest, '--reconcile', droppedAuditId]);
+      const droppedAuditId = dropped.error.message.match(/audit ID ([a-f0-9-]+)/)![1];
+      await failure('OUTCOME_UNKNOWN', command, input, ['--confirm', droppedPreview.preview.digest, '--reconcile', droppedAuditId!]);
       observed = after;
-      await success(command, input, ['--confirm', droppedPreview.preview.digest, '--reconcile', droppedAuditId]);
+      await success(command, input, ['--confirm', droppedPreview.preview.digest, '--reconcile', droppedAuditId!]);
       assert.equal(writes, 2, 'Reconciliation never dispatches another setter');
     }
     const before = ['KEY/A.', 'key/b', 'KEY?A', 'key#b', 'key%61', 'key@b', 'key:a', 'key\\b', 'bücher'];
@@ -419,5 +429,5 @@ export async function zoneJourney({ task, directory, env, run, executable, vendo
     assert.equal(writes, 1);
   }
   assert.deepEqual(zones.get('keep.test'), keep, 'Other zones remain unchanged');
-  assert.deepEqual(await records('keep.test'), keep.records);
+  assert.deepEqual(await records('keep.test'), keep!.records);
 }

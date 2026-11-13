@@ -1,10 +1,11 @@
+import type { JourneyContext } from './journey-types.ts';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { request } from 'node:https';
 
 // Synthetic wire expectations from the pinned vendor User API contract.
-const operations = [
+const operations: [string, string, string, Record<string, unknown>][] = [
   ['002', 'login', 'login', { user: 'planner', pass: { env: 'ACCOUNT_PASS' }, totp: { env: 'ACCOUNT_TOTP' } }],
   ['003', 'create-token', 'createToken', { tokenName: 'automation-1' }],
   ['004', 'create-single-use-token', 'createSingleUseToken', {}],
@@ -18,7 +19,7 @@ const operations = [
 ];
 export const usersTasks = ['B5.01', 'B5.02', 'B5.OP-116', 'B5.OP-117', ...['006', '007', '009', '010'].map(id => `B5.CR-${id}`), ...operations.map(([id]) => `B5.OP-${id}`)];
 
-export async function usersJourney({ task, temporary, env, run, executable, vendors }) {
+export async function usersJourney({ task, temporary, env, run, executable, vendors }: JourneyContext) {
   const directory = join(temporary, 'users');
   await mkdir(directory, { mode: 0o700 });
   const config = join(directory, 'config.json');
@@ -35,7 +36,7 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
   vendors.tokens.set('beta', token);
   vendors.tokenKinds.set('alpha', 'session');
   let sequence = 0;
-  const invoke = async (command, parameters, flags = [], extraEnv = {}) => {
+  const invoke = async (command: string, parameters?: unknown, flags: string[] = [], extraEnv: NodeJS.ProcessEnv = {}) => {
     const file = join(directory, `input-${sequence++}.json`);
     await writeFile(file, JSON.stringify({ parameters }), { mode: 0o600 });
     const result = await run(executable, [...command.split(' '), '--config', config, '--json', ...(parameters === undefined ? [] : ['--input-file', file]), ...flags],
@@ -44,33 +45,33 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
     for (const value of [token, issued, password, secret, totp]) for (const form of [value, JSON.stringify(value).slice(1, -1), encodeURIComponent(value), Buffer.from(value).toString('base64')]) assert.ok(!result.stdout.includes(form), result.stdout);
     return { ...result, value: JSON.parse(result.stdout) };
   };
-  const success = async (...args) => {
+  const success = async (...args: Parameters<typeof invoke>) => {
     const result = await invoke(...args);
     assert.equal(result.code, 0, result.stdout);
     return result.value;
   };
-  const failure = async (code, ...args) => {
+  const failure = async (code: string, ...args: Parameters<typeof invoke>) => {
     const result = await invoke(...args);
     assert.notEqual(result.code, 0, result.stdout);
     assert.equal(result.value.error.code, code, result.stdout);
   };
-  const execute = async (command, parameters, extraEnv = {}) => {
+  const execute = async (command: string, parameters: unknown, extraEnv: NodeJS.ProcessEnv = {}) => {
     const preview = await success(command, parameters, [], extraEnv);
     const resultFile = join(directory, `result-${sequence++}.json`);
     const result = await success(command, parameters, ['--execute', '--confirm', preview.preview.digest, '--result-file', resultFile], extraEnv);
     assert.equal((await stat(resultFile)).mode & 0o777, 0o600);
     return { result, bytes: await readFile(resultFile) };
   };
-  let fault;
+  let fault: string | undefined;
   let loginToken = issued;
-  const changed = new Map();
-  const sessions = new Map();
+  const changed = new Map<string, Record<string, string>>();
+  const sessions = new Map<string, { type: string; tokenName?: string | undefined }>();
   const account = { displayName: 'Planner', password, totpEnabled: true, sessionTimeoutSeconds: 1800, enrollment: '' };
   for (const [id, , endpoint, parameters] of operations) vendors.responders.set(`/api/user/${endpoint}`, (incoming, bytes) => {
     const p = Object.fromEntries(new URLSearchParams(bytes.toString()));
     const acquisition = id === '002' || id === '003' && p.pass !== undefined;
     assert.equal(incoming.headers.authorization, acquisition ? undefined : `Bearer ${token}`);
-    const expected = Object.fromEntries(Object.entries(parameters).map(([key, value]) => [key, value?.env ? value.env === 'ACCOUNT_TOTP' ? totp : password : String(value)]));
+    const expected = Object.fromEntries(Object.entries(parameters).map(([key, value]) => [key, (value as { env?: string })?.env ? (value as { env: string }).env === 'ACCOUNT_TOTP' ? totp : password : String(value)]));
     if (id === '002') expected.includeInfo = 'true';
     if (id === '003' && acquisition) Object.assign(expected, { user: 'planner', pass: password, totp });
     assert.deepEqual(p, expected);
@@ -82,12 +83,12 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
     if (id === '004') return { body: { status: 'ok', response: { username: 'planner', token: secret } } };
     if (id === '005') { sessions.delete(token); vendors.tokens.delete('alpha'); }
     if (id === '007') {
-      if (p.partialToken.length !== 16) return { body: { status: 'error', errorMessage: 'partialToken must be exactly 16 chars long.' } };
-      const selected = [...sessions.keys()].find(value => value.startsWith(p.partialToken));
+      if (p.partialToken!.length !== 16) return { body: { status: 'error', errorMessage: 'partialToken must be exactly 16 chars long.' } };
+      const selected = [...sessions.keys()].find(value => value.startsWith(p.partialToken!));
       if (!selected || selected === token) return { body: { status: 'error', errorMessage: 'No deletable session matches the prefix.' } };
       sessions.delete(selected);
     }
-    if (id === '008') account.password = p.newPass;
+    if (id === '008') account.password = p.newPass!;
     if (id === '009') { account.enrollment = secret; return { body: { status: 'ok', response: { secret, provisioningUri: `otpauth://totp/planner?secret=${secret}` } } }; }
     if (id === '010') account.totpEnabled = true;
     if (id === '011') account.totpEnabled = false;
@@ -95,7 +96,7 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
     return { body: { status: 'ok', response: {} } };
   });
   if (['B5.02', 'B5.OP-116', 'B5.OP-117'].includes(task)) {
-    let permission = true;
+    let permission: boolean | string | undefined = true;
     let primary = false;
     const users = new Map();
     const keep = { username: 'keep-user', displayName: 'Keep', memberOfGroups: ['Users'], ssoIdentifier: 'keep-sub' };
@@ -114,11 +115,11 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
     // Regression #52: Modify does not imply View on the cluster state endpoint.
     vendors.responders.set('/api/admin/cluster/state', () => ({ body: { status: 'error', errorMessage: 'Access was denied.' } }));
     for (const action of ['create', 'set']) vendors.responders.set(`/api/admin/sso/users/${action}`, async (incoming, bytes) => {
-      if (incoming.socket.localPort !== Number(new URL(vendors.origins[1]).port)) {
+      if (incoming.socket.localPort !== Number(new URL(vendors.origins[1]!).port)) {
         // Model the vendor secondary proxy, keeping its credential entirely outside the CLI.
         return await new Promise((resolve, reject) => {
           const call = request(new URL(`/api/admin/sso/users/${action}`, vendors.origins[1]), { method: 'POST', ca, headers: { authorization: `Bearer ${clusterToken}` } }, response => {
-            const chunks = [];
+            const chunks: Buffer[] = [];
             response.on('data', chunk => chunks.push(chunk));
             response.once('end', () => resolve({ body: JSON.parse(Buffer.concat(chunks).toString()) }));
           });
@@ -130,7 +131,7 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
       const p = Object.fromEntries(new URLSearchParams(bytes.toString()));
       const previous = users.get(p.user);
       if (action === 'set') users.delete(p.user);
-      users.set(p.newUser ?? p.user, { username: p.newUser ?? p.user, displayName: p.displayName, memberOfGroups: p.memberOfGroups.split(','), ssoIdentifier: previous?.ssoIdentifier ?? p.ssoIdentifier });
+      users.set(p.newUser ?? p.user, { username: p.newUser ?? p.user, displayName: p.displayName, memberOfGroups: p.memberOfGroups!.split(','), ssoIdentifier: previous?.ssoIdentifier ?? p.ssoIdentifier });
       if (action === 'create' && p.memberOfGroups === 'Missing') {
         users.get(p.user).memberOfGroups = ['Everyone'];
         return { body: { status: 'error', errorMessage: 'No such group exists: Missing' } };
@@ -138,7 +139,7 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
       return { body: { status: 'ok' } };
     });
     vendors.responders.set('/api/admin/users/get', (incoming, bytes) => {
-      assert.equal(incoming.socket.localPort, Number(new URL(vendors.origins[1]).port));
+      assert.equal(incoming.socket.localPort, Number(new URL(vendors.origins[1]!).port));
       const stored = users.get(new URLSearchParams(bytes.toString()).get('user'));
       if (!stored) return { body: { status: 'error', errorMessage: 'No such user.' } };
       // Regression #53: user details never expose the provider subject.
@@ -146,7 +147,7 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
       const { totpEnabled, groups, ...seed } = seeds['OP-103'];
       return { body: { status: 'ok', response: { ...seed, ...details, isSsoUser: true, disabled: false, sessions: [] } } };
     });
-    const readback = async expected => {
+    const readback = async (expected: { username: string; displayName: string; memberOfGroups: string[] }) => {
       await configure({ origin: vendors.origins[1] });
       const file = join(directory, 'sso-readback.json');
       await success('admin user get', undefined, ['--user', expected.username, '--result-file', file]);
@@ -202,10 +203,10 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
         assert.equal(vendors.traces.length, before, 'Unsupported login input must be rejected before dispatch');
       }
       const result = await execute(`user ${command}`, parameters);
-      assert.deepEqual(changed.get(id), Object.fromEntries(Object.entries(parameters).map(([key, value]) => [key, value?.env ? value.env === 'ACCOUNT_TOTP' ? totp : password : String(value)]).concat(id === '002' ? [['includeInfo', 'true']] : [])));
-      if (id === '003') assert.equal(JSON.parse(result.bytes).token, secret);
-      if (id === '004') assert.equal(JSON.parse(result.bytes).response.token, secret);
-      if (id === '009') assert.equal(JSON.parse(result.bytes).response.secret, secret);
+      assert.deepEqual(changed.get(id), Object.fromEntries(Object.entries(parameters).map(([key, value]) => [key, (value as { env?: string })?.env ? (value as { env: string }).env === 'ACCOUNT_TOTP' ? totp : password : String(value)]).concat(id === '002' ? [['includeInfo', 'true']] : [])));
+      if (id === '003') assert.equal(JSON.parse(result.bytes.toString()).token, secret);
+      if (id === '004') assert.equal(JSON.parse(result.bytes.toString()).response.token, secret);
+      if (id === '009') assert.equal(JSON.parse(result.bytes.toString()).response.secret, secret);
       if (task === 'B5.CR-010') {
         const preview = await success(`user ${command}`, parameters);
         const destination = join(directory, 'insecure-result');
@@ -263,7 +264,7 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
       fault = undefined;
       if (id === '003') {
         const minted = await execute('user create-token', { ...parameters, user: 'planner', pass: { env: 'ACCOUNT_PASS' }, totp: { env: 'ACCOUNT_TOTP' } });
-        assert.equal(JSON.parse(minted.bytes).token, secret);
+        assert.equal(JSON.parse(minted.bytes.toString()).token, secret);
       }
       if (id === '004') {
         vendors.responders.set('/api/user/session/get', (incoming) => {
@@ -281,11 +282,11 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
   }
   if (['B5.01', 'B5.CR-006'].includes(task)) {
     fault = undefined;
-    const login = operations[0][3];
+    const login = operations[0]![3];
     await configure({ token: { stored: true } });
     await execute('auth login', login);
     vendors.tokens.set('alpha', issued);
-    for (const [field, value] of [['origin', vendors.origins[1]], ['username', 'other'], ['tokenKind', 'api'], ['tlsServerName', 'other.test'], ['caFile', join(directory, 'other.pem')]]) {
+    for (const [field, value] of [['origin', vendors.origins[1]], ['username', 'other'], ['tokenKind', 'api'], ['tlsServerName', 'other.test'], ['caFile', join(directory, 'other.pem')]] satisfies [string, string | undefined][]) {
       await configure({ token: { stored: true }, [field]: value });
       const before = vendors.traces.length;
       await failure('AUTH_REQUIRED', 'user session get');
@@ -318,8 +319,8 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
     await failure('USAGE', 'user change-password', { pass: { env: 'ACCOUNT_PASS' }, newPass: password });
     await failure('USAGE', 'user change-password', { pass: { env: 'ACCOUNT_PASS' }, newPass: { env: 'ACCOUNT_PASS' } }, ['--new-pass', password]);
     assert.equal(vendors.traces.length, before);
-    await execute('user change-password', operations.find(([id]) => id === '008')[3]);
-    assert.equal(changed.get('008').newPass, password);
+    await execute('user change-password', operations.find(([id]) => id === '008')![3]);
+    assert.equal(changed.get('008')!.newPass, password);
     vendors.responders.set('/api/admin/users/set', (_incoming, bytes) => {
       assert.deepEqual(Object.fromEntries(new URLSearchParams(bytes.toString())), { user: 'planner', newPass: password, totpEnabled: 'false' });
       return { body: { status: 'ok' } };
@@ -337,14 +338,14 @@ export async function usersJourney({ task, temporary, env, run, executable, vend
       ['OP-098', 'admin session list', '/api/admin/sessions/list', 'sessions', 'lastSeenUserAgent', []],
       ['OP-103', 'admin user get', '/api/admin/users/get', 'sessions', 'lastSeenUserAgent', ['--user', 'planner']],
       ['OP-091', 'dhcp scope get', '/api/dhcp/scopes/get', 'reservedLeases', 'comments', ['--name', 'scope']],
-    ]) {
-      const response = structuredClone(seeds[id]);
+    ] satisfies [string, string, string, string, string, string[]][]) {
+      const response = structuredClone(seeds[id!]);
       response[key][0][field] = null;
-      vendors.responders.set(path, () => ({ body: { status: 'ok', response } }));
-      const result = await success(command, undefined, [...flags, '--full']);
-      assert.equal(result.response[key][0][field], null);
+      vendors.responders.set(path!, () => ({ body: { status: 'ok', response } }));
+      const result = await success(command!, undefined, [...flags!, '--full']);
+      assert.equal(result.response[key!][0][field], null);
       response[key][0][field] = false;
-      await failure('UPSTREAM_INVALID', command, undefined, flags);
+      await failure('UPSTREAM_INVALID', command!, undefined, flags);
     }
   }
   if (task === 'B5.CR-007') return;

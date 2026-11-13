@@ -1,9 +1,10 @@
+import type { JourneyContext } from './journey-types.ts';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { chmod, mkdir, readFile, stat, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-export const credentialTasks = {
+export const credentialTasks: Record<string, string[]> = {
   'B1.03': ['selection', 'invalid', 'refs', 'isolation', 'noninteractive'],
   'B1.04': ['insecure', 'atomic', 'tls', 'insecure-ca', 'relative-ca', 'result'],
   'B1.CR-001': ['selection'], 'B1.CR-002': ['invalid'], 'B1.CR-003': ['refs'],
@@ -11,9 +12,9 @@ export const credentialTasks = {
   'B1.CR-011': ['tls', 'insecure-ca', 'relative-ca'], 'B1.CR-012': ['noninteractive'],
   'B1.OP-001': ['status'], 'B1.OP-006': ['session', 'login-session', 'single-use-session'],
 };
-const hash = value => createHash('sha256').update(value).digest('hex');
+const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 
-export async function credentialJourney({ task, temporary, env, run, executable, vendors }) {
+export async function credentialJourney({ task, temporary, env, run, executable, vendors }: JourneyContext) {
   const directory = join(temporary, 'credentials');
   await mkdir(directory, { mode: 0o700 });
   const config = join(directory, 'config.json');
@@ -25,9 +26,9 @@ export async function credentialJourney({ task, temporary, env, run, executable,
     token: { env: index === 0 ? 'SYNTHETIC_ALPHA' : 'SYNTHETIC_BETA' }, caFile: vendors.caFile, tlsServerName: 'localhost' });
   const seeded = { version: 1, defaultProfile: 'alpha', profiles: { alpha: profile(), beta: profile(1) } };
   const base = { ...env, SYNTHETIC_ALPHA: token, SYNTHETIC_BETA: other };
-  const writeConfig = async value => writeFile(config, JSON.stringify(value), { mode: 0o600 });
+  const writeConfig = async (value: unknown) => writeFile(config, JSON.stringify(value), { mode: 0o600 });
   await writeConfig(seeded);
-  const invoke = async (args, extra = {}, selectedConfig = config) => {
+  const invoke = async (args: string[], extra: NodeJS.ProcessEnv = {}, selectedConfig: string | null = config) => {
     const result = await run(executable, [...args, '--json', ...(selectedConfig ? ['--config', selectedConfig] : [])],
       { cwd: directory, env: { ...base, ...extra } });
     for (const value of [token, JSON.stringify(token).slice(1, -1), encodeURIComponent(token), other]) {
@@ -36,12 +37,12 @@ export async function credentialJourney({ task, temporary, env, run, executable,
     assert.equal(result.stderr, '');
     return { ...result, value: JSON.parse(result.stdout) };
   };
-  const ok = async (...args) => {
+  const ok = async (...args: Parameters<typeof invoke>) => {
     const result = await invoke(...args);
     assert.equal(result.code, 0, result.stdout);
     return result.value;
   };
-  const reject = async (args, code, extra) => {
+  const reject = async (args: string[], code: string, extra?: NodeJS.ProcessEnv) => {
     const count = vendors.traces.length;
     const result = await invoke(args, extra);
     assert.notEqual(result.code, 0, result.stdout);
@@ -51,7 +52,7 @@ export async function credentialJourney({ task, temporary, env, run, executable,
   const environment = { TECHNITIUM_AXI_ORIGIN: vendors.origins[1], TECHNITIUM_AXI_AUTH: 'token',
     TECHNITIUM_AXI_TOKEN_KIND: 'api', TECHNITIUM_AXI_TOKEN: other, TECHNITIUM_AXI_CA_FILE: vendors.caFile };
   const session = ['user', 'session', 'get'];
-  const tests = {
+  const tests: Record<string, () => Promise<void>> = {
     async selection() {
       const selected = await ok(['auth', 'status', '--profile', 'alpha'], { ...environment, TECHNITIUM_AXI_PROFILE: 'beta' });
       assert.deepEqual(selected, { profile: 'alpha', source: 'flag', origin: vendors.origins[0], tokenKind: 'api', tokenSource: { env: 'SYNTHETIC_ALPHA' } });
@@ -86,12 +87,12 @@ export async function credentialJourney({ task, temporary, env, run, executable,
     },
     async refs() {
       await ok(session);
-      assert.equal(vendors.traces.at(-1).bearerHash, hash(token));
+      assert.equal(vendors.traces.at(-1)!.bearerHash, hash(token));
       const secretFile = join(directory, 'token');
       await writeFile(secretFile, '\uFEFF' + token + '\r\n', { mode: 0o600 });
       await writeConfig({ ...seeded, profiles: { alpha: { ...profile(), token: { file: secretFile } } } });
       await ok(session);
-      assert.equal(vendors.traces.at(-1).bearerHash, hash(token));
+      assert.equal(vendors.traces.at(-1)!.bearerHash, hash(token));
       await writeConfig(seeded);
     },
     async insecure() {
@@ -142,8 +143,8 @@ export async function credentialJourney({ task, temporary, env, run, executable,
     async isolation() {
       await writeFile(join(directory, 'technitium-axi.json'), JSON.stringify({ ...seeded, defaultProfile: 'beta' }), { mode: 0o600 });
       await ok([...session, '--profile', 'alpha'], environment);
-      assert.equal(vendors.traces.at(-1).identity, 'alpha');
-      assert.equal(vendors.traces.at(-1).bearerHash, hash(token));
+      assert.equal(vendors.traces.at(-1)!.identity, 'alpha');
+      assert.equal(vendors.traces.at(-1)!.bearerHash, hash(token));
     },
     async noninteractive() {
       const count = vendors.traces.length;
@@ -152,7 +153,7 @@ export async function credentialJourney({ task, temporary, env, run, executable,
       await writeConfig({ ...seeded, profiles: { alpha: { ...profile(), token: { env: 'MISSING_TOKEN' } } } });
       await reject(session, 'AUTH_REQUIRED');
       assert.equal((await ok(['status'])).server, 'dns-alpha.example.test');
-      assert.equal(vendors.traces.at(-1).bearerHash, null);
+      assert.equal(vendors.traces.at(-1)!.bearerHash, null);
       await writeConfig(seeded);
     },
     async tls() {
@@ -193,16 +194,16 @@ export async function credentialJourney({ task, temporary, env, run, executable,
       const value = await ok([...session, '--result-file', destination]);
       assert.equal(value.info.permissions.Administration.canModify, false);
       const bytes = await readFile(destination);
-      assert.equal(JSON.parse(bytes).token, token);
+      assert.equal(JSON.parse(bytes.toString()).token, token);
       assert.equal(value.result.sha256, hash(bytes));
       assert.equal((await stat(destination)).mode & 0o777, 0o600);
     },
     async status() {
       for (const [name, identity] of [['alpha', 'alpha'], ['beta', 'beta']]) {
-        const result = await ok(['status', '--profile', name]);
+        const result = await ok(['status', '--profile', name!]);
         assert.deepEqual(result, { status: 'ok', server: `dns-${identity}.example.test`, hasDefaultCredentials: false, ssoEnabled: false });
-        assert.equal(vendors.traces.at(-1).identity, identity);
-        assert.equal(vendors.traces.at(-1).bearerHash, null);
+        assert.equal(vendors.traces.at(-1)!.identity, identity);
+        assert.equal(vendors.traces.at(-1)!.bearerHash, null);
       }
       assert.equal((await ok([])).server, 'dns-alpha.example.test');
     },
@@ -217,8 +218,8 @@ export async function credentialJourney({ task, temporary, env, run, executable,
     },
   };
   for (const [name, tokenKind] of [['login-session', 'session'], ['single-use-session', 'single-use']]) {
-    tests[name] = async () => {
-      vendors.tokenKinds.set('alpha', tokenKind);
+    tests[name!] = async () => {
+      vendors.tokenKinds.set('alpha', tokenKind!);
       await writeConfig({ ...seeded, profiles: { alpha: { ...profile(), tokenKind } } });
       const destination = join(directory, 'results', `${tokenKind}.json`);
       const value = await ok([...session, '--result-file', destination]);
@@ -231,6 +232,6 @@ export async function credentialJourney({ task, temporary, env, run, executable,
     };
   }
   const checks = [];
-  for (const test of credentialTasks[task]) { await tests[test](); checks.push(`native:${test}`); }
+  for (const test of credentialTasks[task]!) { await tests[test]!(); checks.push(`native:${test}`); }
   return checks;
 }

@@ -1,25 +1,35 @@
+import type { JourneyContext, WriteInput, WriteArgs } from './journey-types.ts';
 import assert from 'node:assert/strict';
 import { chmod, mkdir, readFile, readdir, symlink, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
-import matrix from '../tests/fixtures/record-inputs.json' with { type: 'json' };
+import recordMatrix from '../tests/fixtures/record-inputs.json' with { type: 'json' };
 import { serverRecords } from './record-shapes.ts';
-import { dnssecJourney, dnssecTasks } from './dnssec-journey.mjs';
-import { listsCacheJourney, listsCacheTasks } from './lists-cache-journey.mjs';
-import { zoneJourney, zoneTasks } from './zone-journey.mjs';
-import { settingsJourney, settingsTasks } from './settings-journey.mjs';
-import { appsRestoreJourney, appsRestoreTasks } from './apps-restore-journey.mjs';
-import { dhcpJourney, dhcpTasks } from './dhcp-journey.mjs';
-import { usersJourney, usersTasks } from './users-journey.mjs';
-import { adminAccountsJourney, adminAccountsTasks } from './admin-accounts-journey.mjs';
-import { clusterJourney, clusterTasks } from './cluster-journey.mjs';
-import { readJourney } from './read-journey.mjs';
-import { ssoLdapJourney, ssoLdapTasks } from './sso-ldap-journey.mjs';
+import { dnssecJourney, dnssecTasks } from './dnssec-journey.ts';
+import { listsCacheJourney, listsCacheTasks } from './lists-cache-journey.ts';
+import { zoneJourney, zoneTasks } from './zone-journey.ts';
+import { settingsJourney, settingsTasks } from './settings-journey.ts';
+import { appsRestoreJourney, appsRestoreTasks } from './apps-restore-journey.ts';
+import { dhcpJourney, dhcpTasks } from './dhcp-journey.ts';
+import { usersJourney, usersTasks } from './users-journey.ts';
+import { adminAccountsJourney, adminAccountsTasks } from './admin-accounts-journey.ts';
+import { clusterJourney, clusterTasks } from './cluster-journey.ts';
+import { readJourney } from './read-journey.ts';
+import { ssoLdapJourney, ssoLdapTasks } from './sso-ldap-journey.ts';
+
+interface FixtureRecord { name: string; type: string; ttl: number; rData: Record<string, unknown> }
+interface RecordRow {
+  type: string; inputType?: string; updateOnly?: boolean; singleton?: boolean;
+  data: Record<string, unknown>; updated: Record<string, unknown>; replacement: Record<string, unknown>;
+  addOptions?: Record<string, unknown>; updateOptions?: Record<string, unknown>; sibling?: unknown;
+  related?: { add: FixtureRecord[]; update: FixtureRecord[] };
+}
+const matrix: { rows: RecordRow[] } = recordMatrix;
 
 export const writeTasks = ['B3.01', 'B3.02', 'B3.03', 'B3.04', 'B3.05', 'B3.CR-013', 'B3.CR-014', 'B3.dnssec', ...dnssecTasks, 'B3.lists-cache', ...listsCacheTasks, ...zoneTasks, ...settingsTasks, ...appsRestoreTasks, ...dhcpTasks, ...usersTasks, ...adminAccountsTasks, ...clusterTasks, ...ssoLdapTasks, 'B3.OP-049', 'B3.OP-051', 'B3.OP-052'];
-const hash = value => createHash('sha256').update(value).digest('hex');
+const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 
-export async function writeJourney({ task, temporary, env, run, executable, vendors }) {
+export async function writeJourney({ task, temporary, env, run, executable, vendors }: JourneyContext): Promise<string[]> {
   if (adminAccountsTasks.includes(task)) {
     await adminAccountsJourney({ task, temporary, env, run, executable, vendors });
     return [`native:${task}:write-behavior`];
@@ -37,10 +47,10 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
   vendors.tokens.set('alpha', token);
   const profile = { origin: vendors.origins[0], auth: 'token', tokenKind: 'api', username: 'planner', token: { env: 'WRITE_TOKEN' }, caFile: vendors.caFile, tlsServerName: 'localhost' };
   let sequence = 0;
-  const configure = async (operations = [], extra = {}) => writeFile(config, JSON.stringify({ version: 1,
+  const configure = async (operations: string[] = [], extra: Record<string, unknown> = {}) => writeFile(config, JSON.stringify({ version: 1,
     profiles: { alpha: { ...profile, writes: { allowWrites: operations.length > 0, operations }, ...extra } } }), { mode: 0o600 });
   await configure();
-  const invoke = async (command, input, flags = [], extraEnv = {}) => {
+  const invoke = async (command: string, input: WriteInput, flags: string[] = [], extraEnv: NodeJS.ProcessEnv = {}) => {
     const file = join(directory, `input-${sequence++}.json`);
     await writeFile(file, JSON.stringify(input), { mode: 0o600 });
     const result = await run(executable, [...command.split(' '), '--input-file', file, '--config', config, '--json', ...flags],
@@ -49,18 +59,18 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     for (const canary of [token, secret]) for (const form of [canary, encodeURIComponent(canary), JSON.stringify(canary).slice(1, -1), Buffer.from(canary).toString('base64')]) assert.ok(!result.stdout.includes(form), result.stdout);
     return { ...result, value: JSON.parse(result.stdout) };
   };
-  const success = async (...args) => {
+  const success = async (...args: WriteArgs) => {
     const result = await invoke(...args);
     assert.equal(result.code, 0, `${args[0]} [${Object.keys(args[1].parameters).join(',')}]: ${result.stdout}`);
     return result.value;
   };
-  const failure = async (code, ...args) => {
+  const failure = async (code: string, ...args: WriteArgs) => {
     const result = await invoke(...args);
     assert.notEqual(result.code, 0, result.stdout);
     assert.equal(result.value.error.code, code, result.stdout);
     return result.value;
   };
-  const execute = async (command, input, extraEnv = {}) => {
+  const execute = async (command: string, input: WriteInput, extraEnv: NodeJS.ProcessEnv = {}) => {
     const preview = await success(command, input, [], extraEnv);
     return await success(command, input, ['--execute', '--confirm', preview.preview.digest], extraEnv);
   };
@@ -102,8 +112,8 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     return [`native:${task}:write-behavior`];
   }
   const add = { parameters: { zone: 'example.test', domain: 'www.example.test', type: 'A', ipAddress: '192.0.2.1', ttl: 0 } };
-  const sent = [];
-  let fault;
+  const sent: Record<string, string>[] = [];
+  let fault: string | undefined;
   vendors.responders.set('/api/zones/records/add', async (incoming, bytes) => {
     const data = Object.fromEntries(new URLSearchParams(bytes.toString()));
     sent.push(data);
@@ -246,7 +256,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         setters++;
         const form = new URLSearchParams(bytes.toString());
         assert.deepEqual([...form.keys()].sort(), [...Object.keys(row.target), row.field].sort());
-        state = form.get(row.field).split(',');
+        state = form.get(row.field)!.split(',');
         if (drop) { incoming.socket.destroy(); return {}; }
         return { body: { status: 'ok' } };
       });
@@ -273,7 +283,12 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       await failure('OUTCOME_UNKNOWN', row.command, lost, ['--confirm', lostPreview.preview.digest, '--reconcile', auditId]);
     }
     const proxy = { type: 'Http', address: 'proxy.example.test', port: 8080, username: 'operator', password: secret, bypass: ['old.test'] };
-    const mappings = [
+    const mappings: {
+      command: string; grant: string; get: string; set: string;
+      target: { zone?: string; group?: string };
+      before: Record<string, unknown>; baseline: Record<string, unknown>; parameters: Record<string, unknown>;
+      after: Record<string, unknown>; form: Record<string, string>;
+    }[] = [
       ...[
         { group: 'Administrators', members: [], after: ['planner'] },
         { group: 'ADMINISTRATORS', members: ['BOB'], after: ['bob', 'planner'] },
@@ -363,7 +378,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
       await success(row.command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
       assert.equal(setters, 2);
       if (row.target.group?.toLowerCase() === 'administrators') {
-        state = { ...state, members: state.members.filter(member => member !== 'planner') };
+        state = { ...state, members: (state.members as string[]).filter(member => member !== 'planner') };
         await failure('OUTCOME_UNKNOWN', row.command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
       }
       if (row.after.forwarderProtocol === 'Tls') {
@@ -371,7 +386,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         await failure('OUTCOME_UNKNOWN', row.command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
       }
       if (row.after.proxy) {
-        state = { proxy: { ...state.proxy, address: 'changed.test' } };
+        state = { proxy: { ...(state.proxy as Record<string, unknown>), address: 'changed.test' } };
         await failure('OUTCOME_UNKNOWN', row.command, input, ['--confirm', preview.preview.digest, '--reconcile', auditId]);
       }
     }
@@ -382,16 +397,16 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     const upload = join(directory, 'zone.txt');
     const bytes = Buffer.from('$ORIGIN example.test.\nwww 60 IN TXT "héllo"\n');
     await writeFile(upload, bytes, { mode: 0o600 });
-    const requests = [];
+    const requests: (string | null)[] = [];
     for (const [command, grant, path, parameters] of [
       ['zone create', 'OP-022', '/api/zones/create', { zone: 'example.test', type: 'Primary' }],
       ['zone import', 'OP-023', '/api/zones/import', { zone: 'example.test', overwrite: false }],
-    ]) {
-      await configure([grant]);
-      vendors.responders.set(path, (incoming, body) => {
-        const query = new URL(incoming.url, 'https://fixture.test').searchParams;
+    ] satisfies [string, string, string, Record<string, unknown>][]) {
+      await configure([grant!]);
+      vendors.responders.set(path!, (incoming, body) => {
+        const query = new URL(incoming.url!, 'https://fixture.test').searchParams;
         assert.deepEqual(Object.fromEntries(query), Object.fromEntries(Object.entries(parameters).map(([key, value]) => [key, String(value)])));
-        const boundary = incoming.headers['content-type'].split('boundary=')[1];
+        const boundary = incoming.headers['content-type']!.split('boundary=')[1];
         const prefix = Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="zone.txt"\r\nContent-Type: text/plain\r\n\r\n`);
         const suffix = Buffer.from(`\r\n--${boundary}--\r\n`);
         assert.deepEqual(body.subarray(0, prefix.length), prefix);
@@ -401,15 +416,15 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         return { body: { status: 'ok' } };
       });
       const input = { parameters, upload: { file: upload } };
-      const preview = await success(command, input);
+      const preview = await success(command!, input);
       assert.equal(preview.preview.upload.sha256, hash(bytes));
       await writeFile(upload, 'changed');
-      await failure('CONFIRMATION_MISMATCH', command, input, ['--execute', '--confirm', preview.preview.digest]);
+      await failure('CONFIRMATION_MISMATCH', command!, input, ['--execute', '--confirm', preview.preview.digest]);
       await writeFile(upload, bytes);
-      await success(command, input, ['--execute', '--confirm', preview.preview.digest]);
+      await success(command!, input, ['--execute', '--confirm', preview.preview.digest]);
       const link = join(directory, `upload-${grant}.link`);
       await symlink(upload, link);
-      await failure('CONFIG_INSECURE', command, { parameters, upload: { file: link } });
+      await failure('CONFIG_INSECURE', command!, { parameters, upload: { file: link } });
     }
     assert.deepEqual(requests, ['example.test', 'example.test']);
     await writeFile(upload, Buffer.alloc(16 * 1024 * 1024 + 1));
@@ -440,7 +455,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     const fwdPreview = await success('zone record add', fwd);
     await failure('CONFIRMATION_MISMATCH', 'zone record add', fwd, ['--execute', '--confirm', fwdPreview.preview.digest], { OPERATION_SECRET: 'different-revision' });
     await success('zone record add', fwd, ['--execute', '--confirm', fwdPreview.preview.digest, '--result-file', result]);
-    assert.equal(sent[0].proxyPassword, secret);
+    assert.equal(sent[0]!.proxyPassword, secret);
     assert.equal(JSON.parse(await readFile(result, 'utf8')).response.proxyPassword, secret);
     await failure('USAGE', 'zone record add', { parameters: { ...fwd.parameters, proxyPassword: secret } });
     await chmod(pem, 0o644);
@@ -454,38 +469,38 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
   if (zoneTasks.includes(task)) await zoneJourney({ task, directory, env, run, executable, vendors, config, token, configure, success, failure, execute });
   if (['B3.02', 'B3.OP-049', 'B3.OP-051', 'B3.OP-052'].includes(task)) {
     await configure(['OP-049', 'OP-051', 'OP-052']);
-    const numericTypes = { A: '1', SOA: '6', TXT: '16', DNAME: '39', ANAME: '65280', FWD: '65281', APP: '65282' };
+    const numericTypes: Record<string, string> = { A: '1', SOA: '6', TXT: '16', DNAME: '39', ANAME: '65280', FWD: '65281', APP: '65282' };
     for (const row of matrix.rows.flatMap(row => numericTypes[row.type] ? [row, { ...row, inputType: numericTypes[row.type] }] : [row])) {
-      let records = [];
-      let related = [];
+      let records: FixtureRecord[] = [];
+      let related: FixtureRecord[] = [];
       const owner = row.updateOnly ? 'example.test' : 'www.example.test';
       const keep = { name: 'keep.example.test', type: 'TXT', ttl: 60, rData: { text: 'keep' } };
-      const firstKey = Object.keys(row.data)[0];
-      const siblingData = { ...row.data, [firstKey]: row.sibling ?? (typeof row.data[firstKey] === 'number' ? row.data[firstKey] + 1 : `sibling.${row.data[firstKey]}`) };
+      const firstKey = Object.keys(row.data)[0]!;
+      const siblingData = { ...row.data, [firstKey]: row.sibling ?? (typeof row.data[firstKey!] === 'number' ? (row.data[firstKey!] as number) + 1 : `sibling.${row.data[firstKey!]}`) };
       const comparison = { name: row.updateOnly ? 'keep.test' : row.singleton ? 'other.example.test' : owner, type: row.type, ttl: 60, rData: siblingData };
       records = [keep, comparison];
       const params = { zone: 'example.test', domain: owner, type: row.type, ttl: 60, ...row.data, ...row.addOptions };
-      const recordInput = parameters => ({ parameters: { ...parameters, type: row.inputType ?? row.type } });
+      const recordInput = (parameters: Record<string, unknown>) => ({ parameters: { ...parameters, type: row.inputType ?? row.type } });
       const dataKeys = Object.keys(row.data);
-      const select = p => records.findIndex(record => record.name === p.domain && record.type === p.type &&
+      const select = (p: Record<string, string>) => records.findIndex(record => record.name === p.domain && record.type === p.type &&
         (row.singleton || dataKeys.every(key => String(record.rData[key]) === p[key])));
       vendors.responders.set('/api/zones/records/add', (_incoming, bytes) => {
         const p = Object.fromEntries(new URLSearchParams(bytes.toString()));
         const expected = row.singleton && p.overwrite === 'true' ? { ...params, ...row.updated } : params;
-        for (const [key, value] of Object.entries(expected)) assert.equal(p[key], String(value?.env ? secret : Array.isArray(value) ? value.join(',') : value), `${row.type} add ${key}`);
+        for (const [key, value] of Object.entries(expected)) assert.equal(p[key], String((value as { env?: string })?.env ? secret : Array.isArray(value) ? value.join(',') : value), `${row.type} add ${key}`);
         if (row.singleton && select(p) >= 0 && p.overwrite !== 'true') return { body: { status: 'error' } };
         if (row.singleton && select(p) >= 0) records.splice(select(p), 1);
-        records.push({ name: p.domain, type: p.type, ttl: Number(p.ttl), rData: { ...(row.singleton && p.overwrite === 'true' ? row.updated : row.data) } });
+        records.push({ name: p.domain!, type: p.type!, ttl: Number(p.ttl), rData: { ...(row.singleton && p.overwrite === 'true' ? row.updated : row.data) } });
         if (row.related && p.ptr === 'true' && p.updateSvcbHints === 'true') related = row.related.add;
         return { body: { status: 'ok' } };
       });
       vendors.responders.set('/api/zones/records/update', (_incoming, bytes) => {
         const p = Object.fromEntries(new URLSearchParams(bytes.toString()));
-        for (const [key, value] of Object.entries(row.updateOptions ?? {})) assert.equal(p[key], String(value?.env ? secret : Array.isArray(value) ? value.join(',') : value), `${row.type} update ${key}`);
+        for (const [key, value] of Object.entries(row.updateOptions ?? {})) assert.equal(p[key], String((value as { env?: string })?.env ? secret : Array.isArray(value) ? value.join(',') : value), `${row.type} update ${key}`);
         assert.deepEqual(Object.fromEntries(Object.entries(row.replacement).map(([key]) => [key, p[key]])), Object.fromEntries(Object.entries(row.replacement).map(([key, value]) => [key, String(value)])));
         const index = select(p);
         assert.ok(index >= 0, 'Exact record selector must preserve siblings');
-        records[index] = { name: p.newDomain ?? p.domain, type: row.type, ttl: Number(p.ttl), rData: row.updated };
+        records[index] = { name: (p.newDomain ?? p.domain)!, type: row.type, ttl: Number(p.ttl), rData: row.updated };
         if (row.related && p.ptr === 'true' && p.updateSvcbHints === 'true') related = row.related.update;
         return { body: { status: 'ok' } };
       });
@@ -498,14 +513,14 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         return { body: { status: 'ok' } };
       });
       vendors.responders.set('/api/zones/records/get', () => ({ body: { status: 'ok', response: { zone: { name: 'example.test', type: 'Primary' }, records: serverRecords([...records, ...related]) } } }));
-      const readback = async (expected, expectedRelated = []) => {
+      const readback = async (expected: FixtureRecord[], expectedRelated: FixtureRecord[] = []) => {
         const result = join(directory, `records-${sequence++}.json`);
         const read = await run(executable, ['zone', 'record', 'get', '--domain', 'example.test', '--zone', 'example.test', '--list-zone', 'true', '--config', config, '--result-file', result, '--json'], { env: { ...env, WRITE_TOKEN: token } });
         assert.equal(read.code, 0, read.stdout + read.stderr);
         assert.deepEqual(JSON.parse(await readFile(result, 'utf8')).response.records, serverRecords([...expected, ...expectedRelated]));
         // The tool's own projection must carry every rData field the server reported for this record type.
         const projected = JSON.parse(read.stdout);
-        assert.deepEqual(projected.response.records.map(({ name, type, ttl, rData }) => ({ name, type, ttl, rData })), serverRecords([...expected, ...expectedRelated]));
+        assert.deepEqual(projected.response.records.map(({ name, type, ttl, rData }: FixtureRecord) => ({ name, type, ttl, rData })), serverRecords([...expected, ...expectedRelated]));
         assert.equal(projected.output.complete, true);
       };
       const first = { name: owner, type: row.type, ttl: 60, rData: row.data };
@@ -513,7 +528,7 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         records.push(first);
         await failure('USAGE', 'zone record add', recordInput(params));
       } else await execute('zone record add', recordInput(params));
-      await readback([keep, comparison, first], row.related?.add);
+      await readback([keep, comparison, first], row.related!?.add);
       if (row.singleton && !row.updateOnly) {
         const duplicate = recordInput({ ...params, overwrite: false });
         await failure('UPSTREAM_ERROR', 'zone record add', duplicate, ['--execute', '--confirm', (await success('zone record add', duplicate)).preview.digest]);
@@ -521,20 +536,20 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
         await execute('zone record add', recordInput({ ...params, ...row.updated, overwrite: true }));
         await readback([keep, comparison, { ...first, rData: row.updated }]);
       }
-      const update = { ...params, ...row.replacement, ...row.updateOptions, ttl: 0 };
+      const update: Record<string, unknown> = { ...params, ...row.replacement, ...row.updateOptions, ttl: 0 };
       delete update.overwrite;
       if (row.singleton) for (const key of dataKeys) if (!Object.hasOwn(row.replacement, key)) delete update[key];
       await execute('zone record update', recordInput(update));
       const rData = row.updated;
-      const updated = { name: update.newDomain ?? owner, type: row.type, ttl: 0, rData };
-      await readback([keep, comparison, updated], row.related?.update);
+      const updated = { name: (update.newDomain as string | undefined) ?? owner, type: row.type, ttl: 0, rData };
+      await readback([keep, comparison, updated], row.related!?.update);
       const remove = { zone: 'example.test', domain: updated.name, type: row.type, ...(row.singleton ? {} : rData) };
       if (row.updateOnly) await failure('USAGE', 'zone record delete', recordInput(remove));
       else {
         // The server deletes owner-and-type singletons without comparing a value, so a value selector must be refused.
         if (row.singleton) await failure('USAGE', 'zone record delete', recordInput({ ...remove, ...rData }));
         await execute('zone record delete', recordInput(remove));
-        await readback([keep, comparison], row.related?.update);
+        await readback([keep, comparison], row.related!?.update);
       }
       await failure('USAGE', 'zone record add', { parameters: { ...params, unexpected: true } });
     }
@@ -549,15 +564,15 @@ export async function writeJourney({ task, temporary, env, run, executable, vend
     for (const [newDomain, code, state, expected] of [
       [original.name, 'UPSTREAM_ERROR', 'failed', [original]],
       ['example.test', 'OUTCOME_UNKNOWN', 'intent', []],
-    ]) {
+    ] satisfies [string, string, string, typeof remaining][]) {
       remaining = [original];
       const input = { parameters: { zone: 'example.test', domain: original.name, type: 'CNAME', cname: 'target.test', newDomain } };
       const preview = await success('zone record update', input);
-      await failure(code, 'zone record update', input, ['--execute', '--confirm', preview.preview.digest]);
+      await failure(code!, 'zone record update', input, ['--execute', '--confirm', preview.preview.digest]);
       const resultFile = join(directory, `rename-readback-${sequence++}.json`);
       const read = await run(executable, ['zone', 'record', 'get', '--zone', 'example.test', '--domain', 'example.test', '--list-zone', 'true', '--config', config, '--result-file', resultFile, '--json'], { env: { ...env, WRITE_TOKEN: token } });
       assert.equal(read.code, 0, read.stdout + read.stderr);
-      assert.deepEqual(JSON.parse(await readFile(resultFile, 'utf8')).response.records, serverRecords(expected));
+      assert.deepEqual(JSON.parse(await readFile(resultFile, 'utf8')).response.records, serverRecords(expected!));
       const receipt = JSON.parse(await readFile(join(env.XDG_STATE_HOME, 'technitium-axi', 'writes.log.d', `${preview.preview.digest}.json`), 'utf8'));
       assert.equal(receipt.state, state);
       await failure('REPLAY_DENIED', 'zone record update', input, ['--execute', '--confirm', preview.preview.digest]);
