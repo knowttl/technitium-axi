@@ -57,7 +57,7 @@
     "errorFields": ["code", "source", "message", "next", "requestId"],
     "optionalErrorFields": ["diagnostic"]
   },
-  "expected": { "version": "0.1.0", "unknownFlag": "INVALID_INPUT", "ungrantedCaller": "TOOL_NOT_GRANTED", "fileOnDiscovery": "UNSUPPORTED_INPUT", "invalidFile": "INVALID_INPUT", "technitiumTransferRoute": "NOT_FOUND" },
+  "expected": { "version": "0.1.1", "unknownFlag": "INVALID_INPUT", "ungrantedCaller": "TOOL_NOT_GRANTED", "fileOnDiscovery": "UNSUPPORTED_INPUT", "invalidFile": "INVALID_INPUT", "technitiumTransferRoute": "NOT_FOUND" },
   "preserve": { "vendorRequests": 0, "unselectedCallerGrants": [], "writeAccess": false },
   "faults": ["unknown flag", "ungranted caller", "unsafe file name", "noncanonical base64", "duplicate file name", "file size mismatch", "stdin on discovery", "unsupported transfer", "server startup failure", "cancellation"]
 }
